@@ -1,91 +1,159 @@
 <!DOCTYPE html>
-<html>
+<html lang="<?= $this->config->item('current_lang') ?: 'id'; ?>">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= lang('app_login_title'); ?></title>
+    <!-- Bootstrap 5 & Bootstrap Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    
     <style>
+        :root {
+            --brand: #0b5d5b;
+            --brand-dark: #083f3e;
+            --brand-light: #e6f2f1;
+            --bg: #f4f6f7;
+        }
+
         body {
-            font-family: Arial;
-            margin: 0;
-            background: #f4f6f9;
+            background: linear-gradient(135deg, var(--bg) 0%, #e0e6e8 100%);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #1f2937;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
+            padding: 1rem;
         }
 
-        .box {
-            background: #fff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            width: 320px;
-        }
-
-        .box h3 {
-            margin-top: 0;
-        }
-
-        .box label {
-            display: block;
-            margin: 12px 0 4px;
-            font-size: 14px;
-        }
-
-        .box input[type=text],
-        .box input[type=password] {
+        .login-card {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(11, 93, 91, 0.08);
+            border: 1px solid #edf0f1;
             width: 100%;
-            padding: 8px;
-            box-sizing: border-box;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            max-width: 380px;
+            padding: 2rem 1.75rem;
         }
 
-        .box button {
-            margin-top: 18px;
-            width: 100%;
-            padding: 10px;
-            background: #2c3e50;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .error {
-            background: #fdecea;
-            color: #c0392b;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            margin-bottom: 10px;
-        }
-
-        .lang-switch {
+        .brand-header {
             text-align: center;
-            margin-bottom: 14px;
-            font-size: 13px;
+            margin-bottom: 1.5rem;
         }
 
-        .lang-switch a {
-            margin: 0 6px;
+        .brand-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--brand-light);
+            color: var(--brand);
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: .75rem;
+        }
+
+        .brand-title {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--brand-dark);
+            margin-bottom: .25rem;
+        }
+
+        /* Language Switcher */
+        .lang-pills {
+            display: flex;
+            justify-content: center;
+            gap: .35rem;
+            margin-bottom: 1.5rem;
+            background: var(--bg);
+            padding: 4px;
+            border-radius: 20px;
+        }
+
+        .lang-pills a {
+            flex: 1;
+            text-align: center;
+            padding: .3rem .5rem;
+            font-size: .78rem;
+            font-weight: 600;
+            color: #6b7280;
             text-decoration: none;
-            color: #2c3e50;
+            border-radius: 16px;
+            transition: all .2s ease;
         }
 
-        .lang-switch a.active {
-            font-weight: bold;
-            text-decoration: underline;
+        .lang-pills a.active {
+            background: #ffffff;
+            color: var(--brand);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .06);
+        }
+
+        /* Input Group Fixing */
+        .input-group-text {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+            color: #6b7280;
+            border-top-left-radius: 8px;
+            border-bottom-left-radius: 8px;
+            padding-left: 0.85rem;
+            padding-right: 0.85rem;
+        }
+
+        .form-control {
+            border-color: #d1d5db;
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+            padding: .6rem .75rem;
+            font-size: .88rem;
+        }
+
+        .form-control:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 3px rgba(11, 93, 91, 0.15);
+        }
+
+        .input-group:focus-within .input-group-text {
+            border-color: var(--brand);
+            color: var(--brand);
+        }
+
+        .btn-brand {
+            background: var(--brand);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            padding: .65rem;
+            font-weight: 600;
+            font-size: .9rem;
+            width: 100%;
+            transition: background .2s ease;
+        }
+
+        .btn-brand:hover {
+            background: var(--brand-dark);
+            color: #ffffff;
+        }
+
+        .alert-custom {
+            font-size: .82rem;
+            border-radius: 8px;
+            padding: .65rem .85rem;
         }
     </style>
 </head>
 
 <body>
-    <div class="box">
-        <div class="lang-switch">
+
+    <div class="login-card">
+        <!-- Switcher Bahasa -->
+        <div class="lang-pills">
             <?php
-            $current = $this->config->item('current_lang');
-            $langs = ['id' => 'ID', 'en' => 'EN', 'zh' => '中文'];
+            $current = $this->config->item('current_lang') ?: 'id';
+            $langs = ['id' => 'Indonesia', 'en' => 'English', 'zh' => '中文'];
             foreach ($langs as $code => $label):
                 $class = ($current === $code) ? 'active' : '';
             ?>
@@ -93,24 +161,58 @@
             <?php endforeach; ?>
         </div>
 
-        <h3><?= lang('app_login_title'); ?></h3>
+        <!-- Header Brand -->
+        <div class="brand-header">
+            <div class="brand-icon">
+                <i class="bi bi-columns-gap"></i>
+            </div>
+            <div class="brand-title"><?= lang('app_login_title'); ?></div>
+            <small class="text-muted" style="font-size: .8rem;">Silakan masuk ke akun Anda</small>
+        </div>
 
+        <!-- Pesan Error Flashdata -->
         <?php if ($this->session->flashdata('error')): ?>
-            <div class="error"><?= $this->session->flashdata('error'); ?></div>
+            <div class="alert alert-danger alert-custom mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
+                <div><?= $this->session->flashdata('error'); ?></div>
+            </div>
         <?php endif; ?>
 
-        <?= validation_errors('<div class="error">', '</div>'); ?>
+        <!-- Validation Errors -->
+        <?php if (validation_errors()): ?>
+            <div class="alert alert-warning alert-custom mb-3">
+                <?= validation_errors('<div class="d-flex align-items-center gap-1"><i class="bi bi-dot"></i>', '</div>'); ?>
+            </div>
+        <?php endif; ?>
 
+        <!-- Form Login -->
         <form action="<?= site_url('login/proses'); ?>" method="post">
-            <label><?= lang('app_username'); ?></label>
-            <input type="text" name="username" value="<?= set_value('username'); ?>">
+            <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary"><?= lang('app_username'); ?></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input type="text" name="username" class="form-control" value="<?= set_value('username'); ?>" placeholder="Masukkan username" required autocomplete="off">
+                </div>
+            </div>
 
-            <label><?= lang('app_password'); ?></label>
-            <input type="password" name="password">
+            <div class="mb-4">
+                <label class="form-label small fw-semibold text-secondary"><?= lang('app_password'); ?></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
+                </div>
+            </div>
 
-            <button type="submit"><?= lang('app_login_button'); ?></button>
+            <button type="submit" class="btn btn-brand shadow-sm">
+                <?= lang('app_login_button'); ?> <i class="bi bi-arrow-right-short ms-1"></i>
+            </button>
         </form>
+
+        <div class="text-center mt-4 small text-muted" style="font-size: .75rem;">
+            &copy; 2026 PT Oupai Pintu Jendela Indonesia
+        </div>
     </div>
+
 </body>
 
 </html>

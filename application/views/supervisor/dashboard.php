@@ -353,7 +353,7 @@
             <nav class="col-lg-2 sidebar d-none d-lg-flex flex-column p-0">
                 <div class="brand">
                     <i class="bi bi-columns-gap"></i>
-                    <div>PT Cipta<br>Jendela Pintu</div>
+                    <div>PT Ciptadfsfe<br>Jendelsfaa Pintu</div>
                 </div>
                 <ul class="nav flex-column mb-auto">
                     <li class="nav-item"><a class="nav-link active" href="#"><i class="bi bi-speedometer2"></i> Dashboard</a></li>

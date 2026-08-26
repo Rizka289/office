@@ -224,8 +224,8 @@
                     <ul class="sub-menu">
                         <!-- Sub-bab: Supplier -->
                         <li>
-                            <a class="nav-sub-link" href="<?= site_url('login'); ?>">
-                                <i class="bi bi-truck"></i> <?= lang('menu_login'); ?>
+                            <a class="nav-sub-link" href="<?= site_url('user'); ?>">
+                                <i class="bi bi-truck"></i> <?= lang('menu_user'); ?>
                             </a>
                         </li>
                         <li>

@@ -8,6 +8,16 @@
         </button>
     </div>
 
+    <!-- ================= SEARCH BOX ================= -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="searchCustomer" class="form-control" placeholder="Cari nama / kontak / alamat...">
+            </div>
+        </div>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
@@ -19,34 +29,19 @@
                     <th class="text-center">Aksi</th>
                 </tr>
             </thead>
-            <tbody>
-                <?php if (!empty($customers)): ?>
-                    <?php $no = 1;
-                    foreach ($customers as $customer): ?>
-                        <tr>
-                            <td><?= $no++; ?></td>
-                            <td class="fw-semibold"><?= html_escape($customer['nama']); ?></td>
-                            <td><?= html_escape($customer['kontak']); ?></td>
-                            <td><?= html_escape($customer['alamat']); ?></td>
-                            <td class="text-center">
-                                <!-- Tombol Edit -->
-                                <button class="btn btn-sm btn-outline-warning btn-edit" data-id="<?= $customer['id']; ?>" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <!-- Tombol Delete -->
-                                <button class="btn btn-sm btn-outline-danger btn-delete" data-id="<?= $customer['id']; ?>" data-nama="<?= html_escape($customer['nama']); ?>" title="Hapus">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">Data supplier tidak ditemukan.</td>
-                    </tr>
-                <?php endif; ?>
+            <tbody id="customerTableBody">
+                <tr>
+                    <td colspan="5" class="text-center text-muted">Memuat data...</td>
+                </tr>
             </tbody>
         </table>
+    </div>
+    <!-- ================= INFO + PAGINATION ================= -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <small class="text-muted" id="customerInfo"></small>
+        <nav aria-label="Pagination Customer">
+            <ul class="pagination pagination-sm mb-0" id="customerPagination"></ul>
+        </nav>
     </div>
 </div>
 
@@ -120,6 +115,121 @@
 <!-- ================= JS Khusus Halaman User (bukan bagian layout) ================= -->
 <script>
     $(document).ready(function() {
+        var currentPage = 1;
+        var currentSearch = '';
+        var searchTimer = null;
+
+        // Ambil url list_data sekali saja
+        var listDataUrl = "<?= site_url('customer/list_data'); ?>";
+
+        function escapeHtml(str) {
+            return $('<div>').text(str == null ? '' : str).html();
+        }
+
+        // Render baris tabel dari data JSON
+        function renderRows(rows, page, perPage) {
+            var $tbody = $('#customerTableBody');
+            $tbody.empty();
+
+            if (!rows || rows.length === 0) {
+                $tbody.append('<tr><td colspan="5" class="text-center text-muted">Data customer tidak ditemukan.</td></tr>');
+                return;
+            }
+
+            var startNo = (page - 1) * perPage;
+            rows.forEach(function(cus, idx) {
+                var no = startNo + idx + 1;
+                var tr = '<tr>' +
+                    '<td>' + no + '</td>' +
+                    '<td class="fw-semibold">' + escapeHtml(cus.nama) + '</td>' +
+                    '<td>' + escapeHtml(cus.kontak) + '</td>' +
+                    '<td>' + escapeHtml(cus.alamat) + '</td>' +
+                    '<td class="text-center">' +
+                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + cus.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + cus.id + '" data-nama="' + escapeHtml(cus.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                    '</td>' +
+                    '</tr>';
+                $tbody.append(tr);
+            });
+        }
+
+        // Render kontrol pagination
+        function renderPagination(currentPage, totalPages) {
+            var $pg = $('#supplierPagination');
+            $pg.empty();
+
+            if (totalPages <= 1) {
+                return;
+            }
+
+            function pageItem(label, page, disabled, active) {
+                return '<li class="page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '') + '">' +
+                    '<a class="page-link" href="#" data-page="' + page + '">' + label + '</a></li>';
+            }
+
+            $pg.append(pageItem('&laquo;', currentPage - 1, currentPage <= 1, false));
+
+            for (var i = 1; i <= totalPages; i++) {
+                $pg.append(pageItem(i, i, false, i === currentPage));
+            }
+
+            $pg.append(pageItem('&raquo;', currentPage + 1, currentPage >= totalPages, false));
+        }
+
+        // Ambil data dari server (search + pagination)
+        function loadData(page, search) {
+            currentPage = page;
+            currentSearch = search;
+
+            $.ajax({
+                url: listDataUrl,
+                type: 'GET',
+                data: {
+                    page: page,
+                    search: search
+                },
+                dataType: 'JSON',
+                success: function(response) {
+                    if (response.status) {
+                        renderRows(response.data, response.current_page, response.per_page);
+                        renderPagination(response.current_page, response.total_pages);
+
+                        var start = response.total === 0 ? 0 : ((response.current_page - 1) * response.per_page) + 1;
+                        var end = Math.min(response.current_page * response.per_page, response.total);
+                        $('#customerInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
+                    } else {
+                        $('#customerTableBody').html('<tr><td colspan="5" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                    }
+                },
+                error: function() {
+                    $('#customerTableBody').html('<tr><td colspan="5" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                }
+            });
+        }
+
+        // Muat data pertama kali (page 1, tanpa search)
+        loadData(1, '');
+
+        // Klik tombol pagination
+        $(document).on('click', '#customerPagination a.page-link', function(e) {
+            e.preventDefault();
+            var $li = $(this).closest('li');
+            if ($li.hasClass('disabled') || $li.hasClass('active')) {
+                return;
+            }
+            var page = parseInt($(this).data('page'), 10);
+            loadData(page, currentSearch);
+        });
+
+        // Search dengan debounce (tunggu user berhenti ngetik 400ms), reset ke page 1
+        $('#searchCustomer').on('keyup', function() {
+            var keyword = $(this).val();
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function() {
+                loadData(1, keyword);
+            }, 400);
+        });
+
 
         // Reset modal Tambah Supplier setiap kali dibuka/ditutup
         // (jangan ikut mengosongkan field CSRF, hanya field input data)

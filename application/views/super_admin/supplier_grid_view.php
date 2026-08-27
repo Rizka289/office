@@ -1,6 +1,6 @@
 <!-- ================= GRID DATA SUPPLIER ================= -->
 <div class="card card-custom p-3">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h6 class="fw-bold m-0">Daftar Supplier</h6>
         <!-- Trigger Modal Tambah User -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahSup">
@@ -8,45 +8,42 @@
         </button>
     </div>
 
+    <!-- ================= SEARCH BOX ================= -->
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" id="searchSupplier" class="form-control" placeholder="Cari nama / kontak / alamat...">
+            </div>
+        </div>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>No</th>
+                    <th style="width:60px;">No</th>
                     <th>Nama Supplier</th>
                     <th>Kontak</th>
                     <th>Alamat</th>
-                    <th class="text-center">Aksi</th>
+                    <th>Deskripsi</th>
+                    <th class="text-center" style="width:120px;">Aksi</th>
                 </tr>
             </thead>
-            <tbody>
-                <?php if (!empty($supplier)): ?>
-                    <?php $no = 1;
-                    foreach ($supplier as $sup): ?>
-                        <tr>
-                            <td><?= $no++; ?></td>
-                            <td class="fw-semibold"><?= html_escape($sup['nama']); ?></td>
-                            <td><?= html_escape($sup['kontak']); ?></td>
-                            <td><?= html_escape($sup['alamat']); ?></td>
-                            <td class="text-center">
-                                <!-- Tombol Edit -->
-                                <button class="btn btn-sm btn-outline-warning btn-edit" data-id="<?= $sup['id']; ?>" title="Edit">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <!-- Tombol Delete -->
-                                <button class="btn btn-sm btn-outline-danger btn-delete" data-id="<?= $sup['id']; ?>" data-nama="<?= html_escape($sup['nama']); ?>" title="Hapus">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">Data supplier tidak ditemukan.</td>
-                    </tr>
-                <?php endif; ?>
+            <tbody id="supplierTableBody">
+                <tr>
+                    <td colspan="5" class="text-center text-muted">Memuat data...</td>
+                </tr>
             </tbody>
         </table>
+    </div>
+
+    <!-- ================= INFO + PAGINATION ================= -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <small class="text-muted" id="supplierInfo"></small>
+        <nav aria-label="Pagination Supplier">
+            <ul class="pagination pagination-sm mb-0" id="supplierPagination"></ul>
+        </nav>
     </div>
 </div>
 
@@ -68,6 +65,10 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Kontak</label>
                         <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" autocomplete="off" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <textarea name="deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan Deskripsi" autocomplete="off" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Alamat</label>
@@ -104,6 +105,10 @@
                         <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" id="edit_kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" required>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan deskripsi" required></textarea>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">Alamat</label>
                         <textarea name="alamat" id="edit_alamat" class="form-control form-control-sm" rows="3" placeholder="Masukkan alamat" required></textarea>
                     </div>
@@ -117,9 +122,125 @@
     </div>
 </div>
 
-<!-- ================= JS Khusus Halaman User (bukan bagian layout) ================= -->
+<!-- ================= JS Khusus Halaman Supplier (bukan bagian layout) ================= -->
 <script>
     $(document).ready(function() {
+
+        var currentPage = 1;
+        var currentSearch = '';
+        var searchTimer = null;
+
+        // Ambil url list_data sekali saja
+        var listDataUrl = "<?= site_url('supplier/list_data'); ?>";
+
+        function escapeHtml(str) {
+            return $('<div>').text(str == null ? '' : str).html();
+        }
+
+        // Render baris tabel dari data JSON
+        function renderRows(rows, page, perPage) {
+            var $tbody = $('#supplierTableBody');
+            $tbody.empty();
+
+            if (!rows || rows.length === 0) {
+                $tbody.append('<tr><td colspan="5" class="text-center text-muted">Data supplier tidak ditemukan.</td></tr>');
+                return;
+            }
+
+            var startNo = (page - 1) * perPage;
+            rows.forEach(function(sup, idx) {
+                var no = startNo + idx + 1;
+                var tr = '<tr>' +
+                    '<td>' + no + '</td>' +
+                    '<td class="fw-semibold">' + escapeHtml(sup.nama) + '</td>' +
+                    '<td>' + escapeHtml(sup.kontak) + '</td>' +
+                    '<td>' + escapeHtml(sup.alamat) + '</td>' +
+                    '<td>' + escapeHtml(sup.deskripsi) + '</td>' +
+                    '<td class="text-center">' +
+                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + sup.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + sup.id + '" data-nama="' + escapeHtml(sup.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                    '</td>' +
+                    '</tr>';
+                $tbody.append(tr);
+            });
+        }
+
+        // Render kontrol pagination
+        function renderPagination(currentPage, totalPages) {
+            var $pg = $('#supplierPagination');
+            $pg.empty();
+
+            if (totalPages <= 1) {
+                return;
+            }
+
+            function pageItem(label, page, disabled, active) {
+                return '<li class="page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '') + '">' +
+                    '<a class="page-link" href="#" data-page="' + page + '">' + label + '</a></li>';
+            }
+
+            $pg.append(pageItem('&laquo;', currentPage - 1, currentPage <= 1, false));
+
+            for (var i = 1; i <= totalPages; i++) {
+                $pg.append(pageItem(i, i, false, i === currentPage));
+            }
+
+            $pg.append(pageItem('&raquo;', currentPage + 1, currentPage >= totalPages, false));
+        }
+
+        // Ambil data dari server (search + pagination)
+        function loadData(page, search) {
+            currentPage = page;
+            currentSearch = search;
+
+            $.ajax({
+                url: listDataUrl,
+                type: 'GET',
+                data: {
+                    page: page,
+                    search: search
+                },
+                dataType: 'JSON',
+                success: function(response) {
+                    if (response.status) {
+                        renderRows(response.data, response.current_page, response.per_page);
+                        renderPagination(response.current_page, response.total_pages);
+
+                        var start = response.total === 0 ? 0 : ((response.current_page - 1) * response.per_page) + 1;
+                        var end = Math.min(response.current_page * response.per_page, response.total);
+                        $('#supplierInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
+                    } else {
+                        $('#supplierTableBody').html('<tr><td colspan="5" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                    }
+                },
+                error: function() {
+                    $('#supplierTableBody').html('<tr><td colspan="5" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                }
+            });
+        }
+
+        // Muat data pertama kali (page 1, tanpa search)
+        loadData(1, '');
+
+        // Klik tombol pagination
+        $(document).on('click', '#supplierPagination a.page-link', function(e) {
+            e.preventDefault();
+            var $li = $(this).closest('li');
+            if ($li.hasClass('disabled') || $li.hasClass('active')) {
+                return;
+            }
+            var page = parseInt($(this).data('page'), 10);
+            loadData(page, currentSearch);
+        });
+
+        // Search dengan debounce (tunggu user berhenti ngetik 400ms), reset ke page 1
+        $('#searchSupplier').on('keyup', function() {
+            var keyword = $(this).val();
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function() {
+                loadData(1, keyword);
+            }, 400);
+        });
 
         // Reset modal Tambah Supplier setiap kali dibuka/ditutup
         // (jangan ikut mengosongkan field CSRF, hanya field input data)
@@ -148,11 +269,11 @@
                     if (response.status) {
                         alert(response.message);
                         $('#modalTambahSup').modal('hide');
-                        location.reload();
+                        loadData(1, currentSearch); // kembali ke halaman 1 supaya data baru terlihat
                     } else {
                         alert(response.message);
-                        $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                     }
+                    $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 },
                 error: function(xhr, status, error) {
                     alert('Terjadi kesalahan saat menyimpan data.');
@@ -175,6 +296,7 @@
                         $('#edit_id').val(response.data.id);
                         $('#edit_nama').val(response.data.nama);
                         $('#edit_kontak').val(response.data.kontak);
+                        $('#edit_deskripsi').val(response.data.deskripsi);
                         $('#edit_alamat').val(response.data.alamat);
 
                         $('#modalEditSup').modal('show');
@@ -203,11 +325,11 @@
                     if (response.status) {
                         alert(response.message);
                         $('#modalEditSup').modal('hide');
-                        location.reload();
+                        loadData(currentPage, currentSearch); // tetap di halaman yang sama
                     } else {
                         alert(response.message);
-                        $('#btnUpdate').prop('disabled', false).text('Update Data');
                     }
+                    $('#btnUpdate').prop('disabled', false).text('Update Data');
                 },
                 error: function(xhr, status, error) {
                     alert('Terjadi kesalahan saat memperbarui data.');
@@ -232,7 +354,10 @@
                         refreshCsrf(response.csrf_hash);
                         if (response.status) {
                             alert(response.message);
-                            location.reload();
+                            // Jika ini item terakhir di halaman & bukan halaman 1, mundur 1 halaman
+                            var rowsLeft = $('#supplierTableBody tr').length - 1;
+                            var targetPage = (rowsLeft <= 0 && currentPage > 1) ? currentPage - 1 : currentPage;
+                            loadData(targetPage, currentSearch);
                         } else {
                             alert(response.message);
                         }

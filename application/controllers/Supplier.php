@@ -17,7 +17,7 @@ class Supplier extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen Supplier';
-        $data['supplier'] = $this->Supplier_model->get_all_supplier();
+        // $data['supplier'] = $this->Supplier_model->get_all_supplier();
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/supplier_grid_view', $data);
@@ -62,9 +62,10 @@ class Supplier extends MY_Controller
     {
         $nama     = $this->input->post('nama', true);
         $kontak = $this->input->post('kontak', true);
+        $deskripsi = $this->input->post('deskripsi', true);
         $alamat = $this->input->post('alamat', true);
 
-        if (empty($nama) || empty($kontak) || empty($alamat)) {
+        if (empty($nama) || empty($kontak) || empty($deskripsi) || empty($alamat)) {
             $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
             return;
         }
@@ -72,6 +73,7 @@ class Supplier extends MY_Controller
         $data = array(
             'nama'       => $nama,
             'kontak'   => $kontak,
+            'deskripsi'   => $deskripsi,
             'alamat'   => $alamat,
             'created_at' => date('Y-m-d H:i:s')
         );
@@ -101,10 +103,11 @@ class Supplier extends MY_Controller
     {
         $id       = $this->input->post('id', true);
         $nama     = $this->input->post('nama', true);
+        $deskripsi     = $this->input->post('deskripsi', true);
         $kontak = $this->input->post('kontak', true);
         $alamat = $this->input->post('alamat', true);
 
-        if (empty($id) || empty($nama) || empty($kontak) || empty($alamat)) {
+        if (empty($id) || empty($nama) || empty($kontak) || empty($alamat) || empty($deskripsi)) {
             $this->jsonResponse(['status' => false, 'message' => 'Field nama, kontak, dan alamat wajib diisi!']);
             return;
         }
@@ -112,6 +115,7 @@ class Supplier extends MY_Controller
         $data = array(
             'nama'     => $nama,
             'kontak' => $kontak,
+            'deskripsi' => $deskripsi,
             'alamat'     => $alamat
         );
 

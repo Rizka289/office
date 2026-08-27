@@ -17,7 +17,7 @@ class Kategori_barang extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen Kategori Barang';
-        $data['kategori_barang'] = $this->Kategori_barang_model->get_all_kat_barang();
+        // $data['kategori_barang'] = $this->Kategori_barang_model->get_all_kat_barang();
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/kategori_barang', $data);

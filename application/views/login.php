@@ -8,7 +8,7 @@
     <!-- Bootstrap 5 & Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
-    
+
     <style>
         :root {
             --brand: #0b5d5b;
@@ -187,6 +187,10 @@
 
         <!-- Form Login -->
         <form action="<?= site_url('login/proses'); ?>" method="post">
+            <!-- CSRF Protection -->
+            <input type="hidden"
+                name="<?= $this->security->get_csrf_token_name(); ?>"
+                value="<?= $this->security->get_csrf_hash(); ?>">
             <div class="mb-3">
                 <label class="form-label small fw-semibold text-secondary"><?= lang('app_username'); ?></label>
                 <div class="input-group">

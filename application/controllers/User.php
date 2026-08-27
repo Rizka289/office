@@ -19,7 +19,9 @@ class User extends MY_Controller
         $data['title'] = 'Manajemen User';
         $data['users'] = $this->User_model->get_all_users();
 
+        $this->load->view('templates/header', $data);
         $this->load->view('super_admin/user_grid_view', $data);
+        $this->load->view('templates/footer', $data);
     }
 
     // Helper: selipkan csrf_hash terbaru ke setiap response JSON,

@@ -23,34 +23,50 @@ class Login extends MY_Controller
 
     public function proses()
     {
-        $this->form_validation->set_rules('username', lang('app_username'), 'required');
-        $this->form_validation->set_rules('password', lang('app_password'), 'required');
+        $this->form_validation->set_rules(
+            'username',
+            lang('app_username'),
+            'required|trim'
+        );
 
-        if ($this->form_validation->run() == FALSE) {
+        $this->form_validation->set_rules(
+            'password',
+            lang('app_password'),
+            'required'
+        );
+
+        if ($this->form_validation->run() === FALSE) {
             $this->load->view('login');
-        } else {
-            $username = $this->input->post('username', TRUE);
-            $password = $this->input->post('password', TRUE);
-
-            $user = $this->user_model->get_by_username($username);
-
-            if ($user && password_verify($password, $user->password)) {
-                $session = [
-                    'user_id'    => $user->id,
-                    'username'   => $user->username,
-                    'nama'       => $user->nama_lengkap,
-                    'role'       => $user->role,
-                    'logged_in'  => TRUE
-                ];
-                $this->session->set_userdata($session);
-
-                redirect('dashboard');
-            } else {
-                // Pesan error sekarang mengikuti bahasa yang aktif
-                $this->session->set_flashdata('error', lang('app_login_failed'));
-                redirect('login');
-            }
+            return;
         }
+
+        $username = $this->input->post('username', TRUE);
+        $password = $this->input->post('password');
+
+        $user = $this->user_model->get_by_username($username);
+
+        if ($user && password_verify($password, $user->password)) {
+
+            $session = [
+                'user_id'   => $user->id,
+                'username'  => $user->username,
+                'nama'      => $user->nama_lengkap,
+                'role'      => $user->role,
+                'logged_in' => TRUE
+            ];
+
+            $this->session->set_userdata($session);
+
+            redirect('dashboard');
+            return;
+        }
+
+        $this->session->set_flashdata(
+            'error',
+            lang('app_login_failed')
+        );
+
+        redirect('login');
     }
 
     public function logout()

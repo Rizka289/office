@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= lang('app_login_title'); ?></title>
+    <title><?= translate('app_login_title'); ?></title>
     <!-- Bootstrap 5 & Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
@@ -152,12 +152,12 @@
         <!-- Switcher Bahasa -->
         <div class="lang-pills">
             <?php
-            $current = $this->config->item('current_lang') ?: 'id';
+            $current = get_current_lang('id');
             $langs = ['id' => 'Indonesia', 'en' => 'English', 'zh' => '中文'];
             foreach ($langs as $code => $label):
                 $class = ($current === $code) ? 'active' : '';
             ?>
-                <a class="<?= $class; ?>" href="<?= site_url('login/lang/' . $code); ?>"><?= $label; ?></a>
+                <a class="<?= $class; ?>" href="<?= site_url('language/switch_lang/' . $code); ?>"><?= $label; ?></a>
             <?php endforeach; ?>
         </div>
 
@@ -166,8 +166,8 @@
             <div class="brand-icon">
                 <i class="bi bi-columns-gap"></i>
             </div>
-            <div class="brand-title"><?= lang('app_login_title'); ?></div>
-            <small class="text-muted" style="font-size: .8rem;">Silakan masuk ke akun Anda</small>
+            <div class="brand-title"><?= translate('app_login_title');  ?></div>
+           
         </div>
 
         <!-- Pesan Error Flashdata -->
@@ -192,7 +192,7 @@
                 name="<?= $this->security->get_csrf_token_name(); ?>"
                 value="<?= $this->security->get_csrf_hash(); ?>">
             <div class="mb-3">
-                <label class="form-label small fw-semibold text-secondary"><?= lang('app_username'); ?></label>
+                <label class="form-label small fw-semibold text-secondary"><?= translate('app_username'); ?></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-person"></i></span>
                     <input type="text" name="username" class="form-control" value="<?= set_value('username'); ?>" placeholder="Masukkan username" required autocomplete="off">
@@ -200,7 +200,7 @@
             </div>
 
             <div class="mb-4">
-                <label class="form-label small fw-semibold text-secondary"><?= lang('app_password'); ?></label>
+                <label class="form-label small fw-semibold text-secondary"><?= translate('app_password'); ?></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-lock"></i></span>
                     <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
@@ -208,7 +208,7 @@
             </div>
 
             <button type="submit" class="btn btn-brand shadow-sm">
-                <?= lang('app_login_button'); ?> <i class="bi bi-arrow-right-short ms-1"></i>
+                <?= translate('app_login_button'); ?> <i class="bi bi-arrow-right-short ms-1"></i>
             </button>
         </form>
 

@@ -250,7 +250,12 @@
                         <!-- Sub-bab: barang -->
                         <li>
                             <a class="nav-sub-link" href="<?= site_url('Kategori_barang'); ?>">
-                                <i class="bi bi-list-check"></i> Kategori Barang
+                                <i class="bi bi-list-check"></i> <?= translate('kategori_barang')  ?>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="nav-sub-link" href="<?= site_url('Barang'); ?>">
+                                <i class="bi bi-list-check"></i> <?= translate('nama_barang')  ?>
                             </a>
                         </li>
                     </ul>
@@ -317,7 +322,7 @@
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
                                     <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= lang('profile'); ?></a>
-                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= lang('logout'); ?></a>
+                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= lang('app_logout'); ?></a>
                                 </div>
                             </div>
                         </div>

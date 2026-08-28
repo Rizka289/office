@@ -22,7 +22,7 @@
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th style="width:60px;">No</th>
+                    <th style="width:60px;"><?= translate('no') ?></th>
                     <th>Nama Supplier</th>
                     <th>Kontak</th>
                     <th>Alamat</th>

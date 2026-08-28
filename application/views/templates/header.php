@@ -227,7 +227,7 @@
                     <ul class="sub-menu">
                         <li>
                             <a class="nav-sub-link <?= $active_menu === 'user' ? 'active' : ''; ?>" href="<?= site_url('user'); ?>">
-                                <i class="bi bi-people"></i> Data Login
+                                <i class="bi bi-people"> </i> <?= translate('menu_user'); ?>
                             </a>
                         </li>
                         <li>
@@ -237,14 +237,21 @@
                         </li>
                         <li>
                             <a class="nav-sub-link <?= $active_menu === 'customer' ? 'active' : ''; ?>" href="<?= site_url('customer'); ?>">
-                                <i class="bi bi-people"></i> Data Customer
+                                <i class="bi bi-people"></i> <?= translate('menu_customer') ?>
                             </a>
                         </li>
                         <li>
                             <a class="nav-sub-link <?= $active_menu === 'kategori_barang' ? 'active' : ''; ?>" href="<?= site_url('kategori_barang'); ?>">
-                                <i class="bi bi-list-check"></i> Kategori Barang
+                                <i class="bi bi-list-check"></i> <?= translate('kategori_barang') ?>
                             </a>
                         </li>
+
+                        <li>
+                            <a class="nav-sub-link <?= $active_menu === 'barang' ? 'active' : ''; ?>" href="<?= site_url('barang'); ?>">
+                                <i class="bi bi-list-check"></i> <?= translate('nama_barang') ?>
+                            </a>
+                        </li>
+
                     </ul>
                 </div>
             </li>
@@ -304,8 +311,8 @@
                             </div>
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
-                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i> Profile</a>
-                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i><?= translate('profile') ?></a>
+                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= translate('app_logout') ?></a>
                                 </div>
                             </div>
                         </div>

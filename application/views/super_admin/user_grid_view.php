@@ -22,11 +22,11 @@
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>No</th>
-                    <th>Nama Lengkap</th>
-                    <th>Username</th>
-                    <th>Hak Akses</th>
-                    <th class="text-center">Aksi</th>
+                    <th><?= translate('no') ?></th>
+                    <th><?= translate('nama_lengkap') ?></th>
+                    <th><?= translate('username') ?></th>
+                    <th><?= translate('hak_akses') ?></th>
+                    <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
             <tbody id="userTableBody">

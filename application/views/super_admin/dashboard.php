@@ -238,7 +238,7 @@
                         </li>
                         <li>
                             <a class="nav-sub-link" href="<?= site_url('supplier'); ?>">
-                                <i class="bi bi-people"></i> <?= lang('menu_supplier'); ?>
+                                <i class="bi bi-people"></i> <?= translate('menu_supplier') ?>
                             </a>
                         </li>
                         <!-- Sub-bab: Pelanggan -->

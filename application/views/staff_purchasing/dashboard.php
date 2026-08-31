@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($page_title) ? $page_title . ' - Dashboard' : 'Dashboard'; ?></title>
+    <title><?= lang('dash_title'); ?></title>
     <!-- Bootstrap 5 & Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
@@ -17,14 +17,6 @@
             --accent: #c98a3e;
             --bg: #f4f6f7;
             --text-muted: #6b7280;
-        }
-
-        .sidebar .brand a,
-        .sidebar .brand a:hover,
-        .sidebar .brand a:visited,
-        .sidebar .brand a:active {
-            color: #fff !important;
-            text-decoration: none !important;
         }
 
         body {
@@ -50,6 +42,14 @@
             display: flex;
             align-items: center;
             gap: .6rem;
+        }
+
+        .sidebar .brand a,
+        .sidebar .brand a:hover,
+        .sidebar .brand a:visited,
+        .sidebar .brand a:active {
+            color: #fff !important;
+            text-decoration: none !important;
         }
 
         .sidebar .nav-link,
@@ -78,6 +78,7 @@
             margin-right: .5rem;
         }
 
+        /* Sub-bab Accordion Styling */
         .sidebar .sub-menu {
             background: rgba(0, 0, 0, 0.15);
             padding-left: 0;
@@ -90,9 +91,13 @@
             font-size: .85rem;
             color: rgba(255, 255, 255, .7);
             display: flex;
+            /* tambahan */
             align-items: center;
+            /* tambahan */
             justify-content: flex-start;
+            /* tambahan */
             gap: 8px;
+            /* tambahan */
         }
 
         .sidebar .nav-sub-link:hover,
@@ -178,98 +183,100 @@
             color: var(--brand);
         }
 
-        /* ===== Komponen umum yang dipakai di semua halaman konten ===== */
-        .card-custom {
+        /* ===== KPI Cards ===== */
+        .kpi-card {
             background: #fff;
-            border-radius: 12px;
+            border-radius: 14px;
             border: 1px solid #edf0f1;
+            padding: 1rem 1.1rem;
             box-shadow: 0 2px 10px rgba(15, 42, 41, .04);
+            height: 100%;
         }
 
-        .btn-brand {
-            background: var(--brand);
-            color: #fff;
-            border: none;
+        .kpi-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: .3rem 0 .1rem;
         }
 
-        .btn-brand:hover {
-            background: var(--brand-dark);
-            color: #fff;
+        .kpi-label {
+            color: var(--text-muted);
+            font-size: .78rem;
+        }
+
+
+
+        .nav-sub-link i {
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- Hidden input CSRF token global, dipakai & di-refresh oleh semua request AJAX di semua halaman -->
-    <input type="hidden" id="csrf_token_name" value="<?= $this->security->get_csrf_token_name(); ?>">
-    <input type="hidden" id="csrf_token_hash" value="<?= $this->security->get_csrf_hash(); ?>">
-
-    <!-- jQuery & Bootstrap dimuat di awal supaya "$" sudah siap dipakai oleh script di halaman manapun -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
-
-    <?php
-    // Fungsi render menu sidebar. $active_menu dikirim dari controller lewat $data['active_menu']
-    // supaya menu yang sedang aktif otomatis ke-highlight, tanpa perlu edit HTML tiap halaman.
-    $active_menu = isset($active_menu) ? $active_menu : '';
-
-    function render_navigation($menu_id = 'menuDesktop', $active_menu = '')
-    {
-    ?>
+    <!-- Navigasi Dinamis (Bab & Sub-Bab dengan Multi-Bahasa) -->
+    <?php function render_navigation($menu_id = 'menuDesktop')
+    { ?>
         <ul class="nav flex-column mb-auto" id="<?= $menu_id; ?>">
+
+
+            <!-- Bab 1: Master Data (Collapsible Accordion) -->
             <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#masterSubmenu_<?= $menu_id; ?>" role="button" aria-expanded="true" aria-controls="masterSubmenu_<?= $menu_id; ?>">
-                    <div><i class="bi bi-database-fill-gear main-icon"></i> <?= function_exists('lang') ? lang('menu_master') : 'Master Data'; ?></div>
+                <a class="nav-link collapsed" data-bs-toggle="collapse" href="#masterSubmenu_<?= $menu_id; ?>" role="button" aria-expanded="false" aria-controls="masterSubmenu_<?= $menu_id; ?>">
+                    <div><i class="bi bi-receipt-cutoff"></i> <?= translate('purchasing') ?></div>
                     <i class="bi bi-chevron-right arrow-icon"></i>
                 </a>
-                <div class="collapse show" id="masterSubmenu_<?= $menu_id; ?>" data-bs-parent="#<?= $menu_id; ?>">
+                <div class="collapse" id="masterSubmenu_<?= $menu_id; ?>" data-bs-parent="#<?= $menu_id; ?>">
                     <ul class="sub-menu">
+                        <!-- Sub-bab: Supplier -->
                         <li>
-                            <a class="nav-sub-link <?= $active_menu === 'user' ? 'active' : ''; ?>" href="<?= site_url('user'); ?>">
-                                <i class="bi bi-people"> </i> <?= translate('menu_user'); ?>
+                            <a class="nav-sub-link" href="<?= site_url('purchase_order'); ?>">
+                                <i class="bi bi-box"></i> <?= translate('app_purchasing'); ?>
                             </a>
                         </li>
                         <li>
-                            <a class="nav-sub-link <?= $active_menu === 'supplier' ? 'active' : ''; ?>" href="<?= site_url('supplier'); ?>">
+                            <a class="nav-sub-link" href="<?= site_url('supplier'); ?>">
                                 <i class="bi bi-people"></i> <?= translate('menu_supplier') ?>
                             </a>
                         </li>
+                        <!-- Sub-bab: Pelanggan -->
                         <li>
-                            <a class="nav-sub-link <?= $active_menu === 'customer' ? 'active' : ''; ?>" href="<?= site_url('customer'); ?>">
-                                <i class="bi bi-people"></i> <?= translate('menu_customer') ?>
+                            <a class="nav-sub-link" href="<?= site_url('pelanggan'); ?>">
+                                <i class="bi bi-people"></i> <?= lang('menu_customer'); ?>
+                            </a>
+                        </li>
+                        <!-- Sub-bab: barang -->
+                        <li>
+                            <a class="nav-sub-link" href="<?= site_url('Kategori_barang'); ?>">
+                                <i class="bi bi-list-check"></i> <?= translate('kategori_barang')  ?>
                             </a>
                         </li>
                         <li>
-                            <a class="nav-sub-link <?= $active_menu === 'kategori_barang' ? 'active' : ''; ?>" href="<?= site_url('kategori_barang'); ?>">
-                                <i class="bi bi-list-check"></i> <?= translate('kategori_barang') ?>
+                            <a class="nav-sub-link" href="<?= site_url('Barang'); ?>">
+                                <i class="bi bi-list-check"></i> <?= translate('nama_barang')  ?>
                             </a>
                         </li>
-
-                        <li>
-                            <a class="nav-sub-link <?= $active_menu === 'barang' ? 'active' : ''; ?>" href="<?= site_url('barang'); ?>">
-                                <i class="bi bi-list-check"></i> <?= translate('nama_barang') ?>
-                            </a>
-                        </li>
-
                     </ul>
                 </div>
             </li>
+
+
         </ul>
-    <?php
-    }
-    ?>
+    <?php } ?>
 
     <!-- Mobile Offcanvas Sidebar -->
     <div class="offcanvas offcanvas-start sidebar text-bg-dark" tabindex="-1" id="mobileSidebar">
         <div class="d-flex justify-content-between align-items-center px-3 pt-3">
             <div class="brand mb-0 pb-0 border-0">
-                <a href="<?= site_url('dashboard'); ?>">PT Oupai Pintu<br>Jendela Indonesia</a>
+
+                <a href="<?= site_url('dashboard'); ?>" >PT Oupai Pintu<br>Jendela Indonesia</a>
             </div>
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
         </div>
         <hr class="text-white-50 mx-3">
-        <?php render_navigation('menuMobile', $active_menu); ?>
+        <?php render_navigation('menuMobile'); ?>
     </div>
 
     <div class="container-fluid">
@@ -277,9 +284,10 @@
             <!-- Desktop Sidebar -->
             <nav class="col-lg-2 sidebar d-none d-lg-flex flex-column p-0">
                 <div class="brand">
-                    <a href="<?= site_url('dashboard'); ?>">PT Oupai Pintu<br>Jendela Indonesia</a>
+
+                    <a href="<?= site_url('dashboard'); ?>"> PT Oupai Pintu<br>Jendela Indonesia</a>
                 </div>
-                <?php render_navigation('menuDesktop', $active_menu); ?>
+                <?php render_navigation('menuDesktop'); ?>
                 <div class="p-3 small text-white-50 border-top border-white border-opacity-25">
                     &copy; 2026 PT Oupai Pintu Jendela Indonesia
                 </div>
@@ -294,11 +302,13 @@
                             <i class="bi bi-list fs-4"></i>
                         </button>
                         <div>
-                            <h5 class="mb-0"><?= isset($page_title) ? $page_title : 'Dashboard'; ?></h5>
+                            <h5 class="mb-0"><?= lang('dash_title'); ?></h5>
+                            <small class="text-muted d-none d-sm-block"><?= lang('dash_subtitle'); ?></small>
                         </div>
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Profile User -->
                         <div class="profile-menu" tabindex="0">
                             <div class="profile-trigger d-flex align-items-center gap-2">
                                 <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width:34px;height:34px;">
@@ -311,13 +321,49 @@
                             </div>
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
-                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i><?= translate('profile') ?></a>
-                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= translate('app_logout') ?></a>
+                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= lang('profile'); ?></a>
+                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= lang('app_logout'); ?></a>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ============ Konten halaman (view spesifik) dimulai di sini ============ -->
+                <!-- Dashboard Content / KPI Cards -->
                 <div class="p-3 p-lg-4">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <div class="kpi-value">Rp 18,4 M</div>
+                                <div class="kpi-label"><?= lang('kpi_revenue'); ?></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <div class="kpi-value">Rp 3,26 M</div>
+                                <div class="kpi-label"><?= lang('kpi_net_profit'); ?></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <div class="kpi-value">Rp 22,9 M</div>
+                                <div class="kpi-label"><?= lang('kpi_total_assets'); ?></div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <div class="kpi-value">Rp 9,1 M</div>
+                                <div class="kpi-label"><?= lang('kpi_liabilities'); ?></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

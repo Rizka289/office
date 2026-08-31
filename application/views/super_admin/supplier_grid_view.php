@@ -1,10 +1,10 @@
 <!-- ================= GRID DATA SUPPLIER ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h6 class="fw-bold m-0">Daftar Supplier</h6>
+        <h6 class="fw-bold m-0"><?= translate('list_pemasok') ?></h6>
         <!-- Trigger Modal Tambah User -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahSup">
-            <i class="bi bi-plus-lg"></i> Tambah Supplier
+            <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
         </button>
     </div>
 
@@ -23,11 +23,11 @@
             <thead class="table-light">
                 <tr>
                     <th style="width:60px;"><?= translate('no') ?></th>
-                    <th>Nama Supplier</th>
-                    <th>Kontak</th>
-                    <th>Alamat</th>
-                    <th>Deskripsi</th>
-                    <th class="text-center" style="width:120px;">Aksi</th>
+                    <th><?= translate('nama') ?></th>
+                    <th><?= translate('kontak') ?></th>
+                    <th><?= translate('alamat') ?></th>
+                    <th><?= translate('deskripsi') ?></th>
+                    <th class="text-center" style="width:120px;"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
             <tbody id="supplierTableBody">

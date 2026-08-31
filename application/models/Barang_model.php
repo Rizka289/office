@@ -22,17 +22,6 @@ class Barang_model extends CI_Model
         return $query->result_array();
     }
 
-    // // Terapkan filter search ke query builder (dipakai bareng oleh get & count)
-    // private function applySearchFilter($search)
-    // {
-    //     if (!empty($search)) {
-    //         $this->db->group_start()
-    //             ->like('kode_barang', $search)
-    //             ->or_like('nama', $search)
-    //             // ->or_like('kategori', $search)
-    //             ->group_end();
-    //     }
-    // }
 
     // Terapkan filter search ke query builder (dipakai bareng oleh get & count)
     // Search sekarang juga menjangkau nama_kategori (hasil join), bukan cuma kode & nama barang.
@@ -50,7 +39,7 @@ class Barang_model extends CI_Model
     // Mengambil data nama barang dengan pagination & search (untuk grid)
     public function get_barang_paginated($search = '', $limit = 5, $offset = 0)
     {
-         // Tambahkan baris ini agar menyertakan JOIN dan SELECT nama_kategori
+        // Tambahkan baris ini agar menyertakan JOIN dan SELECT nama_kategori
         $this->selectWithKategori();
 
         $this->applySearchFilter($search);

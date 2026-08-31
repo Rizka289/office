@@ -1,10 +1,10 @@
 <!-- ================= GRID DATA NAMA BARANG ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h6 class="fw-bold m-0">Daftar Nama Barang</h6>
+        <h6 class="fw-bold m-0"><?= translate('list_barang') ?></h6>
         <!-- Trigger Modal Tambah Nama Barang -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahNamaBarang">
-            <i class="bi bi-plus-lg"></i> Tambah Nama Barang
+            <i class="bi bi-plus-lg"></i><?= translate('add') ?>
         </button>
     </div>
 
@@ -22,15 +22,15 @@
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>No</th>
-                    <th>Kode Barang</th>
-                    <th>Kategori Barang</th>
-                    <th>Nama Barang</th>
-                    <th>Jenis Barang</th>
-                    <th>Satuan</th>
-                    <th>Dimensi</th>
-                    <th>Stok Minimum</th>
-                    <th class="text-center">Aksi</th>
+                    <th><?= translate('no') ?></th>
+                    <th><?= translate('kode') ?></th>
+                    <th><?= translate('kategori_barang') ?></th>
+                    <th><?= translate('nama_barang') ?></th>
+                    <th><?= translate('jenis_barang') ?></th>
+                    <th><?= translate('satuan') ?></th>
+                    <th><?= translate('dimensi') ?></th>
+                    <th><?= translate('min_stok') ?></th>
+                    <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
             <tbody id="tbodyNamaBarang">
@@ -80,15 +80,33 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Jenis Barang</label>
-                        <textarea name="jenis" class="form-control form-control-sm" rows="3" placeholder="Masukkan jenis barang" autocomplete="off" required></textarea>
+                        <select name="jenis" class="form-select form-select-sm" required>
+                            <option value="">-- Pilih Jenis Barang --</option>
+                            <option value="bahan_baku">Bahan Baku</option>
+                            <option value="aksesoris">Aksesoris</option>
+                            <option value="finishing">Finishing</option>
+                            <option value="setengah_jadi">Setengah Jadi</option>
+                            <option value="produk_jadi_pintu">Produk Jadi Pintu</option>
+                            <option value="produk_jadi_jendela">Produk Jadi Jendela</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Satuan</label>
-                        <textarea name="satuan" class="form-control form-control-sm" rows="3" placeholder="Masukkan satuan" autocomplete="off" required></textarea>
+                        <select name="satuan" class="form-select form-select-sm" required>
+                            <option value="">-- Pilih Satuan --</option>
+                            <option value="pcs">Pcs</option>
+                            <option value="set/padang">Set/pasang</option>
+                            <option value="batang">Batang</option>
+                            <option value="meter">Meter</option>
+                            <option value="lembar">Lembar</option>
+                            <option value="m2">m2</option>
+                            <option value="m3">m3</option>
+                            <option value="roll">Roll</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Dimensi</label>
-                        <textarea name="dimensi" class="form-control form-control-sm" rows="3" placeholder="Masukkan dimensi" autocomplete="off" required></textarea>
+                        <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Stok Minimum</label>
@@ -121,31 +139,49 @@
                         <input type="text" name="kode" id="edit_kode" class="form-control form-control-sm" placeholder="Masukkan kode barang" required>
                     </div>
                     <div class="mb-3">
-                       <label class="form-label small fw-bold">Kategori Barang</label>
-                       <select name="id_kategori" id="edit_id_kategori" class="form-select form-select-sm" required>
-                           <option value="">-- Pilih Kategori --</option>
-                           <?php foreach ($kategoriList as $kat): ?>
-                               <option value="<?= $kat['id']; ?>"><?= htmlspecialchars($kat['nama_kategori']); ?></option>
-                           <?php endforeach; ?>
-                       </select>
-                   </div>
+                        <label class="form-label small fw-bold">Kategori Barang</label>
+                        <select name="id_kategori" id="edit_id_kategori" class="form-select form-select-sm" required>
+                            <option value="">-- Pilih Kategori --</option>
+                            <?php foreach ($kategoriList as $kat): ?>
+                                <option value="<?= $kat['id']; ?>"><?= htmlspecialchars($kat['nama_kategori']); ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Nama Barang</label>
                         <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">Jenis Barang</label>
-                        <textarea name="jenis" id="edit_jenis" class="form-control form-control-sm" rows="3" placeholder="Masukkan jenis barang" required></textarea>
+                        <select name="jenis" id="edit_jenis" class="form-select form-select-sm" required>
+                            <option value="">-- Pilih Jenis Barang --</option>
+                            <option value="bahan_baku">Bahan Baku</option>
+                            <option value="aksesoris">Aksesoris</option>
+                            <option value="finishing">Finishing</option>
+                            <option value="setengah_jadi">Setengah Jadi</option>
+                            <option value="produk_jadi_pintu">Produk Jadi Pintu</option>
+                            <option value="produk_jadi_jendela">Produk Jadi Jendela</option>
+                        </select>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">Satuan</label>
-                        <textarea name="satuan" id="edit_satuan" class="form-control form-control-sm" rows="3" placeholder="Masukkan satuan" required></textarea>
+                        <select name="satuan" id="edit_satuan" class="form-select form-select-sm" required>
+                            <option value="">-- Pilih Satuan --</option>
+                            <option value="pcs">Pcs</option>
+                            <option value="set/padang">Set/pasang</option>
+                            <option value="batang">Batang</option>
+                            <option value="meter">Meter</option>
+                            <option value="lembar">Lembar</option>
+                            <option value="m2">m2</option>
+                            <option value="m3">m3</option>
+                            <option value="roll">Roll</option>
+                        </select>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">Dimensi</label>
-                        <textarea name="dimensi" id="edit_dimensi" class="form-control form-control-sm" rows="3" placeholder="Masukkan dimensi" required></textarea>
+                        <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label class="form-label small fw-bold">Stok Minimum</label>
                         <input type="number" name="stok_minimum" id="edit_stok" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" required>
                     </div>
@@ -163,9 +199,9 @@
 <script>
     $(document).ready(function() {
 
-        var currentPage   = 1;
+        var currentPage = 1;
         var currentSearch = '';
-        var searchTimer   = null;
+        var searchTimer = null;
 
         // Helper ambil ulang field csrf terbaru dari salah satu form di halaman ini
         function refreshCsrf(hash) {
@@ -189,7 +225,7 @@
 
         // ================= LOAD DATA (dipakai untuk load awal, search, & pindah halaman) =================
         function loadData(page, search) {
-            currentPage   = page || 1;
+            currentPage = page || 1;
             currentSearch = (search !== undefined) ? search : currentSearch;
 
             $.ajax({
@@ -235,18 +271,18 @@
             rows.forEach(function(brg, idx) {
                 var tr = '' +
                     '<tr>' +
-                        '<td>' + (startNo + idx) + '</td>' +
-                        '<td class="fw-semibold">' + escapeHtml(brg.kode_barang) + '</td>' +
-                        '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
-                        '<td>' + escapeHtml(brg.nama) + '</td>' +
-                        '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
-                        '<td>' + escapeHtml(brg.satuan) + '</td>' +
-                        '<td>' + escapeHtml(brg.dimensi) + '</td>' +
-                        '<td>' + escapeHtml(brg.stok_minimum) + '</td>' +
-                        '<td class="text-center">' +
-                            '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + brg.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
-                            '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + brg.id + '" data-nama="' + escapeHtml(brg.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
-                        '</td>' +
+                    '<td>' + (startNo + idx) + '</td>' +
+                    '<td class="fw-semibold">' + escapeHtml(brg.kode_barang) + '</td>' +
+                    '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
+                    '<td>' + escapeHtml(brg.nama) + '</td>' +
+                    '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
+                    '<td>' + escapeHtml(brg.satuan) + '</td>' +
+                    '<td>' + escapeHtml(brg.dimensi) + '</td>' +
+                    '<td>' + escapeHtml(brg.stok_minimum) + '</td>' +
+                    '<td class="text-center">' +
+                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + brg.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + brg.id + '" data-nama="' + escapeHtml(brg.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                    '</td>' +
                     '</tr>';
                 $tbody.append(tr);
             });
@@ -261,7 +297,7 @@
             function pageItem(label, targetPage, disabled, active) {
                 return '<li class="page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '') + '">' +
                     '<a href="#" class="page-link" data-page="' + targetPage + '">' + label + '</a>' +
-                '</li>';
+                    '</li>';
             }
 
             $pagination.append(pageItem('&laquo;', page - 1, page <= 1, false));
@@ -279,7 +315,7 @@
                 return;
             }
             var start = ((page - 1) * perPage) + 1;
-            var end   = start + countInPage - 1;
+            var end = start + countInPage - 1;
             $('#infoNamaBarang').text('Menampilkan ' + start + '-' + end + ' dari ' + total + ' data');
         }
 
@@ -351,7 +387,7 @@
                         $('#edit_kode').val(response.data.kode_barang);
                         $('#edit_nama').val(response.data.nama);
                         $('#edit_id_kategori').val(response.data.id_kategori);
-                        $('#edit_jenis').val(response.data.jenis);
+                        $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
                         $('#edit_dimensi').val(response.data.dimensi);
                         $('#edit_stok').val(response.data.stok_minimum);

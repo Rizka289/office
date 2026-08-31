@@ -11,12 +11,15 @@ class Barang extends MY_Controller
         parent::__construct();
         $this->requireRole('super_admin'); // hanya super admin yang boleh akses seluruh method di sini
         $this->load->model('Barang_model');
+        $this->load->model('Kategori_barang_model'); // 1. Load model kategori
         $this->load->helper('url');
     }
 
     public function index()
     {
         $data['title'] = 'Manajemen Nama Barang';
+        // 2. Ambil data kategori list dari model untuk dikirim ke view
+        $data['kategoriList'] = $this->Kategori_barang_model->get_kat_barang_paginated('', 1000, 0);
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/barang_grid_view', $data);
@@ -65,21 +68,20 @@ class Barang extends MY_Controller
         $kode         = $this->input->post('kode', true);
         $nama         = $this->input->post('nama', true);
         $idkategori     = $this->input->post('id_kategori', true);
-        $kategori     = $this->input->post('kategori', true);
         $jenis        = $this->input->post('jenis', true);
         $satuan       = $this->input->post('satuan', true);
         $dimensi      = $this->input->post('dimensi', true);
         $stokMinimum  = $this->input->post('stok_minimum', true);
 
         if (
-            empty($kode) || empty($nama) || empty($idkategori) || empty($kategori) || empty($jenis)
+            empty($kode) || empty($nama) || empty($idkategori) || empty($jenis)
             || empty($satuan) || empty($dimensi) || $stokMinimum === null || $stokMinimum === ''
         ) {
             $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
             return;
         }
         // Pastikan id_kategori yang dikirim benar-benar ada di tabel kategori_barang
-        if (!$this->Kategori_barang_model->get_by_id($idKategori)) {
+        if (!$this->Kategori_barang_model->get_by_id($idkategori)) {
             $this->jsonResponse(['status' => false, 'message' => 'Kategori tidak valid!']);
             return;
         }
@@ -88,8 +90,7 @@ class Barang extends MY_Controller
         $data = array(
             'kode_barang'  => $kode,
             'nama'         => $nama,
-            'id_kategori'  => $idKategori,
-            'kategori'     => $kategori,
+            'id_kategori'  => $idkategori,
             'jenis_barang' => $jenis,
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,
@@ -125,14 +126,13 @@ class Barang extends MY_Controller
         $kode         = $this->input->post('kode', true);
         $nama         = $this->input->post('nama', true);
         $idkategori   = $this->input->post('id_kategori', true);
-        $kategori     = $this->input->post('kategori', true);
         $jenis        = $this->input->post('jenis', true);
         $satuan       = $this->input->post('satuan', true);
         $dimensi      = $this->input->post('dimensi', true);
         $stokMinimum  = $this->input->post('stok_minimum', true);
 
         if (
-            empty($id) || empty($kode) || empty($nama) || empty($idkategori) || empty($kategori) || empty($jenis)
+            empty($id) || empty($kode) || empty($nama) || empty($idkategori)  || empty($jenis)
             || empty($satuan) || empty($dimensi) || $stokMinimum === null || $stokMinimum === ''
         ) {
             $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
@@ -143,7 +143,6 @@ class Barang extends MY_Controller
             'kode_barang'  => $kode,
             'nama'         => $nama,
             'id_kategori'  => $idkategori,
-            'kategori'     => $kategori,
             'jenis_barang' => $jenis,
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,

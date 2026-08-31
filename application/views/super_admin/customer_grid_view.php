@@ -1,10 +1,10 @@
 <!-- ================= GRID DATA CUSTOMER ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold m-0">Daftar Customer</h6>
+        <h6 class="fw-bold m-0"><?= translate('list_pelanggan') ?></h6>
         <!-- Trigger Modal Tambah Customer -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahCustomer">
-            <i class="bi bi-plus-lg"></i> Tambah Customer
+            <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
         </button>
     </div>
 
@@ -22,11 +22,11 @@
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>No</th>
-                    <th>Nama Customer</th>
-                    <th>Kontak</th>
-                    <th>Alamat</th>
-                    <th class="text-center">Aksi</th>
+                    <th><?= translate('no') ?></th>
+                    <th><?= translate('nama') ?></th>
+                    <th><?= translate('kontak') ?></th>
+                    <th><?= translate('alamat') ?></th>
+                    <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
             <tbody id="customerTableBody">

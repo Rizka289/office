@@ -9,8 +9,8 @@ class Dashboard extends MY_Controller {
             case 'super_admin':
                 redirect('super_admin');
                 break;
-            case 'staff_gudang':
-                redirect('staff_gudang');
+            case 'staff_purchasing':
+                redirect('staff_purchasing');
                 break;
             case 'supervisor':
                 redirect('supervisor');

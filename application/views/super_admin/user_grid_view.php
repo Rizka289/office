@@ -1,10 +1,10 @@
 <!-- ================= GRID DATA USER ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold m-0">Daftar Pengguna Login</h6>
+        <h6 class="fw-bold m-0"><?= translate('app_list') ?></h6>
         <!-- Trigger Modal Tambah User -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahUser">
-            <i class="bi bi-plus-lg"></i> Tambah User
+            <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
         </button>
     </div>
 
@@ -74,7 +74,7 @@
                             <option value="">-- Pilih Role --</option>
                             <option value="super_admin">super admin</option>
                             <option value="supervisor">supervisor</option>
-                            <option value="staff_gudang">staff gudang</option>
+                            <option value="staff_purchasing">staff purchasing</option>
                         </select>
                     </div>
                 </div>
@@ -118,7 +118,7 @@
                             <option value="">-- Pilih Role --</option>
                             <option value="super_admin">super admin</option>
                             <option value="supervisor">supervisor</option>
-                            <option value="staff_gudang">staff gudang</option>
+                            <option value="staff_purchasing">staff purchasing</option>
                         </select>
                     </div>
                 </div>

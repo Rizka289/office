@@ -19,14 +19,6 @@
             --text-muted: #6b7280;
         }
 
-        .sidebar .brand a,
-        .sidebar .brand a:hover,
-        .sidebar .brand a:visited,
-        .sidebar .brand a:active {
-            color: #fff !important;
-            text-decoration: none !important;
-        }
-
         body {
             background: var(--bg);
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -39,6 +31,15 @@
             min-height: 100vh;
             color: #fff;
             padding-top: 1.25rem;
+        }
+
+        .sidebar .brand,
+        .sidebar .brand a,
+        .sidebar .brand a:hover,
+        .sidebar .brand a:visited,
+        .sidebar .brand a:active {
+            color: #fff !important;
+            text-decoration: none !important;
         }
 
         .sidebar .brand {
@@ -93,6 +94,12 @@
             align-items: center;
             justify-content: flex-start;
             gap: 8px;
+        }
+
+        .sidebar .nav-sub-link i {
+            width: 16px;
+            text-align: center;
+            flex-shrink: 0;
         }
 
         .sidebar .nav-sub-link:hover,
@@ -196,6 +203,27 @@
             background: var(--brand-dark);
             color: #fff;
         }
+
+        /* ===== KPI Cards (dipakai di dashboard) ===== */
+        .kpi-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #edf0f1;
+            padding: 1rem 1.1rem;
+            box-shadow: 0 2px 10px rgba(15, 42, 41, .04);
+            height: 100%;
+        }
+
+        .kpi-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin: .3rem 0 .1rem;
+        }
+
+        .kpi-label {
+            color: var(--text-muted);
+            font-size: .78rem;
+        }
     </style>
 </head>
 
@@ -210,51 +238,133 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 
     <?php
-    // Fungsi render menu sidebar. $active_menu dikirim dari controller lewat $data['active_menu']
-    // supaya menu yang sedang aktif otomatis ke-highlight, tanpa perlu edit HTML tiap halaman.
+    /**
+     * ==========================================================================
+     *  KONFIGURASI MENU BERBASIS ROLE
+     * ==========================================================================
+     * Setiap item menu punya daftar role yang boleh melihatnya di 'roles'.
+     * Tambah/ubah menu cukup di array ini saja — tidak perlu edit HTML di bawah,
+     * dan tidak perlu bikin file header terpisah per role.
+     *
+     * Sesuaikan nama role di 'roles' dengan nilai yang disimpan di session
+     * (lihat MY_Controller::requireRole(), mis. 'super_admin', 'staff_purchasing').
+     */
+    $menu_groups = [
+
+        [
+            'key'   => 'master',
+            'label' => function_exists('translate') ? translate('menu_master') : 'Master Data',
+            'icon'  => 'bi-database-fill-gear',
+            'roles' => ['super_admin'], // hanya super_admin yang lihat grup Master Data
+            'items' => [
+                [
+                    'key'   => 'user',
+                    'label' => function_exists('translate') ? translate('menu_user') : 'User',
+                    'icon'  => 'bi-people',
+                    'url'   => 'user',
+                    'roles' => ['super_admin'],
+                ],
+                [
+                    'key'   => 'supplier',
+                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
+                    'icon'  => 'bi-people',
+                    'url'   => 'supplier',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
+                    'key'   => 'customer',
+                    'label' => function_exists('translate') ? translate('menu_customer') : 'Customer',
+                    'icon'  => 'bi-people',
+                    'url'   => 'customer',
+                    'roles' => ['super_admin'],
+                ],
+                [
+                    'key'   => 'kategori_barang',
+                    'label' => function_exists('translate') ? translate('kategori_barang') : 'Kategori Barang',
+                    'icon'  => 'bi-list-check',
+                    'url'   => 'kategori_barang',
+                    'roles' => ['super_admin'],
+                ],
+                [
+                    'key'   => 'barang',
+                    'label' => function_exists('translate') ? translate('nama_barang') : 'Barang',
+                    'icon'  => 'bi-list-check',
+                    'url'   => 'barang',
+                    'roles' => ['super_admin'],
+                ],
+            ],
+        ],
+        [
+            'key'   => 'purchasing',
+            'label' => function_exists('translate') ? translate('purchasing') : 'Purchasing',
+            'icon'  => 'bi-receipt-cutoff',
+            'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
+            'items' => [
+                [
+                    'key'   => 'purchase_order',
+                    'label' => function_exists('translate') ? translate('app_purchasing') : 'Pesanan Pembelian',
+                    'icon'  => 'bi-box',
+                    'url'   => 'purchase_order',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
+                    'key'   => 'supplier',
+                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
+                    'icon'  => 'bi-people',
+                    'url'   => 'supplier',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+            ],
+        ],
+    ];
+
+    // Role user yang sedang login. Sesuaikan key session-nya jika berbeda di project ini.
+    $current_role = $this->session->userdata('role');
+
+    // $active_menu dikirim dari controller lewat $data['active_menu']
     $active_menu = isset($active_menu) ? $active_menu : '';
 
-    function render_navigation($menu_id = 'menuDesktop', $active_menu = '')
+    function render_navigation($menu_id, $menu_groups, $current_role, $active_menu = '')
     {
+        $is_first = true;
     ?>
         <ul class="nav flex-column mb-auto" id="<?= $menu_id; ?>">
-            <li class="nav-item">
-                <a class="nav-link" data-bs-toggle="collapse" href="#masterSubmenu_<?= $menu_id; ?>" role="button" aria-expanded="true" aria-controls="masterSubmenu_<?= $menu_id; ?>">
-                    <div><i class="bi bi-database-fill-gear main-icon"></i> <?= function_exists('lang') ? lang('menu_master') : 'Master Data'; ?></div>
-                    <i class="bi bi-chevron-right arrow-icon"></i>
-                </a>
-                <div class="collapse show" id="masterSubmenu_<?= $menu_id; ?>" data-bs-parent="#<?= $menu_id; ?>">
-                    <ul class="sub-menu">
-                        <li>
-                            <a class="nav-sub-link <?= $active_menu === 'user' ? 'active' : ''; ?>" href="<?= site_url('user'); ?>">
-                                <i class="bi bi-people"> </i> <?= translate('menu_user'); ?>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-sub-link <?= $active_menu === 'supplier' ? 'active' : ''; ?>" href="<?= site_url('supplier'); ?>">
-                                <i class="bi bi-people"></i> <?= translate('menu_supplier') ?>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-sub-link <?= $active_menu === 'customer' ? 'active' : ''; ?>" href="<?= site_url('customer'); ?>">
-                                <i class="bi bi-people"></i> <?= translate('menu_customer') ?>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="nav-sub-link <?= $active_menu === 'kategori_barang' ? 'active' : ''; ?>" href="<?= site_url('kategori_barang'); ?>">
-                                <i class="bi bi-list-check"></i> <?= translate('kategori_barang') ?>
-                            </a>
-                        </li>
+            <?php foreach ($menu_groups as $group):
+                // Lewati grup ini kalau role user tidak ada di daftar 'roles' grup
+                if (!in_array($current_role, $group['roles'], true)) {
+                    continue;
+                }
 
-                        <li>
-                            <a class="nav-sub-link <?= $active_menu === 'barang' ? 'active' : ''; ?>" href="<?= site_url('barang'); ?>">
-                                <i class="bi bi-list-check"></i> <?= translate('nama_barang') ?>
-                            </a>
-                        </li>
+                // Saring item di dalam grup sesuai role juga (jaga-jaga jika berbeda level)
+                $visible_items = array_filter($group['items'], function ($item) use ($current_role) {
+                    return in_array($current_role, $item['roles'], true);
+                });
+                if (empty($visible_items)) {
+                    continue;
+                }
 
-                    </ul>
-                </div>
-            </li>
+                $group_dom_id  = 'submenu_' . $group['key'] . '_' . $menu_id;
+                $group_is_open = $is_first; // grup pertama yang muncul dibuka otomatis
+                $is_first      = false;
+            ?>
+                <li class="nav-item">
+                    <a class="nav-link <?= $group_is_open ? '' : 'collapsed'; ?>" data-bs-toggle="collapse" href="#<?= $group_dom_id; ?>" role="button" aria-expanded="<?= $group_is_open ? 'true' : 'false'; ?>" aria-controls="<?= $group_dom_id; ?>">
+                        <div><i class="bi <?= $group['icon']; ?> main-icon"></i> <?= $group['label']; ?></div>
+                        <i class="bi bi-chevron-right arrow-icon"></i>
+                    </a>
+                    <div class="collapse <?= $group_is_open ? 'show' : ''; ?>" id="<?= $group_dom_id; ?>" data-bs-parent="#<?= $menu_id; ?>">
+                        <ul class="sub-menu">
+                            <?php foreach ($visible_items as $item): ?>
+                                <li>
+                                    <a class="nav-sub-link <?= $active_menu === $item['key'] ? 'active' : ''; ?>" href="<?= site_url($item['url']); ?>">
+                                        <i class="bi <?= $item['icon']; ?>"></i> <?= $item['label']; ?>
+                                    </a>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </li>
+            <?php endforeach; ?>
         </ul>
     <?php
     }
@@ -269,7 +379,7 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
         </div>
         <hr class="text-white-50 mx-3">
-        <?php render_navigation('menuMobile', $active_menu); ?>
+        <?php render_navigation('menuMobile', $menu_groups, $current_role, $active_menu); ?>
     </div>
 
     <div class="container-fluid">
@@ -279,7 +389,7 @@
                 <div class="brand">
                     <a href="<?= site_url('dashboard'); ?>">PT Oupai Pintu<br>Jendela Indonesia</a>
                 </div>
-                <?php render_navigation('menuDesktop', $active_menu); ?>
+                <?php render_navigation('menuDesktop', $menu_groups, $current_role, $active_menu); ?>
                 <div class="p-3 small text-white-50 border-top border-white border-opacity-25">
                     &copy; 2026 PT Oupai Pintu Jendela Indonesia
                 </div>
@@ -295,6 +405,9 @@
                         </button>
                         <div>
                             <h5 class="mb-0"><?= isset($page_title) ? $page_title : 'Dashboard'; ?></h5>
+                            <?php if (isset($page_subtitle)): ?>
+                                <small class="text-muted d-none d-sm-block"><?= $page_subtitle; ?></small>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -311,8 +424,8 @@
                             </div>
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
-                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i><?= translate('profile') ?></a>
-                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= translate('app_logout') ?></a>
+                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= function_exists('translate') ? translate('profile') : 'Profil'; ?></a>
+                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= function_exists('translate') ? translate('app_logout') : 'Keluar'; ?></a>
                                 </div>
                             </div>
                         </div>

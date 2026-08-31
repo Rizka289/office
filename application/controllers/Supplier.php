@@ -9,7 +9,7 @@ class Supplier extends MY_Controller
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole('super_admin'); // hanya super admin yang boleh akses seluruh method di sini
+        $this->requireRole(['super_admin','staff_purchasing']); // hanya super admin yang boleh akses seluruh method di sini
         $this->load->model('Supplier_model');
         $this->load->helper('url');
     }

@@ -1,474 +1,943 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="UTF-8">
-<title>Purchase Order</title>
+<!-- Stylings Khusus Halaman PO -->
 <style>
-  :root{
-    --ink:#1b2430;
-    --slate:#4a5568;
-    --mist:#8b98a9;
-    --paper:#f5f6f4;
-    --panel:#ffffff;
-    --line:#dde1e6;
-    --brand:#1f4b43;
-    --brand-ink:#e9f2ef;
-    --rust:#b5622a;
-    --rust-ink:#fbeee2;
-    --ok:#2f7a4f;
-    --danger:#b23b3b;
-    --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  .po-wrapper {
+    --po-ink: #1b2430;
+    --po-slate: #4a5568;
+    --po-mist: #8b98a9;
+    --po-line: #dde1e6;
+    --po-brand: #0b5d5b;
+    --po-brand-light: #e6f2f1;
+    --po-rust: #b5622a;
+    --po-rust-ink: #fbeee2;
+    --po-ok: #198754;
+    --po-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--paper);
-    color:var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  .wrap{max-width:1040px;margin:0 auto;padding:28px 20px 60px;}
 
-  /* ---- header ---- */
-  .topbar{
-    display:flex;justify-content:space-between;align-items:flex-end;
-    border-bottom:2px solid var(--ink);
-    padding-bottom:14px;margin-bottom:22px;
+  .stat-card {
+    background: #fff;
+    border: 1px solid var(--po-line);
+    border-radius: 8px;
+    padding: 12px 16px;
   }
-  .topbar .eyebrow{
-    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
-    text-transform:uppercase;color:var(--mist);margin:0 0 4px;
-  }
-  .topbar h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em;}
-  .newbtn{
-    background:var(--brand);color:#fff;border:none;border-radius:6px;
-    padding:11px 18px;font-size:14px;font-weight:600;cursor:pointer;
-    display:flex;align-items:center;gap:8px;transition:background .15s;
-  }
-  .newbtn:hover{background:#173a34;}
-  .newbtn svg{width:15px;height:15px;}
 
-  /* ---- list view ---- */
-  .stats{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
-  .stat{
-    background:var(--panel);border:1px solid var(--line);border-radius:8px;
-    padding:12px 16px;min-width:120px;
+  .stat-card .n {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: var(--po-mono);
   }
-  .stat .n{font-size:20px;font-weight:700;font-family:var(--mono);}
-  .stat .l{font-size:11px;color:var(--mist);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
 
-  table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;}
-  thead th{
-    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.08em;
-    color:var(--mist);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line);
-    background:#fafafa;
+  .stat-card .l {
+    font-size: 11px;
+    color: var(--po-mist);
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    margin-top: 2px;
   }
-  tbody td{padding:14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:middle;}
-  tbody tr:last-child td{border-bottom:none;}
-  tbody tr{cursor:pointer;transition:background .12s;}
-  tbody tr:hover{background:#f9faf9;}
-  .po-no{font-family:var(--mono);font-weight:700;color:var(--brand);}
-  .badge{
-    display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;
-    text-transform:uppercase;letter-spacing:.04em;
-  }
-  .badge.draft{background:#eef0f2;color:var(--slate);}
-  .badge.sent{background:var(--rust-ink);color:var(--rust);}
-  .badge.received{background:#e6f2ea;color:var(--ok);}
-  .amount{font-family:var(--mono);font-weight:600;text-align:right;}
-  .empty{
-    text-align:center;padding:60px 20px;color:var(--mist);
-  }
-  .empty p{margin:6px 0 18px;font-size:14px;}
 
-  /* ---- form / detail view ---- */
-  .hidden{display:none !important;}
-  .formhead{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-  .backlink{
-    background:none;border:none;color:var(--slate);font-size:13px;cursor:pointer;
-    display:flex;align-items:center;gap:6px;padding:0;font-weight:600;
+  .po-no {
+    font-family: var(--po-mono);
+    font-weight: 700;
+    color: var(--po-brand);
   }
-  .backlink:hover{color:var(--ink);}
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:24px;margin-bottom:16px;}
-  .card h2{
-    margin:0 0 16px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;
-    color:var(--mist);border-bottom:1px solid var(--line);padding-bottom:10px;
+  .badge-status {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
   }
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
-  .field label{
-    display:block;font-size:12px;font-weight:600;color:var(--slate);margin-bottom:6px;
-  }
-  .field input, .field select, .field textarea{
-    width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;
-    font-size:14px;font-family:inherit;color:var(--ink);background:#fff;
-  }
-  .field input:focus, .field select:focus, .field textarea:focus{
-    outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-ink);
-  }
-  .field.readonly input{background:#f5f6f4;color:var(--mist);}
 
-  /* item table */
-  .items-table{width:100%;border-collapse:collapse;}
-  .items-table th{
-    text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mist);
-    padding:0 8px 8px;font-weight:600;
+  .badge-status.menunggu {
+    background: var(--po-rust-ink);
+    color: var(--po-rust);
   }
-  .items-table td{padding:6px 8px;vertical-align:top;}
-  .items-table input{padding:8px 9px;font-size:13.5px;}
-  .items-table .col-qty input, .items-table .col-price input{text-align:right;font-family:var(--mono);}
-  .items-table .col-sub{font-family:var(--mono);text-align:right;padding-top:14px;font-size:13.5px;font-weight:600;white-space:nowrap;}
-  .items-table .col-del{width:34px;text-align:center;padding-top:10px;}
-  .rmv{
-    background:none;border:none;color:var(--mist);cursor:pointer;font-size:16px;
-    width:26px;height:26px;border-radius:5px;line-height:1;
-  }
-  .rmv:hover{background:var(--rust-ink);color:var(--danger);}
 
-  .addrow{
-    margin-top:10px;background:none;border:1px dashed var(--line);color:var(--slate);
-    padding:9px 14px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;width:100%;
+  .badge-status.lolos {
+    background: #e6f2ea;
+    color: var(--po-ok);
   }
-  .addrow:hover{border-color:var(--brand);color:var(--brand);background:var(--brand-ink);}
 
-  .totalrow{
-    display:flex;justify-content:flex-end;gap:28px;margin-top:16px;padding-top:14px;
-    border-top:1px solid var(--line);
+  .badge-status.ditolak {
+    background: #fbe9e9;
+    color: #b3261e;
   }
-  .totalrow .tl{font-size:13px;color:var(--slate);align-self:center;}
-  .totalrow .tv{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--brand);}
 
-  .formfoot{display:flex;justify-content:space-between;align-items:center;margin-top:4px;}
-  .statusrow{display:flex;gap:8px;align-items:center;}
-  .statusrow select{width:auto;padding:8px 30px 8px 12px;}
-  .btnrow{display:flex;gap:10px;}
-  .btn{padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid transparent;}
-  .btn.primary{background:var(--brand);color:#fff;}
-  .btn.primary:hover{background:#173a34;}
-  .btn.ghost{background:#fff;color:var(--slate);border-color:var(--line);}
-  .btn.ghost:hover{border-color:var(--slate);color:var(--ink);}
-  .btn.danger{background:#fff;color:var(--danger);border-color:#ecc7c7;}
-  .btn.danger:hover{background:var(--rust-ink);}
-
-  .toast{
-    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
-    background:var(--ink);color:#fff;padding:12px 20px;border-radius:8px;font-size:13.5px;
-    opacity:0;pointer-events:none;transition:all .25s ease;font-weight:600;
+  .amount-col {
+    font-family: var(--po-mono);
+    font-weight: 600;
+    text-align: right;
   }
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .items-table th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--po-mist);
+    font-weight: 600;
+  }
+
+  .items-table .col-qty input,
+  .items-table .col-price input {
+    text-align: right;
+    font-family: var(--po-mono);
+  }
+
+  .items-table .col-sub {
+    font-family: var(--po-mono);
+    text-align: right;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .addrow-btn {
+    border: 1px dashed var(--po-line);
+    background: transparent;
+    color: var(--po-slate);
+    padding: 9px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.2s;
+  }
+
+  .addrow-btn:hover {
+    border-color: var(--po-brand);
+    color: var(--po-brand);
+    background: var(--po-brand-light);
+  }
+
+  .total-row-val {
+    font-family: var(--po-mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--po-brand);
+  }
+
+  .po-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #1b2430;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all .25s ease;
+    font-weight: 600;
+    z-index: 9999;
+  }
+
+  .po-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  .supplier-search-wrap, .barang-search-wrap {
+    position: relative;
+  }
+
+  .supplier-search-wrap .bi-search {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--po-mist);
+    font-size: 13px;
+    pointer-events: none;
+  }
+
+  .supplier-search-wrap input#f_supplier_search {
+    padding-left: 34px;
+  }
+
+  .supplier-search-wrap input#f_supplier_search.is-linked,
+  .barang-search-wrap input.it-barang-search.is-linked {
+    border-color: var(--po-ok);
+    background: #f4faf6;
+  }
+
+  .supplier-suggest-box, .barang-suggest-box {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: #fff;
+    border: 1px solid var(--po-line);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(27, 36, 48, .12);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .supplier-suggest-item {
+    padding: 9px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f2f4;
+  }
+
+  .supplier-suggest-item:last-child {
+    border-bottom: none;
+  }
+
+  .supplier-suggest-item:hover,
+  .supplier-suggest-item.active {
+    background: var(--po-brand-light);
+  }
+
+  .supplier-suggest-item .s-name {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--po-ink);
+  }
+
+  .supplier-suggest-item .s-meta {
+    font-size: 11.5px;
+    color: var(--po-mist);
+  }
+
+  .supplier-suggest-empty {
+    padding: 14px;
+    font-size: 13px;
+    color: var(--po-mist);
+    text-align: center;
+  }
+
+  .supplier-linked-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--po-ok);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
 </style>
-</head>
-<body>
-<div class="wrap">
+
+<div class="po-wrapper">
 
   <!-- ============ LIST VIEW ============ -->
   <div id="listView">
-    <div class="topbar">
+    <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <p class="eyebrow">Procurement</p>
-        <h1>Purchase Order</h1>
+        <h4 class="mb-0 fw-bold">Purchase Order</h4>
       </div>
-      <button class="newbtn" onclick="openForm()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-        PO Baru
+      <button class="btn btn-brand d-flex align-items-center gap-2" onclick="openForm()">
+        <i class="bi bi-plus-lg"></i> PO Baru
       </button>
     </div>
 
-    <div class="stats">
-      <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Total PO</div></div>
-      <div class="stat"><div class="n" id="statDraft">0</div><div class="l">Draft</div></div>
-      <div class="stat"><div class="n" id="statSent">0</div><div class="l">Terkirim</div></div>
-      <div class="stat"><div class="n" id="statValue">Rp 0</div><div class="l">Total Nilai</div></div>
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="n" id="statTotal">0</div>
+          <div class="l">Total PO</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="n" id="statDraft">0</div>
+          <div class="l">Menunggu QC</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="n" id="statSent">0</div>
+          <div class="l">Lolos QC</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="stat-card">
+          <div class="n" id="statValue">Rp 0</div>
+          <div class="l">Total Nilai</div>
+        </div>
+      </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>No. PO</th><th>Supplier</th><th>Tanggal</th><th>Status</th><th style="text-align:right">Nilai</th>
-        </tr>
-      </thead>
-      <tbody id="poTableBody"></tbody>
-    </table>
+    <!-- Tabel Data PO -->
+    <div class="card card-custom overflow-hidden">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>No. PO</th>
+              <th>Supplier</th>
+              <th>Tanggal JT</th>
+              <th>Status</th>
+              <th class="text-end">Nilai</th>
+              <th class="text-center" style="width: 130px;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="poTableBody"></tbody>
+        </table>
+      </div>
 
-    <div class="empty hidden" id="emptyState">
-      <p>Belum ada purchase order.</p>
-      <button class="newbtn" style="margin:0 auto" onclick="openForm()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
-        Buat PO Pertama
-      </button>
+      <div class="text-center py-5 d-none" id="emptyState">
+        <p class="text-muted mb-3">Belum ada purchase order.</p>
+        <button class="btn btn-brand" onclick="openForm()">
+          <i class="bi bi-plus-lg me-1"></i> Buat PO Pertama
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- ============ FORM / DETAIL VIEW ============ -->
-  <div id="formView" class="hidden">
-    <div class="formhead">
-      <button class="backlink" onclick="closeForm()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M15 18l-6-6 6-6"/></svg>
-        Kembali ke daftar
+  <div id="formView" class="d-none">
+    <div class="mb-3 d-flex justify-content-between align-items-center">
+      <button class="btn btn-link text-decoration-none text-secondary p-0 fw-semibold" onclick="closeForm()">
+        <i class="bi bi-arrow-left me-1"></i> Kembali ke daftar
       </button>
+      <h5 class="mb-0 fw-bold" id="formTitle">Form Purchase Order</h5>
     </div>
 
-    <div class="card">
-      <h2>Informasi Purchase Order</h2>
-      <div class="grid">
-        <div class="field readonly">
-          <label>No. PO</label>
-          <input type="text" id="f_pono" readonly>
+    <!-- Informasi PO -->
+    <div class="card card-custom p-4 mb-4">
+      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;">Informasi Purchase Order</h6>
+      <input type="hidden" id="f_id_po" value="">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">No. PO</label>
+          <input type="text" class="form-control bg-light" id="f_nopo" readonly>
         </div>
-        <div class="field">
-          <label>Tanggal PO</label>
-          <input type="date" id="f_date">
+
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Tanggal Jatuh Tempo</label>
+          <input type="date" class="form-control" id="f_date">
         </div>
-        <div class="field">
-          <label>Nama Supplier</label>
-          <input type="text" id="f_supplier" placeholder="cth. PT Sumber Makmur">
+
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold d-flex justify-content-between align-items-center">
+            <span>Supplier</span>
+            <span class="supplier-linked-tag d-none" id="supplierLinkedTag"><i class="bi bi-link-45deg"></i> Terhubung</span>
+          </label>
+          <div class="supplier-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" class="form-control" id="f_supplier_search" placeholder="Ketik nama supplier untuk mencari..." autocomplete="off">
+            <input type="hidden" id="f_id_supplier" value="">
+            <div class="supplier-suggest-box d-none" id="supplierSuggestBox"></div>
+          </div>
         </div>
-        <div class="field">
-          <label>Diminta Oleh</label>
-          <input type="text" id="f_requester" placeholder="cth. Bagian Gudang">
-        </div>
-        <div class="field" style="grid-column:1/-1">
-          <label>Catatan</label>
-          <input type="text" id="f_note" placeholder="Catatan tambahan (opsional)">
+
+        <div class="col-md-6">
+          <label class="form-label small fw-semibold">Catatan</label>
+          <textarea class="form-control" id="f_note" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <h2>Detail Barang</h2>
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th style="width:34%">Nama Barang</th>
-            <th style="width:14%">Qty</th>
-            <th style="width:10%">Satuan</th>
-            <th style="width:18%">Harga Satuan</th>
-            <th style="width:18%">Subtotal</th>
-            <th class="col-del"></th>
-          </tr>
-        </thead>
-        <tbody id="itemsBody"></tbody>
-      </table>
-      <button class="addrow" onclick="addItemRow()">+ Tambah Baris Barang</button>
+    <!-- Detail Barang -->
+    <div class="card card-custom p-4 mb-4">
+      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;">Detail Barang</h6>
+      <div class="table-responsive">
+        <table class="table align-middle items-table mb-2">
+          <thead>
+            <tr>
+              <th style="width:34%">Nama Barang</th>
+              <th style="width:14%">Qty</th>
+              <th style="width:14%">Satuan</th>
+              <th style="width:18%">Harga Satuan</th>
+              <th style="width:16%" class="text-end">Subtotal</th>
+              <th style="width:4%"></th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody"></tbody>
+        </table>
+      </div>
 
-      <div class="totalrow">
-        <div class="tl">Total Purchase Order</div>
-        <div class="tv" id="grandTotal">Rp 0</div>
+      <button class="addrow-btn mb-4" id="btnAddRow" onclick="addItemRow()">+ Tambah Baris Barang</button>
+
+      <div class="d-flex justify-content-end align-items-center gap-3 pt-3 border-top">
+        <span class="text-secondary small fw-semibold">Total Purchase Order:</span>
+        <span class="total-row-val" id="grandTotal">Rp 0</span>
       </div>
     </div>
 
-    <div class="formfoot">
-      <div class="statusrow">
-        <label style="font-size:12px;font-weight:600;color:var(--slate)">Status:</label>
-        <select id="f_status">
-          <option value="draft">Draft</option>
-          <option value="sent">Terkirim ke Supplier</option>
-          <option value="received">Barang Diterima</option>
-        </select>
+    <!-- Tombol Aksi Form -->
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="text-muted small">
+        <i class="bi bi-info-circle me-1"></i> Pastikan semua data terisi dengan benar.
       </div>
-      <div class="btnrow">
-        <button class="btn danger hidden" id="deleteBtn" onclick="deleteCurrentPO()">Hapus PO</button>
-        <button class="btn ghost" onclick="closeForm()">Batal</button>
-        <button class="btn primary" onclick="savePO()">Simpan Purchase Order</button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-danger d-none" id="deleteBtn" onclick="deleteCurrentPO()">Hapus PO</button>
+        <button class="btn btn-light border" onclick="closeForm()">Batal</button>
+        <button class="btn btn-brand" id="saveBtn" onclick="savePO()">Simpan Purchase Order</button>
       </div>
     </div>
   </div>
 
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- Element Toast -->
+<div class="po-toast" id="toast"></div>
+
+<!-- Modal Konfirmasi Hapus -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center p-4">
+        <i class="bi bi-exclamation-triangle text-danger display-4 mb-2"></i>
+        <h6 class="fw-bold">Konfirmasi Hapus</h6>
+        <p class="small text-muted mb-4">Apakah Anda yakin ingin menghapus PO ini? Data yang dihapus tidak bisa dikembalikan.</p>
+        <div class="d-flex justify-content-center gap-2">
+          <button type="button" class="btn btn-light btn-sm px-3" data-bs-dismiss="modal">Batal</button>
+          <button type="button" class="btn btn-danger btn-sm px-3" id="confirmDeleteBtn">Ya, Hapus</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-let purchaseOrders = [];
-let currentEditId = null;
-let itemSeq = 0;
+  const supplierList = <?php echo json_encode($supplier ?? [], JSON_UNESCAPED_UNICODE); ?>;
+  const barangList = <?php echo json_encode($barang ?? [], JSON_UNESCAPED_UNICODE); ?>;
+  const satuanOptions = <?php echo json_encode($satuan_options ?? [], JSON_UNESCAPED_UNICODE); ?>;
 
-function fmtRupiah(n){
-  return 'Rp ' + Math.round(n).toLocaleString('id-ID');
-}
-function todayISO(){
-  return new Date().toISOString().slice(0,10);
-}
-function genPONumber(){
-  const y = new Date().getFullYear();
-  const seq = String(purchaseOrders.length + 1).padStart(4,'0');
-  return `PO/${y}/${seq}`;
-}
-function showToast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(()=> t.classList.remove('show'), 2200);
-}
+  const SITE_URL = "<?php echo site_url(); ?>/";
+  const CSRF_NAME = "<?php echo $csrf_name ?? 'csrf_test_name'; ?>";
+  let csrfHash = "<?php echo $csrf_hash ?? ''; ?>";
 
-/* ---------- render list ---------- */
-function renderList(){
-  const body = document.getElementById('poTableBody');
-  const empty = document.getElementById('emptyState');
-  body.innerHTML = '';
+  let purchaseOrders = [];
+  let itemSeq = 0;
+  let supplierActiveIndex = -1;
+  let currentSearch = '';
+  let currentPage = 1;
+  let totalRecords = 0;
+  let targetDeleteId = null;
 
-  if(purchaseOrders.length === 0){
-    empty.classList.remove('hidden');
-  } else {
-    empty.classList.add('hidden');
+  function fmtRupiah(n) {
+    return 'Rp ' + Math.round(n).toLocaleString('id-ID');
   }
 
-  purchaseOrders.slice().reverse().forEach(po=>{
-    const total = po.items.reduce((s,it)=> s + (it.qty * it.price), 0);
-    const tr = document.createElement('tr');
-    tr.onclick = () => openForm(po.id);
-    tr.innerHTML = `
-      <td class="po-no">${po.poNumber}</td>
-      <td>${po.supplier || '<span style="color:var(--mist)">Belum diisi</span>'}</td>
-      <td>${po.date ? formatDateID(po.date) : '-'}</td>
-      <td><span class="badge ${po.status}">${statusLabel(po.status)}</span></td>
-      <td class="amount">${fmtRupiah(total)}</td>
-    `;
-    body.appendChild(tr);
-  });
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
 
-  document.getElementById('statTotal').textContent = purchaseOrders.length;
-  document.getElementById('statDraft').textContent = purchaseOrders.filter(p=>p.status==='draft').length;
-  document.getElementById('statSent').textContent = purchaseOrders.filter(p=>p.status==='sent').length;
-  const totalValue = purchaseOrders.reduce((s,po)=> s + po.items.reduce((a,it)=>a+it.qty*it.price,0), 0);
-  document.getElementById('statValue').textContent = fmtRupiah(totalValue);
-}
-function statusLabel(s){
-  return {draft:'Draft', sent:'Terkirim', received:'Diterima'}[s] || s;
-}
-function formatDateID(iso){
-  const d = new Date(iso);
-  return d.toLocaleDateString('id-ID', {day:'2-digit', month:'short', year:'numeric'});
-}
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
 
-/* ---------- open / close form (this is the "tampilkan lalu input detail" flow) ---------- */
-function openForm(id){
-  document.getElementById('listView').classList.add('hidden');
-  document.getElementById('formView').classList.remove('hidden');
+  async function fetchPOList(search = '', page = 1) {
+    const url = `${SITE_URL}purchase_order/list_data?search=${encodeURIComponent(search)}&page=${page}`;
+    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const json = await res.json();
+    if (json.csrf_hash) csrfHash = json.csrf_hash;
+    return json;
+  }
 
-  const itemsBody = document.getElementById('itemsBody');
-  itemsBody.innerHTML = '';
+  async function fetchPODetail(id) {
+    const res = await fetch(`${SITE_URL}purchase_order/get_detail/${id}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const json = await res.json();
+    if (json.csrf_hash) csrfHash = json.csrf_hash;
+    return json;
+  }
 
-  if(id){
-    // tampilkan PO yang sudah ada -> lalu bisa diinput ulang detailnya
-    currentEditId = id;
-    const po = purchaseOrders.find(p=>p.id === id);
-    document.getElementById('f_pono').value = po.poNumber;
-    document.getElementById('f_date').value = po.date;
-    document.getElementById('f_supplier').value = po.supplier;
-    document.getElementById('f_requester').value = po.requester;
-    document.getElementById('f_note').value = po.note;
-    document.getElementById('f_status').value = po.status;
-    document.getElementById('deleteBtn').classList.remove('hidden');
-    po.items.forEach(it => addItemRow(it));
-  } else {
-    // PO baru -> tampilkan form kosong untuk diisi detailnya
-    currentEditId = null;
-    document.getElementById('f_pono').value = genPONumber();
+  async function submitPO(payloadData) {
+    payloadData[CSRF_NAME] = csrfHash;
+    const res = await fetch(`${SITE_URL}purchase_order/simpan`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams(buildFormDataParams(payloadData)).toString()
+    });
+    const json = await res.json();
+    if (json.csrf_hash) csrfHash = json.csrf_hash;
+    return json;
+  }
+
+  async function requestDeletePO(id) {
+    const res = await fetch(`${SITE_URL}purchase_order/hapus/${id}`, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: `${CSRF_NAME}=${csrfHash}`
+    });
+    const json = await res.json();
+    if (json.csrf_hash) csrfHash = json.csrf_hash;
+    return json;
+  }
+
+  async function loadAndRenderList() {
+    try {
+      const json = await fetchPOList(currentSearch, currentPage);
+      if (json.status) {
+        purchaseOrders = json.data || [];
+        totalRecords = json.total || purchaseOrders.length;
+        renderList();
+      } else {
+        showToast(json.message || 'Gagal memuat data PO');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Tidak bisa terhubung ke server');
+    }
+  }
+
+  function renderList() {
+    const body = document.getElementById('poTableBody');
+    const empty = document.getElementById('emptyState');
+    body.innerHTML = '';
+
+    if (purchaseOrders.length === 0) {
+      empty.classList.remove('d-none');
+    } else {
+      empty.classList.add('d-none');
+    }
+
+    purchaseOrders.forEach(po => {
+      const total = parseFloat(po.total_nilai) || 0;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="po-no">${escapeHTML(po.no_po)}</td>
+        <td>${po.nama_supplier ? escapeHTML(po.nama_supplier) : '<span class="text-muted">Belum diisi</span>'}</td>
+        <td>${po.tanggal_jatuh_tempo ? formatDateID(po.tanggal_jatuh_tempo) : '-'}</td>
+        <td><span class="badge-status ${po.status_qc}">${statusLabel(po.status_qc)}</span></td>
+        <td class="amount-col">${fmtRupiah(total)}</td>
+        <td class="text-center">
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary" title="Detail PO" onclick="openViewPO(${po.id})"><i class="bi bi-eye"></i></button>
+            <button class="btn btn-outline-primary" title="Edit PO" onclick="openEditPO(${po.id})"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-outline-danger" title="Hapus PO" onclick="confirmDelete(${po.id})"><i class="bi bi-trash"></i></button>
+          </div>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+
+    document.getElementById('statTotal').textContent = totalRecords;
+    document.getElementById('statDraft').textContent = purchaseOrders.filter(p => p.status_qc === 'menunggu').length;
+    document.getElementById('statSent').textContent = purchaseOrders.filter(p => p.status_qc === 'lolos').length;
+    const totalValue = purchaseOrders.reduce((s, po) => s + (parseFloat(po.total_nilai) || 0), 0);
+    document.getElementById('statValue').textContent = fmtRupiah(totalValue);
+  }
+
+  /* ---------- Mode Form (Baru, View, Edit) ---------- */
+  function setFormReadonly(readonly) {
+    document.getElementById('f_date').disabled = readonly;
+    document.getElementById('f_supplier_search').disabled = readonly;
+    document.getElementById('f_note').disabled = readonly;
+    document.getElementById('btnAddRow').style.display = readonly ? 'none' : 'block';
+    document.getElementById('saveBtn').style.display = readonly ? 'none' : 'inline-block';
+  }
+
+  function openForm() {
+    document.getElementById('listView').classList.add('d-none');
+    document.getElementById('formView').classList.remove('d-none');
+    document.getElementById('formTitle').textContent = 'Buat Purchase Order Baru';
+
+    setFormReadonly(false);
+
+    document.getElementById('itemsBody').innerHTML = '';
+    document.getElementById('f_id_po').value = '';
+    document.getElementById('f_nopo').value = 'Dibuat otomatis saat disimpan';
     document.getElementById('f_date').value = todayISO();
-    document.getElementById('f_supplier').value = '';
-    document.getElementById('f_requester').value = '';
+    document.getElementById('f_supplier_search').value = '';
     document.getElementById('f_note').value = '';
-    document.getElementById('f_status').value = 'draft';
-    document.getElementById('deleteBtn').classList.add('hidden');
+    document.getElementById('deleteBtn').classList.add('d-none');
+    clearSupplierLink();
     addItemRow();
+    updateGrandTotal();
   }
-  updateGrandTotal();
-}
-function closeForm(){
-  document.getElementById('formView').classList.add('hidden');
-  document.getElementById('listView').classList.remove('hidden');
-  renderList();
-}
 
-/* ---------- item rows ---------- */
-function addItemRow(prefill){
-  itemSeq++;
-  const rowId = 'row_' + itemSeq;
-  const tr = document.createElement('tr');
-  tr.id = rowId;
-  tr.innerHTML = `
-    <td><input type="text" class="it-name" placeholder="Nama barang" value="${prefill ? escapeHTML(prefill.name) : ''}"></td>
-    <td class="col-qty"><input type="number" min="0" class="it-qty" value="${prefill ? prefill.qty : 1}" oninput="updateGrandTotal()"></td>
-    <td><input type="text" class="it-unit" placeholder="pcs" value="${prefill ? escapeHTML(prefill.unit || '') : ''}"></td>
-    <td class="col-price"><input type="number" min="0" class="it-price" value="${prefill ? prefill.price : 0}" oninput="updateGrandTotal()"></td>
-    <td class="col-sub" id="sub_${rowId}">Rp 0</td>
-    <td class="col-del"><button class="rmv" onclick="removeItemRow('${rowId}')">&times;</button></td>
-  `;
-  document.getElementById('itemsBody').appendChild(tr);
-  updateGrandTotal();
-}
-function removeItemRow(rowId){
-  const row = document.getElementById(rowId);
-  if(row) row.remove();
-  updateGrandTotal();
-}
-function updateGrandTotal(){
-  let grand = 0;
-  document.querySelectorAll('#itemsBody tr').forEach(tr=>{
-    const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
-    const price = parseFloat(tr.querySelector('.it-price').value) || 0;
-    const sub = qty * price;
-    grand += sub;
-    tr.querySelector('.col-sub').textContent = fmtRupiah(sub);
+  async function openViewPO(id) {
+    const json = await fetchPODetail(id);
+    if (!json.status) {
+      showToast(json.message);
+      return;
+    }
+
+    openForm();
+    document.getElementById('formTitle').textContent = 'Detail Purchase Order';
+    setFormReadonly(true);
+
+    fillFormWithData(json.data);
+  }
+
+  async function openEditPO(id) {
+    const json = await fetchPODetail(id);
+    if (!json.status) {
+      showToast(json.message);
+      return;
+    }
+
+    openForm();
+    document.getElementById('formTitle').textContent = 'Edit Purchase Order';
+    setFormReadonly(false);
+    document.getElementById('deleteBtn').classList.remove('d-none');
+
+    fillFormWithData(json.data);
+  }
+
+  function fillFormWithData(data) {
+    const header = data.header;
+    const items = data.items || [];
+
+    document.getElementById('f_id_po').value = header.id;
+    document.getElementById('f_nopo').value = header.no_po;
+    document.getElementById('f_date').value = header.tanggal_jatuh_tempo;
+    document.getElementById('f_note').value = header.keterangan || '';
+
+    selectSupplier(header.id_supplier, header.nama_supplier);
+
+    const itemsBody = document.getElementById('itemsBody');
+    itemsBody.innerHTML = '';
+
+    items.forEach(item => {
+      addItemRow({
+        id_barang: item.id_barang,
+        nama: item.nama_barang,
+        qty: item.qty,
+        unit: item.satuan,
+        price: item.harga
+      });
+    });
+
+    // Sesuaikan status disabled input barang jika sedang mode readonly/view
+    const isReadonly = document.getElementById('saveBtn').style.display === 'none';
+    if (isReadonly) {
+      itemsBody.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
+    }
+  }
+
+  function closeForm() {
+    document.getElementById('formView').classList.add('d-none');
+    document.getElementById('listView').classList.remove('d-none');
+    loadAndRenderList();
+  }
+
+  /* ---------- Hapus Data ---------- */
+  function confirmDelete(id) {
+    targetDeleteId = id;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+  }
+
+  document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
+    if (!targetDeleteId) return;
+    const json = await requestDeletePO(targetDeleteId);
+    const modalEl = document.getElementById('deleteModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    modal.hide();
+
+    if (json.status) {
+      showToast(json.message);
+      loadAndRenderList();
+    } else {
+      showToast(json.message);
+    }
   });
-  document.getElementById('grandTotal').textContent = fmtRupiah(grand);
-}
-function escapeHTML(s){
-  return (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
 
-/* ---------- save / delete ---------- */
-function savePO(){
-  const supplier = document.getElementById('f_supplier').value.trim();
-  if(!supplier){
-    showToast('Nama supplier wajib diisi');
-    document.getElementById('f_supplier').focus();
-    return;
+  function deleteCurrentPO() {
+    const id = document.getElementById('f_id_po').value;
+    if (id) {
+      closeForm();
+      confirmDelete(id);
+    }
   }
 
-  const items = [];
-  document.querySelectorAll('#itemsBody tr').forEach(tr=>{
-    const name = tr.querySelector('.it-name').value.trim();
-    const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
-    const unit = tr.querySelector('.it-unit').value.trim();
-    const price = parseFloat(tr.querySelector('.it-price').value) || 0;
-    if(name) items.push({name, qty, unit, price});
-  });
-  if(items.length === 0){
-    showToast('Tambahkan minimal 1 barang');
-    return;
+  /* ---------- Handling Supplier Autocomplete ---------- */
+  function normalizeSupplier(s) {
+    return {
+      id: s.id ?? s.id_supplier ?? '',
+      nama: s.nama_supplier ?? s.nama ?? '',
+      meta: [s.no_telp || s.telepon || s.kontak || '', s.alamat || ''].filter(Boolean).join(' • ')
+    };
   }
 
-  const data = {
-    poNumber: document.getElementById('f_pono').value,
-    date: document.getElementById('f_date').value,
-    supplier,
-    requester: document.getElementById('f_requester').value.trim(),
-    note: document.getElementById('f_note').value.trim(),
-    status: document.getElementById('f_status').value,
-    items
-  };
-
-  if(currentEditId){
-    const idx = purchaseOrders.findIndex(p=>p.id === currentEditId);
-    purchaseOrders[idx] = {...purchaseOrders[idx], ...data};
-    showToast('Purchase order diperbarui');
-  } else {
-    purchaseOrders.push({id: 'po_' + Date.now(), ...data});
-    showToast('Purchase order baru disimpan');
+  function searchSupplier(keyword) {
+    const kw = (keyword || '').trim().toLowerCase();
+    const list = (supplierList || []).map(normalizeSupplier);
+    if (!kw) return list.slice(0, 8);
+    return list.filter(s => s.nama.toLowerCase().includes(kw)).slice(0, 8);
   }
-  closeForm();
-}
-function deleteCurrentPO(){
-  if(!currentEditId) return;
-  if(!confirm('Hapus purchase order ini?')) return;
-  purchaseOrders = purchaseOrders.filter(p=>p.id !== currentEditId);
-  showToast('Purchase order dihapus');
-  closeForm();
-}
 
-renderList();
+  function renderSupplierSuggestions(list) {
+    const box = document.getElementById('supplierSuggestBox');
+    supplierActiveIndex = -1;
+
+    if (list.length === 0) {
+      box.innerHTML = `<div class="supplier-suggest-empty">Supplier tidak ditemukan</div>`;
+    } else {
+      box.innerHTML = list.map((s, i) => `
+        <div class="supplier-suggest-item" data-idx="${i}" data-id="${s.id}" data-nama="${escapeHTML(s.nama)}"
+             onmousedown="selectSupplier('${s.id}', '${escapeHTML(s.nama).replace(/'/g, "\\'")}')">
+          <div class="s-name">${escapeHTML(s.nama)}</div>
+          ${s.meta ? `<div class="s-meta">${escapeHTML(s.meta)}</div>` : ''}
+        </div>
+      `).join('');
+    }
+    box.classList.remove('d-none');
+  }
+
+  function selectSupplier(id, nama) {
+    document.getElementById('f_id_supplier').value = id;
+    document.getElementById('f_supplier_search').value = nama;
+    document.getElementById('f_supplier_search').classList.add('is-linked');
+    document.getElementById('supplierLinkedTag').classList.remove('d-none');
+    document.getElementById('supplierSuggestBox').classList.add('d-none');
+  }
+
+  function clearSupplierLink() {
+    document.getElementById('f_id_supplier').value = '';
+    document.getElementById('f_supplier_search').classList.remove('is-linked');
+    document.getElementById('supplierLinkedTag').classList.add('d-none');
+  }
+
+  function initSupplierSearch() {
+    const input = document.getElementById('f_supplier_search');
+    const box = document.getElementById('supplierSuggestBox');
+
+    input.addEventListener('input', () => {
+      clearSupplierLink();
+      renderSupplierSuggestions(searchSupplier(input.value));
+    });
+
+    input.addEventListener('focus', () => renderSupplierSuggestions(searchSupplier(input.value)));
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.supplier-search-wrap')) box.classList.add('d-none');
+    });
+  }
+  initSupplierSearch();
+
+  /* ---------- Item Rows (Detail Barang) ---------- */
+  function addItemRow(prefill) {
+    itemSeq++;
+    const rowId = 'row_' + itemSeq;
+    const tr = document.createElement('tr');
+    tr.id = rowId;
+    tr.innerHTML = `
+      <td>
+        <div class="barang-search-wrap">
+          <input type="text" class="form-control form-control-sm it-barang-search" placeholder="Ketik untuk cari barang..." autocomplete="off"
+                 value="${prefill ? escapeHTML(prefill.nama) : ''}">
+          <input type="hidden" class="it-id-barang" value="${prefill ? prefill.id_barang : ''}">
+          <div class="barang-suggest-box d-none"></div>
+        </div>
+      </td>
+      <td class="col-qty"><input type="number" min="0" class="form-control form-control-sm it-qty" value="${prefill ? prefill.qty : 1}" oninput="updateGrandTotal()"></td>
+      <td><select class="form-select form-select-sm it-unit">${renderSatuanOptions(prefill ? prefill.unit : '')}</select></td>
+      <td class="col-price"><input type="number" min="0" class="form-control form-control-sm it-price" value="${prefill ? prefill.price : 0}" oninput="updateGrandTotal()"></td>
+      <td class="col-sub" id="sub_${rowId}">Rp 0</td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-row" onclick="removeItemRow('${rowId}')"><i class="bi bi-trash"></i></button></td>
+    `;
+    document.getElementById('itemsBody').appendChild(tr);
+
+    if (prefill && prefill.id_barang) {
+      tr.querySelector('.it-barang-search').classList.add('is-linked');
+    }
+    initBarangRowSearch(tr);
+    updateGrandTotal();
+  }
+
+  function normalizeBarang(b) {
+    return {
+      id: b.id,
+      kode: b.kode_barang || '',
+      nama: b.nama || '',
+      kategori: b.nama_kategori || ''
+    };
+  }
+
+  function searchBarang(keyword) {
+    const kw = (keyword || '').trim().toLowerCase();
+    const list = (barangList || []).map(normalizeBarang);
+    if (!kw) return list.slice(0, 8);
+    return list.filter(b => b.nama.toLowerCase().includes(kw) || b.kode.toLowerCase().includes(kw)).slice(0, 8);
+  }
+
+  function initBarangRowSearch(tr) {
+    const input = tr.querySelector('.it-barang-search');
+    const box = tr.querySelector('.barang-suggest-box');
+
+    function renderSuggest(list) {
+      if (list.length === 0) {
+        box.innerHTML = `<div class="supplier-suggest-empty">Barang tidak ditemukan</div>`;
+      } else {
+        box.innerHTML = list.map((b, i) => `
+          <div class="supplier-suggest-item" data-id="${b.id}" data-nama="${escapeHTML(b.nama)}">
+            <div class="s-name">${b.kode ? escapeHTML(b.kode) + ' — ' : ''}${escapeHTML(b.nama)}</div>
+            ${b.kategori ? `<div class="s-meta">${escapeHTML(b.kategori)}</div>` : ''}
+          </div>
+        `).join('');
+
+        box.querySelectorAll('.supplier-suggest-item').forEach(el => {
+          el.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            selectBarangForRow(tr, el.dataset.id, el.dataset.nama);
+          });
+        });
+      }
+      box.classList.remove('d-none');
+    }
+
+    input.addEventListener('input', () => {
+      tr.querySelector('.it-id-barang').value = '';
+      input.classList.remove('is-linked');
+      renderSuggest(searchBarang(input.value));
+    });
+
+    input.addEventListener('focus', () => renderSuggest(searchBarang(input.value)));
+
+    document.addEventListener('click', (e) => {
+      if (!tr.contains(e.target)) box.classList.add('d-none');
+    });
+  }
+
+  function selectBarangForRow(tr, id, nama) {
+    tr.querySelector('.it-id-barang').value = id;
+    const input = tr.querySelector('.it-barang-search');
+    input.value = nama;
+    input.classList.add('is-linked');
+    tr.querySelector('.barang-suggest-box').classList.add('d-none');
+  }
+
+  function removeItemRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) row.remove();
+    updateGrandTotal();
+  }
+
+  function updateGrandTotal() {
+    let grand = 0;
+    document.querySelectorAll('#itemsBody tr').forEach(tr => {
+      const qty = parseFloat(tr.querySelector('.it-qty').value) || 0;
+      const price = parseFloat(tr.querySelector('.it-price').value) || 0;
+      const sub = qty * price;
+      grand += sub;
+      tr.querySelector('.col-sub').textContent = fmtRupiah(sub);
+    });
+    document.getElementById('grandTotal').textContent = fmtRupiah(grand);
+  }
+
+  function escapeHTML(s) {
+    return (s || '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function renderSatuanOptions(selected) {
+    if (!satuanOptions || satuanOptions.length === 0) {
+      return `<option value="">-- satuan belum tersedia --</option>`;
+    }
+    return satuanOptions.map(u => {
+      const isSelected = selected ? (u === selected) : false;
+      return `<option value="${escapeHTML(u)}" ${isSelected ? 'selected' : ''}>${escapeHTML(u)}</option>`;
+    }).join('');
+  }
+
+  function statusLabel(s) {
+    return { menunggu: 'Menunggu QC', lolos: 'Lolos QC', ditolak: 'Ditolak QC' }[s] || s;
+  }
+
+  function formatDateID(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  function buildFormDataParams(obj, prefix = '') {
+    let str = [];
+    for (let p in obj) {
+      if (obj.hasOwnProperty(p)) {
+        let k = prefix ? prefix + "[" + p + "]" : p, v = obj[p];
+        if (v !== null && typeof v === "object") {
+          str.push(buildFormDataParams(v, k));
+        } else {
+          str.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
+        }
+      }
+    }
+    return str.join("&");
+  }
+
+  /* ---------- Simpan Data (Add / Edit) ---------- */
+  async function savePO() {
+    const id_po = document.getElementById('f_id_po')?.value;
+    const id_supplier = document.getElementById('f_id_supplier')?.value;
+    if (!id_supplier) {
+      showToast('Pilih supplier dari hasil pencarian');
+      document.getElementById('f_supplier_search')?.focus();
+      return;
+    }
+
+    const tanggal = document.getElementById('f_date')?.value;
+    if (!tanggal) {
+      showToast('Tanggal wajib diisi');
+      return;
+    }
+
+    const items = [];
+    let hasUnlinkedBarang = false;
+    let hasInvalidQty = false;
+
+    document.querySelectorAll('#itemsBody tr').forEach(tr => {
+      const id_barang = tr.querySelector('.it-id-barang')?.value;
+      const qty = parseFloat(tr.querySelector('.it-qty')?.value) || 0;
+      const unit = tr.querySelector('.it-unit')?.value;
+      const price = parseFloat(tr.querySelector('.it-price')?.value) || 0;
+
+      if (!id_barang && qty === 0 && price === 0) return;
+
+      if (!id_barang) hasUnlinkedBarang = true;
+      if (qty <= 0) hasInvalidQty = true;
+
+      items.push({ id_barang, qty, unit, price });
+    });
+
+    if (items.length === 0) {
+      showToast('Tambahkan minimal 1 baris detail barang');
+      return;
+    }
+    if (hasUnlinkedBarang) {
+      showToast('Setiap baris wajib memilih barang dari daftar');
+      return;
+    }
+    if (hasInvalidQty) {
+      showToast('Qty barang harus lebih dari 0');
+      return;
+    }
+
+    const saveBtn = document.getElementById('saveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Menyimpan...';
+
+    try {
+      const payload = {
+        id_po: id_po,
+        id_supplier: id_supplier,
+        tanggal: tanggal,
+        note: document.getElementById('f_note')?.value.trim() || '',
+        items: items
+      };
+
+      const json = await submitPO(payload);
+      if (json.status) {
+        showToast(json.message);
+        closeForm();
+      } else {
+        showToast(json.message);
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Terjadi kesalahan koneksi atau server');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Simpan Purchase Order';
+    }
+  }
+
+  loadAndRenderList();
 </script>
-</body>
-</html>

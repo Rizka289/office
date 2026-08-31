@@ -65,6 +65,16 @@ class Barang_model extends CI_Model
         return $this->db->count_all_results('barang');
     }
 
+    // Mengambil semua barang (id, kode, nama, kategori) untuk dijadikan sumber
+    // pilihan "barang" di form Purchase Order -- supaya baris detail PO
+    // BENAR-BENAR merujuk ke baris yang ada di tabel barang (via id), bukan teks bebas.
+    public function get_all_for_select()
+    {
+        $this->selectWithKategori();
+        $this->db->order_by('barang.nama', 'ASC');
+        return $this->db->get('barang')->result_array();
+    }
+
     public function insert_nama_barang($data)
     {
         return $this->db->insert('barang', $data);

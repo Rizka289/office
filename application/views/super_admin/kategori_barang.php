@@ -1,10 +1,10 @@
 <!-- ================= GRID DATA KATEGORI BARANG ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h6 class="fw-bold m-0">Daftar Kategori</h6>
+        <h6 class="fw-bold m-0"><?= translate('list_kategori') ?></h6>
         <!-- Trigger Modal Tambah Kategori Barang -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahKatBarang">
-            <i class="bi bi-plus-lg"></i> Tambah Kategori Barang
+            <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
         </button>
     </div>
 
@@ -22,12 +22,12 @@
         <table class="table table-hover align-middle">
             <thead class="table-light">
                 <tr>
-                    <th>No</th>
-                    <th>Kode Kategori</th>
-                    <th>Nama Kategori</th>
-                    <th>Deskripsi/peruntukan dalam pabrik</th>
-                    <th>Tanggal Dibuat</th>
-                    <th class="text-center">Aksi</th>
+                    <th><?= translate('no') ?></th>
+                    <th><?= translate('kode') ?></th>
+                    <th><?= translate('nama_ket') ?></th>
+                    <th><?= translate('deskripsi') ?></th>
+                    <th><?= translate('tanggal') ?></th>
+                    <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
             <tbody id="tbodyKatBarang">

@@ -13,6 +13,34 @@ class Supplier_model extends CI_Model
         $query = $this->db->get('supplier');
         return $query->result_array();
     }
+    // Terapkan filter search ke query builder (dipakai bareng oleh get & count)
+    private function applySearchFilter($search)
+    {
+        if (!empty($search)) {
+            $this->db->group_start()
+                ->like('nama', $search)
+                ->or_like('kontak', $search)
+                ->or_like('deskripsi', $search)
+                ->or_like('alamat', $search)
+                ->group_end();
+        }
+    }
+    // Mengambil data kategori barang dengan pagination & search (untuk grid)
+    public function get_supplier_paginated($search = '', $limit = 5, $offset = 0)
+    {
+        $this->applySearchFilter($search);
+        $this->db->order_by('id', 'DESC');
+        $this->db->limit($limit, $offset);
+
+        return $this->db->get('supplier')->result_array();
+    }
+
+    // Hitung total data kategori barang (dengan search yang sama) untuk pagination
+    public function count_supplier($search = '')
+    {
+        $this->applySearchFilter($search);
+        return $this->db->count_all_results('supplier');
+    }
 
     public function get_by_user($nama)
     {

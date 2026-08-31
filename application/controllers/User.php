@@ -17,12 +17,38 @@ class User extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen User';
-        $data['users'] = $this->User_model->get_all_users();
+        // $data['users'] = $this->User_model->get_all_users();
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/user_grid_view', $data);
         $this->load->view('templates/footer', $data);
     }
+
+    // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search
+    public function list_data()
+    {
+        $search = $this->input->get('search', true);
+        $page   = (int) $this->input->get('page', true);
+        if ($page < 1) {
+            $page = 1;
+        }
+
+        $perPage = 5;
+        $offset  = ($page - 1) * $perPage;
+
+        $total = $this->User_model->count_users($search);
+        $data  = $this->User_model->get_users_paginated($search, $perPage, $offset);
+
+        $this->jsonResponse([
+            'status'       => true,
+            'data'         => $data,
+            'total'        => (int) $total,
+            'per_page'     => $perPage,
+            'current_page' => $page,
+            'total_pages'  => (int) ceil($total / $perPage),
+        ]);
+    }
+
 
     // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
     // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
@@ -55,9 +81,10 @@ class User extends MY_Controller
 
         $simpan = $this->User_model->insert_user($data);
 
-        $this->jsonResponse($simpan
-            ? ['status' => true, 'message' => 'Data berhasil disimpan']
-            : ['status' => false, 'message' => 'Gagal menyimpan data']
+        $this->jsonResponse(
+            $simpan
+                ? ['status' => true, 'message' => 'Data berhasil disimpan']
+                : ['status' => false, 'message' => 'Gagal menyimpan data']
         );
     }
 
@@ -65,9 +92,10 @@ class User extends MY_Controller
     public function get_by_id($id)
     {
         $user = $this->User_model->get_by_id($id);
-        $this->jsonResponse($user
-            ? ['status' => true, 'data' => $user]
-            : ['status' => false, 'message' => 'Data tidak ditemukan!']
+        $this->jsonResponse(
+            $user
+                ? ['status' => true, 'data' => $user]
+                : ['status' => false, 'message' => 'Data tidak ditemukan!']
         );
     }
 
@@ -97,9 +125,10 @@ class User extends MY_Controller
 
         $update = $this->User_model->update_user($id, $data);
 
-        $this->jsonResponse($update
-            ? ['status' => true, 'message' => 'Data berhasil diperbarui']
-            : ['status' => false, 'message' => 'Gagal memperbarui data']
+        $this->jsonResponse(
+            $update
+                ? ['status' => true, 'message' => 'Data berhasil diperbarui']
+                : ['status' => false, 'message' => 'Gagal memperbarui data']
         );
     }
 
@@ -113,9 +142,10 @@ class User extends MY_Controller
 
         $delete = $this->User_model->delete_user($id);
 
-        $this->jsonResponse($delete
-            ? ['status' => true, 'message' => 'Data berhasil dihapus']
-            : ['status' => false, 'message' => 'Gagal menghapus data']
+        $this->jsonResponse(
+            $delete
+                ? ['status' => true, 'message' => 'Data berhasil dihapus']
+                : ['status' => false, 'message' => 'Gagal menghapus data']
         );
     }
 }

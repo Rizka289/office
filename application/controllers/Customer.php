@@ -17,12 +17,37 @@ class Customer extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen Customer';
-        $data['customers'] = $this->Customer_model->get_all_customer();
+        // $data['customers'] = $this->Customer_model->get_all_customer();
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/customer_grid_view', $data);
         $this->load->view('templates/footer', $data);
     }
+    // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search
+    public function list_data()
+    {
+        $search = $this->input->get('search', true);
+        $page   = (int) $this->input->get('page', true);
+        if ($page < 1) {
+            $page = 1;
+        }
+
+        $perPage = 5;
+        $offset  = ($page - 1) * $perPage;
+
+        $total = $this->Customer_model->count_customer($search);
+        $data  = $this->Customer_model->get_customer_paginated($search, $perPage, $offset);
+
+        $this->jsonResponse([
+            'status'       => true,
+            'data'         => $data,
+            'total'        => (int) $total,
+            'per_page'     => $perPage,
+            'current_page' => $page,
+            'total_pages'  => (int) ceil($total / $perPage),
+        ]);
+    }
+
 
     // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
     // supaya JS di view bisa refresh token untuk request AJAX berikutnya.

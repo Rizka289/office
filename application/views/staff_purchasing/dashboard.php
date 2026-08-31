@@ -225,15 +225,15 @@
             <!-- Bab 1: Master Data (Collapsible Accordion) -->
             <li class="nav-item">
                 <a class="nav-link collapsed" data-bs-toggle="collapse" href="#masterSubmenu_<?= $menu_id; ?>" role="button" aria-expanded="false" aria-controls="masterSubmenu_<?= $menu_id; ?>">
-                    <div><i class="bi bi-database-fill-gear main-icon"></i> <?= lang('menu_master'); ?></div>
+                    <div><i class="bi bi-receipt-cutoff"></i> <?= translate('purchasing') ?></div>
                     <i class="bi bi-chevron-right arrow-icon"></i>
                 </a>
                 <div class="collapse" id="masterSubmenu_<?= $menu_id; ?>" data-bs-parent="#<?= $menu_id; ?>">
                     <ul class="sub-menu">
                         <!-- Sub-bab: Supplier -->
                         <li>
-                            <a class="nav-sub-link" href="<?= site_url('user'); ?>">
-                                <i class="bi bi-people"></i> <?= lang('menu_user'); ?>
+                            <a class="nav-sub-link" href="<?= site_url('purchase_order'); ?>">
+                                <i class="bi bi-box"></i> <?= translate('app_purchasing'); ?>
                             </a>
                         </li>
                         <li>

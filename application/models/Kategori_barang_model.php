@@ -14,6 +14,14 @@ class Kategori_barang_model extends CI_Model
         return $query->result_array();
     }
 
+    // Ambil semua kategori, diurutkan berdasarkan nama (untuk isi <select>)
+    public function get_all()
+    {
+        $this->db->order_by('nama_kategori', 'ASC');
+        return $this->db->get('kategori_barang')->result_array();
+    }
+    
+
     // Terapkan filter search ke query builder (dipakai bareng oleh get & count)
     private function applySearchFilter($search)
     {
@@ -41,7 +49,7 @@ class Kategori_barang_model extends CI_Model
         $this->applySearchFilter($search);
         return $this->db->count_all_results('kategori_barang');
     }
-    
+
     public function insert_kategori_barang($data)
     {
         return $this->db->insert('kategori_barang', $data);

@@ -292,6 +292,13 @@
                     'url'   => 'barang',
                     'roles' => ['super_admin'],
                 ],
+                [
+                    'key'   => 'locations',
+                    'label' => function_exists('translate') ? translate('app_rak') : 'Lokasi Rak',
+                    'icon'  => 'bi bi-archive',
+                    'url'   => 'locations',
+                    'roles' => ['super_admin'],
+                ],
             ],
         ],
         [

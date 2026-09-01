@@ -164,12 +164,31 @@
     background: #f4faf6;
   }
 
-  .supplier-suggest-box, .barang-suggest-box {
+  .supplier-suggest-box {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
     right: 0;
     z-index: 50;
+    background: #fff;
+    border: 1px solid var(--po-line);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(27, 36, 48, .12);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  /* .barang-suggest-box sengaja dibuat position:fixed (bukan absolute di dalam
+     .barang-search-wrap) karena wrapper-nya berada di dalam .table-responsive.
+     Bootstrap men-set overflow-x:auto pada .table-responsive, dan begitu salah
+     satu axis di-set auto, browser otomatis meng-clip axis satunya juga —
+     akibatnya dropdown saran barang kepotong/ketindih baris tabel dan baru
+     kelihatan kalau discroll manual. Dengan position:fixed + posisi dihitung
+     lewat JS (lihat positionBarangBox()), box ini "keluar" dari alur/clip
+     table-responsive sehingga selalu tampil responsif mengikuti input aktif. */
+  .barang-suggest-box {
+    position: fixed;
+    z-index: 2000;
     background: #fff;
     border: 1px solid var(--po-line);
     border-radius: 8px;
@@ -226,10 +245,10 @@
   <div id="listView">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h4 class="mb-0 fw-bold">Purchase Order</h4>
+        <h4 class="mb-0 fw-bold"><?= translate('app_purchasing') ?></h4>
       </div>
       <button class="btn btn-brand d-flex align-items-center gap-2" onclick="openForm()">
-        <i class="bi bi-plus-lg"></i> PO Baru
+        <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
       </button>
     </div>
 
@@ -267,12 +286,12 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th>No. PO</th>
-              <th>Supplier</th>
-              <th>Tanggal JT</th>
-              <th>Status</th>
-              <th class="text-end">Nilai</th>
-              <th class="text-center" style="width: 130px;">Aksi</th>
+              <th><?= translate('no') ?></th>
+              <th><?= translate('list_pemasok') ?></th>
+              <th><?= translate('tgl_tempo') ?></th>
+              <th><?= translate('status') ?></th>
+              <th class="text-end"><?= translate('nilai') ?></th>
+              <th class="text-center" style="width: 130px;"><?= translate('aksi') ?></th>
             </tr>
           </thead>
           <tbody id="poTableBody"></tbody>
@@ -376,6 +395,11 @@
 
 <!-- Element Toast -->
 <div class="po-toast" id="toast"></div>
+
+<!-- Box saran pencarian barang: sengaja diletakkan di luar .table-responsive
+     (satu elemen dipakai bergantian oleh semua baris) supaya tidak ke-clip
+     oleh overflow tabel. Posisinya diatur lewat JS mengikuti input aktif. -->
+<div class="barang-suggest-box d-none" id="barangSuggestBox"></div>
 
 <!-- Modal Konfirmasi Hapus -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
@@ -725,7 +749,6 @@
           <input type="text" class="form-control form-control-sm it-barang-search" placeholder="Ketik untuk cari barang..." autocomplete="off"
                  value="${prefill ? escapeHTML(prefill.nama) : ''}">
           <input type="hidden" class="it-id-barang" value="${prefill ? prefill.id_barang : ''}">
-          <div class="barang-suggest-box d-none"></div>
         </div>
       </td>
       <td class="col-qty"><input type="number" min="0" class="form-control form-control-sm it-qty" value="${prefill ? prefill.qty : 1}" oninput="updateGrandTotal()"></td>
@@ -759,11 +782,44 @@
     return list.filter(b => b.nama.toLowerCase().includes(kw) || b.kode.toLowerCase().includes(kw)).slice(0, 8);
   }
 
+  /* Satu box saran barang dipakai bergantian oleh semua baris (lihat komentar
+     CSS/HTML-nya). activeBarangInput menyimpan input mana yang sedang aktif
+     supaya box tahu harus reposisi/hide mengikuti input yang mana. */
+  let activeBarangInput = null;
+
+  function positionBarangBox() {
+    const box = document.getElementById('barangSuggestBox');
+    if (!activeBarangInput || box.classList.contains('d-none')) return;
+    const rect = activeBarangInput.getBoundingClientRect();
+    box.style.left = rect.left + 'px';
+    box.style.top = (rect.bottom + 4) + 'px';
+    box.style.width = rect.width + 'px';
+  }
+
+  function hideBarangBox() {
+    document.getElementById('barangSuggestBox').classList.add('d-none');
+    activeBarangInput = null;
+  }
+
+  // Reposisi tiap kali di-scroll (termasuk scroll horizontal/vertikal di
+  // dalam .table-responsive) atau saat window di-resize, supaya box selalu
+  // menempel pas di bawah input yang sedang dicari — bukan ketinggalan/ketindih.
+  window.addEventListener('scroll', positionBarangBox, true);
+  window.addEventListener('resize', positionBarangBox);
+
+  // Klik di luar wrapper pencarian barang ATAU di luar box saran -> tutup box.
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.barang-search-wrap') && !e.target.closest('#barangSuggestBox')) {
+      hideBarangBox();
+    }
+  });
+
   function initBarangRowSearch(tr) {
     const input = tr.querySelector('.it-barang-search');
-    const box = tr.querySelector('.barang-suggest-box');
+    const box = document.getElementById('barangSuggestBox');
 
     function renderSuggest(list) {
+      activeBarangInput = input;
       if (list.length === 0) {
         box.innerHTML = `<div class="supplier-suggest-empty">Barang tidak ditemukan</div>`;
       } else {
@@ -782,6 +838,7 @@
         });
       }
       box.classList.remove('d-none');
+      positionBarangBox();
     }
 
     input.addEventListener('input', () => {
@@ -791,10 +848,6 @@
     });
 
     input.addEventListener('focus', () => renderSuggest(searchBarang(input.value)));
-
-    document.addEventListener('click', (e) => {
-      if (!tr.contains(e.target)) box.classList.add('d-none');
-    });
   }
 
   function selectBarangForRow(tr, id, nama) {
@@ -802,12 +855,17 @@
     const input = tr.querySelector('.it-barang-search');
     input.value = nama;
     input.classList.add('is-linked');
-    tr.querySelector('.barang-suggest-box').classList.add('d-none');
+    hideBarangBox();
   }
 
   function removeItemRow(rowId) {
     const row = document.getElementById(rowId);
-    if (row) row.remove();
+    if (row) {
+      // Kalau baris yang dihapus sedang jadi baris aktif box saran, tutup dulu
+      // supaya box tidak "menggantung" nunjuk ke input yang sudah tidak ada.
+      if (activeBarangInput && row.contains(activeBarangInput)) hideBarangBox();
+      row.remove();
+    }
     updateGrandTotal();
   }
 

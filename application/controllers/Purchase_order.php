@@ -15,8 +15,8 @@ class Purchase_order extends MY_Controller
 
     public function index()
     {
-        $data['title']          = 'Manajemen Pesanan Pembelian';
-        $data['page_title']     = 'Manajemen Pesanan Pembelian';
+        $data['title']          = translate('app_purchasing');
+        $data['page_title']     =  translate('app_purchasing');
         $data['active_menu']    = 'purchase_order';
         $data['supplier']       = $this->Supplier_model->get_all_supplier();
         $data['barang']         = $this->Barang_model->get_all_for_select();

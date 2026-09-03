@@ -299,6 +299,13 @@
                     'url'   => 'locations',
                     'roles' => ['super_admin'],
                 ],
+                [
+                    'key'   => 'artikel',
+                    'label' => function_exists('translate') ? translate('menu_artikel') : 'Artikel',
+                    'icon'  => 'bi-journal-text',
+                    'url'   => 'artikel',
+                    'roles' => ['super_admin'],
+                ],
             ],
         ],
         [

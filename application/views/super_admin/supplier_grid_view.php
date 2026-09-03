@@ -1,7 +1,7 @@
 <!-- ================= GRID DATA SUPPLIER ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h6 class="fw-bold m-0"><?= translate('list_pemasok') ?></h6>
+        <h6 class="fw-bold m-0"></h6>
         <!-- Trigger Modal Tambah User -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahSup">
             <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
@@ -52,32 +52,32 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahSupLabel"><i class="bi bi-person-plus"></i> Tambah Supplier Baru</h5>
+                <h5 class="modal-title fs-6" id="modalTambahSupLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('list_pemasok') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formTambahSup" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Supplier</label>
+                        <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama supplier" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kontak</label>
+                        <label class="form-label small fw-bold"><?= translate('kontak') ?></label>
                         <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
                         <textarea name="deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan Deskripsi" autocomplete="off" required></textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Alamat</label>
+                        <label class="form-label small fw-bold"><?= translate('alamat') ?></label>
                         <textarea name="alamat" class="form-control form-control-sm" rows="3" placeholder="Masukkan alamat" autocomplete="off" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan">Simpan Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>

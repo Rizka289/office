@@ -245,7 +245,7 @@
   <div id="listView">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h4 class="mb-0 fw-bold"><?= translate('app_purchasing') ?></h4>
+       
       </div>
       <button class="btn btn-brand d-flex align-items-center gap-2" onclick="openForm()">
         <i class="bi bi-plus-lg"></i> <?= translate('add') ?>

@@ -16,7 +16,9 @@ class User extends MY_Controller
 
     public function index()
     {
-        $data['title'] = 'Manajemen User';
+        $data['title'] = translate('app_list');
+        $data['page_title']     =  translate('app_list') . ' ' . translate('app_username');
+
         // $data['users'] = $this->User_model->get_all_users();
 
         $this->load->view('templates/header', $data);

@@ -1,7 +1,7 @@
 <!-- ================= GRID DATA CUSTOMER ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold m-0"><?= translate('list_pelanggan') ?></h6>
+        <h6 class="fw-bold m-0"></h6>
         <!-- Trigger Modal Tambah Customer -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahCustomer">
             <i class="bi bi-plus-lg"></i> <?= translate('add') ?>

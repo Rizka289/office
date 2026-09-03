@@ -1,7 +1,7 @@
 <!-- ================= GRID DATA USER ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold m-0"><?= translate('app_list') ?></h6>
+        <h6 class="fw-bold m-0"></h6>
         <!-- Trigger Modal Tambah User -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahUser">
             <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
@@ -24,7 +24,7 @@
                 <tr>
                     <th><?= translate('no') ?></th>
                     <th><?= translate('nama_lengkap') ?></th>
-                    <th><?= translate('username') ?></th>
+                    <th><?= translate('app_username') ?></th>
                     <th><?= translate('hak_akses') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
@@ -50,28 +50,28 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahUserLabel"><i class="bi bi-person-plus"></i> Tambah User Baru</h5>
+                <h5 class="modal-title fs-6" id="modalTambahUserLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('app_username') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formTambahUser" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Lengkap</label>
+                        <label class="form-label small fw-bold"><?= translate('form_full_name') ?></label>
                         <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama lengkap" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Username</label>
+                        <label class="form-label small fw-bold"><?= translate('app_username') ?></label>
                         <input type="text" name="username" class="form-control form-control-sm" placeholder="Masukkan username" autocomplete="new-password" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Password</label>
+                        <label class="form-label small fw-bold"><?= translate('app_password') ?></label>
                         <input type="password" name="password" class="form-control form-control-sm" placeholder="Masukkan password" autocomplete="new-password" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Role</label>
+                        <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
                         <select name="role" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Role --</option>
+                            <option value="">-- <?= translate('label_choice') ?> --</option>
                             <option value="super_admin">super admin</option>
                             <option value="supervisor">supervisor</option>
                             <option value="staff_purchasing">staff purchasing</option>
@@ -79,8 +79,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan">Simpan Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>

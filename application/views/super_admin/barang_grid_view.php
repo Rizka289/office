@@ -26,7 +26,7 @@
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
-                    <th><?= translate('jenis_barang') ?></th>
+                    <th><?= translate('jenis') ?></th>
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('dimensi') ?></th>
                     <th><?= translate('min_stok') ?></th>

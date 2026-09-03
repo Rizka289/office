@@ -53,6 +53,7 @@ class Login extends MY_Controller
                 'username'  => $user->username,
                 'nama'      => $user->nama_lengkap,
                 'role'      => $user->role,
+                'foto'      => $user->foto,
                 'logged_in' => TRUE
             ];
 

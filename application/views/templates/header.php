@@ -273,7 +273,7 @@
                 ],
                 [
                     'key'   => 'customer',
-                    'label' => function_exists('translate') ? translate('menu_customer') : 'Customer',
+                    'label' => function_exists('translate') ? translate('app_list') . ' ' . translate('pelanggan') : 'Customer',
                     'icon'  => 'bi-people',
                     'url'   => 'customer',
                     'roles' => ['super_admin'],
@@ -420,10 +420,23 @@
 
                     <div class="d-flex align-items-center gap-2">
                         <div class="profile-menu" tabindex="0">
-                            <div class="profile-trigger d-flex align-items-center gap-2">
-                                <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width:34px;height:34px;">
-                                    <i class="bi bi-person-fill"></i>
-                                </div>
+                            <div class="profile-trigger d-flex align-items-center gap-2" style="cursor: pointer;">
+                                <!-- Foto Profil di Topbar -->
+                                <?php
+                                $session_foto = $this->session->userdata('foto');
+                                $topbar_foto = (!empty($session_foto) && file_exists(FCPATH . 'uploads/profiles/' . $session_foto))
+                                    ? base_url('uploads/profiles/' . $session_foto)
+                                    : null;
+                                ?>
+
+                                <?php if ($topbar_foto): ?>
+                                    <img src="<?= $topbar_foto; ?>" alt="Profile" class="rounded-circle" style="width:34px; height:34px; object-fit:cover;">
+                                <?php else: ?>
+                                    <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width:34px;height:34px;">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="d-none d-md-block text-end lh-sm">
                                     <div class="fw-semibold" style="font-size:.85rem;"><?= $this->session->userdata('nama') ?: 'User'; ?></div>
                                     <div class="text-muted" style="font-size:.72rem;"><?= $this->session->userdata('username'); ?></div>
@@ -431,7 +444,7 @@
                             </div>
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
-                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= function_exists('translate') ? translate('profile') : 'Profil'; ?></a>
+                                    <a href="<?= site_url('profile'); ?>" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= function_exists('translate') ? translate('profile') : 'Profil'; ?></a>
                                     <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= function_exists('translate') ? translate('app_logout') : 'Keluar'; ?></a>
                                 </div>
                             </div>

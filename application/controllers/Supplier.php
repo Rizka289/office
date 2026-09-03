@@ -9,7 +9,7 @@ class Supplier extends MY_Controller
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole(['super_admin','staff_purchasing']); // hanya super admin yang boleh akses seluruh method di sini
+        $this->requireRole(['super_admin', 'staff_purchasing']); // hanya super admin yang boleh akses seluruh method di sini
         $this->load->model('Supplier_model');
         $this->load->helper('url');
     }
@@ -17,7 +17,8 @@ class Supplier extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen Supplier';
-        // $data['supplier'] = $this->Supplier_model->get_all_supplier();
+        $data['page_title']     =  translate('app_list') . ' ' . translate('list_pemasok');
+
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/supplier_grid_view', $data);

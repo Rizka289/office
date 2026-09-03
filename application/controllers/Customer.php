@@ -17,7 +17,7 @@ class Customer extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen Customer';
-        // $data['customers'] = $this->Customer_model->get_all_customer();
+        $data['page_title']     =  translate('app_list') . ' ' . translate('pelanggan');
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/customer_grid_view', $data);

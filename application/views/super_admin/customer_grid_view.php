@@ -50,28 +50,28 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahCustomerLabel"><i class="bi bi-person-plus"></i> Tambah Customer Baru</h5>
+                <h5 class="modal-title fs-6" id="modalTambahCustomerLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('pelanggan')?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formTambahCustomer" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Customer</label>
+                        <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama customer" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kontak</label>
+                        <label class="form-label small fw-bold"><?= translate('kontak') ?></label>
                         <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Alamat</label>
+                        <label class="form-label small fw-bold"><?= translate('alamat') ?></label>
                         <textarea name="alamat" class="form-control form-control-sm" rows="3" placeholder="Masukkan alamat" autocomplete="off" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan">Simpan Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>
@@ -83,7 +83,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalEditUserLabel"><i class="bi bi-pencil-square"></i> Edit Data Customer</h5>
+                <h5 class="modal-title fs-6" id="modalEditUserLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') . ' ' . translate('pelanggan') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formEditCustomer" autocomplete="off">
@@ -91,21 +91,21 @@
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Customer</label>
+                        <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan nama customer" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kontak</label>
+                        <label class="form-label small fw-bold"><?= translate('kontak') ?></label>
                         <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" id="edit_kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Alamat</label>
+                        <label class="form-label small fw-bold"><?= translate('alamat') ?></label>
                         <textarea name="alamat" id="edit_alamat" class="form-control form-control-sm" rows="3" placeholder="Masukkan alamat" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdate">Update Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdate"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>

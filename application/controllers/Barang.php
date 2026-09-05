@@ -17,7 +17,9 @@ class Barang extends MY_Controller
 
     public function index()
     {
-        $data['title'] = 'Manajemen Nama Barang';
+        $data['title'] = translate('list_barang');
+        $data['page_title']     =  translate('list_barang');
+
         // 2. Ambil data kategori list dari model untuk dikirim ke view
         $data['kategoriList'] = $this->Kategori_barang_model->get_kat_barang_paginated('', 1000, 0);
 

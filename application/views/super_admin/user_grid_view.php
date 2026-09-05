@@ -92,7 +92,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalEditUserLabel"><i class="bi bi-pencil-square"></i> Edit Data User</h5>
+                <h5 class="modal-title fs-6" id="modalEditUserLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formEditUser" autocomplete="off">
@@ -100,22 +100,22 @@
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Lengkap</label>
+                        <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan nama lengkap" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Username</label>
+                        <label class="form-label small fw-bold"><?= translate('username') ?></label>
                         <input type="text" name="username" id="edit_username" class="form-control form-control-sm" placeholder="Masukkan username" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Password Baru</label>
-                        <input type="password" name="password" id="edit_password" class="form-control form-control-sm" placeholder="Kosongkan jika tidak ingin mengubah password" autocomplete="new-password">
-                        <small class="text-muted" style="font-size: 0.75rem;">*Isi hanya jika ingin mengganti password</small>
+                        <label class="form-label small fw-bold"><?= translate('app_password') ?></label>
+                        <input type="password" name="password" id="edit_password" class="form-control form-control-sm" placeholder="<?= translate('placeholder') ?>" autocomplete="new-password">
+                        <small class="text-muted" style="font-size: 0.75rem;"><?= translate('text_muted') ?></small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Role</label>
+                        <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
                         <select name="role" id="edit_role" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Role --</option>
+                            <option value="">-- <?= translate('label_choice') ?> --</option>
                             <option value="super_admin">super admin</option>
                             <option value="supervisor">supervisor</option>
                             <option value="staff_purchasing">staff purchasing</option>
@@ -123,8 +123,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdate">Update Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdate"><?= translate('update') ?></button>
                 </div>
             </form>
         </div>

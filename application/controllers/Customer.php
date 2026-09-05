@@ -16,7 +16,7 @@ class Customer extends MY_Controller
 
     public function index()
     {
-        $data['title'] = 'Manajemen Customer';
+        $data['title'] = translate('app_list') . ' ' . translate('pelanggan');
         $data['page_title']     =  translate('app_list') . ' ' . translate('pelanggan');
 
         $this->load->view('templates/header', $data);

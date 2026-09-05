@@ -140,7 +140,8 @@
     transform: translateX(-50%) translateY(0);
   }
 
-  .supplier-search-wrap, .barang-search-wrap {
+  .supplier-search-wrap,
+  .barang-search-wrap {
     position: relative;
   }
 
@@ -245,7 +246,7 @@
   <div id="listView">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-       
+
       </div>
       <button class="btn btn-brand d-flex align-items-center gap-2" onclick="openForm()">
         <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
@@ -299,9 +300,9 @@
       </div>
 
       <div class="text-center py-5 d-none" id="emptyState">
-        <p class="text-muted mb-3">Belum ada purchase order.</p>
+        <p class="text-muted mb-3"><?= translate('placeholder_po') ?></p>
         <button class="btn btn-brand" onclick="openForm()">
-          <i class="bi bi-plus-lg me-1"></i> Buat PO Pertama
+          <i class="bi bi-plus-lg me-1"></i> <?= translate('add_po') ?>
         </button>
       </div>
     </div>
@@ -311,42 +312,42 @@
   <div id="formView" class="d-none">
     <div class="mb-3 d-flex justify-content-between align-items-center">
       <button class="btn btn-link text-decoration-none text-secondary p-0 fw-semibold" onclick="closeForm()">
-        <i class="bi bi-arrow-left me-1"></i> Kembali ke daftar
+        <i class="bi bi-arrow-left me-1"></i> <?= translate('kembali') ?>
       </button>
       <h5 class="mb-0 fw-bold" id="formTitle">Form Purchase Order</h5>
     </div>
 
     <!-- Informasi PO -->
     <div class="card card-custom p-4 mb-4">
-      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;">Informasi Purchase Order</h6>
+      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;"><?= translate('informasi') . ' ' . translate('app_purchasing')?></h6>
       <input type="hidden" id="f_id_po" value="">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">No. PO</label>
+          <label class="form-label small fw-semibold"><?= translate('no') . ' ' . translate('app_purchasing') ?></label>
           <input type="text" class="form-control bg-light" id="f_nopo" readonly>
         </div>
 
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">Tanggal Jatuh Tempo</label>
+          <label class="form-label small fw-semibold"><?= translate('tgl_tempo') ?></label>
           <input type="date" class="form-control" id="f_date">
         </div>
 
         <div class="col-md-6">
           <label class="form-label small fw-semibold d-flex justify-content-between align-items-center">
-            <span>Supplier</span>
+            <span><?= translate('list_pemasok') ?></span>
             <span class="supplier-linked-tag d-none" id="supplierLinkedTag"><i class="bi bi-link-45deg"></i> Terhubung</span>
           </label>
           <div class="supplier-search-wrap">
             <i class="bi bi-search"></i>
-            <input type="text" class="form-control" id="f_supplier_search" placeholder="Ketik nama supplier untuk mencari..." autocomplete="off">
+            <input type="text" class="form-control" id="f_supplier_search" placeholder="<?= translate('placeholder_supplier') .' ...' ?>" autocomplete="off">
             <input type="hidden" id="f_id_supplier" value="">
             <div class="supplier-suggest-box d-none" id="supplierSuggestBox"></div>
           </div>
         </div>
 
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">Catatan</label>
-          <textarea class="form-control" id="f_note" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
+          <label class="form-label small fw-semibold"><?= translate('deskripsi') ?></label>
+          <textarea class="form-control" id="f_note" rows="3" placeholder="<?= translate('placeholder_deskripsi') ?>"></textarea>
         </div>
       </div>
     </div>
@@ -358,11 +359,11 @@
         <table class="table align-middle items-table mb-2">
           <thead>
             <tr>
-              <th style="width:34%">Nama Barang</th>
-              <th style="width:14%">Qty</th>
-              <th style="width:14%">Satuan</th>
-              <th style="width:18%">Harga Satuan</th>
-              <th style="width:16%" class="text-end">Subtotal</th>
+              <th style="width:34%"><?= translate('nama_barang') ?></th>
+              <th style="width:14%"><?= translate('qty') ?></th>
+              <th style="width:14%"><?= translate('satuan') ?></th>
+              <th style="width:14%"><?= translate('harga') ?></th>
+              <th style="width:16%" class="text-end"><?= translate('subtotal') ?></th>
               <th style="width:4%"></th>
             </tr>
           </thead>
@@ -370,10 +371,10 @@
         </table>
       </div>
 
-      <button class="addrow-btn mb-4" id="btnAddRow" onclick="addItemRow()">+ Tambah Baris Barang</button>
+      <button class="addrow-btn mb-4" id="btnAddRow" onclick="addItemRow()"><?= translate('+tambah') ?></button>
 
       <div class="d-flex justify-content-end align-items-center gap-3 pt-3 border-top">
-        <span class="text-secondary small fw-semibold">Total Purchase Order:</span>
+        <span class="text-secondary small fw-semibold"><?= translate('total') . ' ' . translate('app_purchasing') ?></span>
         <span class="total-row-val" id="grandTotal">Rp 0</span>
       </div>
     </div>
@@ -385,8 +386,8 @@
       </div>
       <div class="d-flex gap-2">
         <button class="btn btn-outline-danger d-none" id="deleteBtn" onclick="deleteCurrentPO()">Hapus PO</button>
-        <button class="btn btn-light border" onclick="closeForm()">Batal</button>
-        <button class="btn btn-brand" id="saveBtn" onclick="savePO()">Simpan Purchase Order</button>
+        <button class="btn btn-light border" onclick="closeForm()"><?= translate('btn_batal') ?></button>
+        <button class="btn btn-brand" id="saveBtn" onclick="savePO()"><?= translate('button_save') ?></button>
       </div>
     </div>
   </div>
@@ -452,14 +453,22 @@
 
   async function fetchPOList(search = '', page = 1) {
     const url = `${SITE_URL}purchase_order/list_data?search=${encodeURIComponent(search)}&page=${page}`;
-    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const res = await fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
     const json = await res.json();
     if (json.csrf_hash) csrfHash = json.csrf_hash;
     return json;
   }
 
   async function fetchPODetail(id) {
-    const res = await fetch(`${SITE_URL}purchase_order/get_detail/${id}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const res = await fetch(`${SITE_URL}purchase_order/get_detail/${id}`, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
     const json = await res.json();
     if (json.csrf_hash) csrfHash = json.csrf_hash;
     return json;
@@ -560,8 +569,7 @@
   function openForm() {
     document.getElementById('listView').classList.add('d-none');
     document.getElementById('formView').classList.remove('d-none');
-    document.getElementById('formTitle').textContent = 'Buat Purchase Order Baru';
-
+    document.getElementById('formTitle').textContent = <?= json_encode(translate('add') . ' ' . translate('app_purchasing')) ?>;
     setFormReadonly(false);
 
     document.getElementById('itemsBody').innerHTML = '';
@@ -883,8 +891,12 @@
 
   function escapeHTML(s) {
     return (s || '').replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    } [c]));
   }
 
   function renderSatuanOptions(selected) {
@@ -898,19 +910,28 @@
   }
 
   function statusLabel(s) {
-    return { menunggu: 'Menunggu QC', lolos: 'Lolos QC', ditolak: 'Ditolak QC' }[s] || s;
+    return {
+      menunggu: 'Menunggu QC',
+      lolos: 'Lolos QC',
+      ditolak: 'Ditolak QC'
+    } [s] || s;
   }
 
   function formatDateID(iso) {
     const d = new Date(iso);
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
   function buildFormDataParams(obj, prefix = '') {
     let str = [];
     for (let p in obj) {
       if (obj.hasOwnProperty(p)) {
-        let k = prefix ? prefix + "[" + p + "]" : p, v = obj[p];
+        let k = prefix ? prefix + "[" + p + "]" : p,
+          v = obj[p];
         if (v !== null && typeof v === "object") {
           str.push(buildFormDataParams(v, k));
         } else {
@@ -952,7 +973,12 @@
       if (!id_barang) hasUnlinkedBarang = true;
       if (qty <= 0) hasInvalidQty = true;
 
-      items.push({ id_barang, qty, unit, price });
+      items.push({
+        id_barang,
+        qty,
+        unit,
+        price
+      });
     });
 
     if (items.length === 0) {

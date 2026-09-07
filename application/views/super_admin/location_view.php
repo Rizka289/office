@@ -1,7 +1,7 @@
 <!-- ================= GRID DATA LOCATION ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h6 class="fw-bold m-0"><?= translate('app_location') ?></h6>
+        <h6 class="fw-bold m-0"></h6>
         <!-- Trigger Modal Tambah Location -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahLocation">
             <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
@@ -25,11 +25,11 @@
                     <th><?= translate('no') ?></th>
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('nama') ?></th>
-                    <th>Lorong</th>
-                    <th>Nomor Rak</th>
-                    <th>Tingkat</th>
-                    <th>Jenis Lokasi</th>
-                    <th class="text-center">Aksi</th>
+                    <th><?= translate('lorong') ?></th>
+                    <th><?= translate('no_rak') ?></th>
+                    <th><?= translate('tingkat') ?></th>
+                    <th><?= translate('jenis_lok') ?></th>
+                    <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
             <tbody id="locationTableBody">
@@ -53,40 +53,45 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahLocationLabel"><i class="bi bi-geo-alt"></i> Tambah Lokasi Rak Baru</h5>
+                <h5 class="modal-title fs-6" id="modalTambahLocationLabel"><i class="bi bi-geo-alt"></i> <?= translate('add') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formTambahLocation" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kode Lokasi</label>
+                        <label class="form-label small fw-bold"><?= translate('kode') ?></label>
                         <input type="text" name="location_code" class="form-control form-control-sm" placeholder="Contoh: A-01-01" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Zona</label>
+                        <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="zone_name" class="form-control form-control-sm" placeholder="Contoh: Zona A" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Lorong</label>
+                        <label class="form-label small fw-bold"><?= translate('lorong') ?></label>
                         <input type="text" name="aisle" class="form-control form-control-sm" placeholder="Contoh: Lorong 1">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nomor Rak</label>
+                        <label class="form-label small fw-bold"><?= translate('no_rak') ?></label>
                         <input type="text" name="rack_number" class="form-control form-control-sm" placeholder="Contoh: Rak 01">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Tingkat</label>
+                        <label class="form-label small fw-bold"><?= translate('tingkat') ?></label>
                         <input type="text" name="level" class="form-control form-control-sm" placeholder="Contoh: 1">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Jenis Lokasi</label>
-                        <input type="text" name="location_type" class="form-control form-control-sm" placeholder="Contoh: Rak / Gudang / Transit">
+                        <label class="form-label small fw-bold"><?= translate('jenis_lok') ?></label>
+                        <select name="location_type" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('label_choice') ?> --</option>
+                            <option value="STORAGE">STORAGE</option>
+                            <option value="QUARANTINE">QUARANTINE</option>
+                            <option value="TRANSIT">TRANSIT</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpanLocation">Simpan Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpanLocation"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>
@@ -98,7 +103,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalEditLocationLabel"><i class="bi bi-pencil-square"></i> Edit Data Lokasi Rak</h5>
+                <h5 class="modal-title fs-6" id="modalEditLocationLabel"><i class="bi bi-pencil-square"></i><?= translate('update') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formEditLocation" autocomplete="off">
@@ -106,33 +111,38 @@
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kode Lokasi</label>
+                        <label class="form-label small fw-bold"><?= translate('kode') ?></label>
                         <input type="text" name="location_code" id="edit_location_code" class="form-control form-control-sm" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Zona</label>
+                        <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="zone_name" id="edit_zone_name" class="form-control form-control-sm" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Lorong</label>
+                        <label class="form-label small fw-bold"><?= translate('lorong') ?></label>
                         <input type="text" name="aisle" id="edit_aisle" class="form-control form-control-sm">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nomor Rak</label>
+                        <label class="form-label small fw-bold"><?= translate('no_rak') ?></label>
                         <input type="text" name="rack_number" id="edit_rack_number" class="form-control form-control-sm">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Tingkat</label>
+                        <label class="form-label small fw-bold"><?= translate('tingkat') ?></label>
                         <input type="text" name="level" id="edit_level" class="form-control form-control-sm">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Jenis Lokasi</label>
-                        <input type="text" name="location_type" id="edit_location_type" class="form-control form-control-sm">
+                        <label class="form-label small fw-bold"><?= translate('jenis_lok') ?></label>
+                        <select name="location_type" id="edit_location_type" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('label_choice') ?> --</option>
+                            <option value="STORAGE">STORAGE</option>
+                            <option value="QUARANTINE">QUARANTINE</option>
+                            <option value="TRANSIT">TRANSIT</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdateLocation">Update Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdateLocation"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>
@@ -148,10 +158,10 @@
 
         // Ambil url endpoint sekali saja
         var listDataUrl = "<?= site_url('locations/list_data'); ?>";
-        var simpanUrl   = "<?= site_url('locations/simpan'); ?>";
-        var updateUrl   = "<?= site_url('locations/update'); ?>";
-        var getByIdUrl  = "<?= site_url('locations/get_by_id/'); ?>";
-        var deleteUrl   = "<?= site_url('locations/delete/'); ?>";
+        var simpanUrl = "<?= site_url('locations/simpan'); ?>";
+        var updateUrl = "<?= site_url('locations/update'); ?>";
+        var getByIdUrl = "<?= site_url('locations/get_by_id/'); ?>";
+        var deleteUrl = "<?= site_url('locations/delete/'); ?>";
 
         function escapeHtml(str) {
             return $('<div>').text(str == null ? '' : str).html();

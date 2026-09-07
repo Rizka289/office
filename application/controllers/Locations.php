@@ -17,6 +17,7 @@ class Locations extends MY_Controller
     public function index()
     {
         $data['title'] = translate('app_rak');
+        $data['page_title'] = translate('app_location');
         // $data['kategori_barang'] = $this->Kategori_barang_model->get_all_kat_barang();
 
         $this->load->view('templates/header', $data);

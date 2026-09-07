@@ -304,7 +304,7 @@
         [
             'key'   => 'purchasing',
             'label' => function_exists('translate') ? translate('purchasing') : 'Purchasing',
-            'icon'  => 'bi-receipt-cutoff',
+            'icon'  => 'bi bi-basket2',
             'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
             'items' => [
                 [
@@ -313,6 +313,28 @@
                     'icon'  => 'bi-box',
                     'url'   => 'purchase_order',
                     'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
+                    'key'   => 'supplier',
+                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
+                    'icon'  => 'bi-people',
+                    'url'   => 'supplier',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+            ],
+        ],
+        [
+            'key'   => 'inventory',
+            'label' => function_exists('translate') ? translate('inventory') : 'Inventory',
+            'icon'  => 'bi bi-box-seam-fill',
+            'roles' => ['super_admin', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
+            'items' => [
+                [
+                    'key'   => 'penerimaan_barang',
+                    'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
+                    'icon'  => 'bi bi-card-checklist',
+                    'url'   => 'penerimaan_barang',
+                    'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
                 ],
                 [
                     'key'   => 'supplier',
@@ -333,6 +355,18 @@
 
     function render_navigation($menu_id, $menu_groups, $current_role, $active_menu = '')
     {
+        // Cari lebih dulu grup mana yang MEMUAT active_menu, supaya grup itu
+        // yang otomatis terbuka -- bukan selalu grup pertama.
+        $active_group_key = null;
+        foreach ($menu_groups as $group) {
+            foreach ($group['items'] as $item) {
+                if ($active_menu !== '' && $item['key'] === $active_menu) {
+                    $active_group_key = $group['key'];
+                    break 2;
+                }
+            }
+        }
+
         $is_first = true;
     ?>
         <ul class="nav flex-column mb-auto" id="<?= $menu_id; ?>">
@@ -350,9 +384,16 @@
                     continue;
                 }
 
-                $group_dom_id  = 'submenu_' . $group['key'] . '_' . $menu_id;
-                $group_is_open = $is_first; // grup pertama yang muncul dibuka otomatis
-                $is_first      = false;
+                $group_dom_id = 'submenu_' . $group['key'] . '_' . $menu_id;
+
+                if ($active_group_key !== null) {
+                    // Ada menu aktif yang cocok -> hanya grup itu yang terbuka
+                    $group_is_open = ($group['key'] === $active_group_key);
+                } else {
+                    // Fallback (mis. halaman dashboard tanpa active_menu): grup pertama terbuka
+                    $group_is_open = $is_first;
+                }
+                $is_first = false;
             ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $group_is_open ? '' : 'collapsed'; ?>" data-bs-toggle="collapse" href="#<?= $group_dom_id; ?>" role="button" aria-expanded="<?= $group_is_open ? 'true' : 'false'; ?>" aria-controls="<?= $group_dom_id; ?>">

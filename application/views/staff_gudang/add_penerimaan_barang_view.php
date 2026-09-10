@@ -2,14 +2,10 @@
 
 <!--
   PENTING: File ini adalah FRAGMENT yang di-load DI DALAM header.php + footer.php
-  (lihat main->load->view('header'), load->view('penerimaan_barang_view'), load->view('footer')).
-  JANGAN tulis <!DOCTYPE>, <html>, <head>, <body>, atau link CDN Bootstrap/Icons di sini —
   semua itu SUDAH disediakan oleh header.php dan akan bentrok/menimpa milik header kalau ditulis ulang.
 -->
 
 <style>
-  /* Variabel di-scope ke .rcv-page saja (BUKAN :root) supaya tidak menimpa
-     --brand / --brand-dark milik header.php yang dipakai sidebar & topbar. */
   .rcv-page {
     --rcv-brand: #2f6f4f;
     --rcv-brand-dark: #234f38;
@@ -116,11 +112,6 @@
     color: #1f7a45;
   }
 
-  .rcv-page .badge-kurang {
-    background: #fde2e1;
-    color: #b3261e;
-  }
-
   .rcv-page .badge-po {
     background: #e7f0eb;
     color: var(--rcv-brand-dark);
@@ -137,7 +128,6 @@
     border-radius: 6px;
   }
 
-  /* Prefiks rcv- dipakai supaya TIDAK menimpa .btn-brand global milik header.php */
   .rcv-page .btn-rcv-brand {
     background: var(--rcv-brand);
     border-color: var(--rcv-brand);
@@ -179,16 +169,6 @@
     font-weight: 700;
     color: var(--rcv-brand-dark);
     font-size: 1.05rem;
-  }
-
-  .rcv-page .qty-diff-ok {
-    color: #1f7a45;
-    font-weight: 600;
-  }
-
-  .rcv-page .qty-diff-bad {
-    color: #b3261e;
-    font-weight: 600;
   }
 
   .rcv-page .footer-actions {
@@ -234,19 +214,19 @@
 
 <div class="rcv-page">
 
-  <!-- Header halaman -->
   <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
       <h4><i class="bi bi-box-seam me-2"></i>Penerimaan Barang</h4>
       <small>Formulir pencatatan barang masuk dari Purchase Order</small>
     </div>
     <div class="text-end">
-      <div class="fw-bold fs-5">No. Penerimaan: RCV-<?php echo isset($no_penerimaan) ? $no_penerimaan : '2026-0001'; ?></div>
+      <div class="fw-bold fs-5">No. Penerimaan: RCV-<?php echo isset($no_penerimaan) ? html_escape($no_penerimaan) : ''; ?></div>
       <span class="badge-status badge-draft"><i class="bi bi-clock-history me-1"></i>Draft</span>
     </div>
   </div>
 
-  <?php echo form_open('penerimaan_barang/simpan', ['id' => 'formPenerimaan']); ?>
+  <?php echo form_open('penerimaan_barang/simpan', ['id' => 'formPenerimaan', 'enctype' => 'multipart/form-data']); ?>
+  <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
 
   <!-- Informasi Umum -->
   <div class="card-modern">
@@ -256,41 +236,42 @@
         <div class="col-md-4">
           <label class="form-label">No. Purchase Order</label>
           <div class="input-group">
-            <input type="text" id="rcvInputNoPO" name="no_po" class="form-control" placeholder="Ketik / scan No. PO lalu tekan Enter" required>
+            <input type="text" id="rcvInputNoPO" name="no_po" class="form-control" placeholder="Ketik / pilih No. PO..." list="rcvPoList" autocomplete="off" required>
             <button type="button" class="btn btn-outline-rcv-brand" id="rcvBtnCariPO">
               <span class="spinner-border spinner-border-sm po-loading" id="rcvPoLoading"></span>
               <i class="bi bi-search" id="rcvIconCariPO"></i>
             </button>
           </div>
-          <div class="form-text" id="rcvPoHint">Detail barang akan otomatis terisi dari data PO.</div>
+          <!-- Datalist Autocomplete -->
+          <datalist id="rcvPoList"></datalist>
+          <div class="form-text" id="rcvPoHint">Ketik "PO" untuk melihat daftar opsi PO atau tekan Enter untuk mencari.</div>
         </div>
         <div class="col-md-4">
           <label class="form-label">Supplier</label>
-          <input type="text" id="rcvInputSupplier" name="supplier" class="form-control" placeholder="Otomatis dari PO" readonly>
+          <input type="text" id="rcvInputSupplier" class="form-control" placeholder="Otomatis dari PO" readonly>
         </div>
         <div class="col-md-4">
           <label class="form-label">Tanggal Penerimaan</label>
-          <input type="date" name="tanggal_terima" class="form-control" required>
+          <input type="date" name="tanggal_terima" class="form-control" value="<?= date('Y-m-d'); ?>" required>
         </div>
 
         <div class="col-md-4">
-          <label class="form-label">No. Surat Jalan</label>
+          <label class="form-label">No. Surat Jalan Supplier</label>
           <input type="text" name="no_surat_jalan" class="form-control" placeholder="Nomor surat jalan supplier">
         </div>
-        <div class="col-md-4">
-          <label class="form-label">Diterima Oleh</label>
-          <input type="text" name="diterima_oleh" class="form-control" placeholder="Nama penerima">
-        </div>
-        <div class="col-md-4">
-          <label class="form-label">Gudang Tujuan</label>
-          <select name="gudang" class="form-select">
-            <option value="">-- Pilih Gudang --</option>
-            <option value="gudang_utama">Gudang Utama</option>
-            <option value="gudang_cabang">Gudang Cabang</option>
+        <!-- <div class="col-md-6">
+          <label class="form-label">Lokasi Default (opsional)</label>
+          <select id="rcvDefaultLocation" class="form-select">
+            <option value="">-- Terapkan ke semua baris --</option>
+            <?php if (!empty($locations)): foreach ($locations as $loc): ?>
+                <option value="<?= (int) $loc->id; ?>"><?= html_escape($loc->location_code . ' - ' . $loc->zone_name); ?></option>
+            <?php endforeach;
+            endif; ?>
           </select>
-        </div>
+          <div class="form-text">Hanya membantu mengisi cepat kolom "Lokasi" di setiap baris item.</div>
+        </div> -->
 
-        <div class="col-12">
+        <div class="col-8">
           <label class="form-label">Catatan</label>
           <textarea name="catatan" class="form-control" rows="2" placeholder="Catatan tambahan (opsional)"></textarea>
         </div>
@@ -320,11 +301,12 @@
               <th style="width:4%">#</th>
               <th style="width:12%">Kode Barang</th>
               <th>Nama Barang</th>
-              <th style="width:8%">Qty PO</th>
+              <th style="width:6%" class="text-center">Terima?</th>
               <th style="width:10%">Qty Diterima</th>
               <th style="width:8%">Satuan</th>
-              <th style="width:11%">Kondisi</th>
-              <th style="width:13%">Keterangan</th>
+              <th style="width:14%">Kondisi</th>
+              <th style="width:16%">Lokasi Simpan</th>
+              <th style="width:14%">Keterangan</th>
               <th style="width:4%"></th>
             </tr>
           </thead>
@@ -336,29 +318,22 @@
 
   <!-- Ringkasan -->
   <div class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-6">
       <div class="summary-box">
         <div class="text-muted small">Total Jenis Barang</div>
         <div class="val" id="rcvTotalJenis">0</div>
       </div>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-6">
       <div class="summary-box">
         <div class="text-muted small">Total Qty Diterima</div>
         <div class="val" id="rcvTotalQty">0</div>
-      </div>
-    </div>
-    <div class="col-md-4">
-      <div class="summary-box">
-        <div class="text-muted small">Status Kesesuaian</div>
-        <div class="val" id="rcvStatusSesuai">-</div>
       </div>
     </div>
   </div>
 
   <!-- Aksi -->
   <div class="footer-actions">
-    <!-- Diubah dari <button type="button"> menjadi tag <a> -->
     <a href="<?php echo site_url('penerimaan_barang'); ?>" class="btn btn-outline-secondary">
       <i class="bi bi-x-lg me-1"></i><?= translate('btn_batal') ?>
     </a>
@@ -374,8 +349,6 @@
 </div>
 
 <script>
-  // Dibungkus IIFE + prefiks 'rcv' pada semua id/variabel supaya tidak bentrok
-  // dengan script global di footer.php atau view lain yang mungkin ikut ter-load.
   (function() {
     const inputNoPO = document.getElementById('rcvInputNoPO');
     const inputSupplier = document.getElementById('rcvInputSupplier');
@@ -387,66 +360,132 @@
     const wrapperTabel = document.getElementById('rcvWrapperTabel');
     const bodyItem = document.getElementById('rcvBodyItem');
     const btnTambahExtra = document.getElementById('rcvBtnTambahExtra');
+    const defaultLokasi = document.getElementById('rcvDefaultLocation');
+    const poDatalist = document.getElementById('rcvPoList');
 
-    if (!inputNoPO) return; // guard kalau fragment ini ke-load tanpa elemen terkait
+    if (!inputNoPO) return;
 
-    // Endpoint controller CI3 yang mengembalikan JSON detail PO.
-    // Contoh response: { "supplier": "PT Sumber Makmur", "items": [
-    //   { "kode": "BRG-001", "nama": "Kertas A4", "qty_po": 50, "satuan": "rim" }, ... ] }
-    const URL_GET_PO = '<?php echo base_url("penerimaan_barang/get_po_items"); ?>';
+    const LOCATIONS = <?php echo json_encode($locations ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+    const BARANG_ALL = <?php echo json_encode($barang_list ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+
+    const URL_GET_PO = '<?= site_url("penerimaan_barang/get_po_items"); ?>';
+    const URL_GET_PO_LIST = '<?= site_url("penerimaan_barang/get_po_list"); ?>';
+
+    // FIX: sebelumnya hardcode angka 2 sebagai id lokasi default di setiap
+    // baris (buildLocationOptions(2)). Kalau id 2 sudah tidak ada di tabel
+    // `locations`, insert ke server akan gagal (FK violation) tanpa pesan
+    // jelas. Sekarang nilai default dikirim dari controller/model yang
+    // memang mengambil lokasi aktif yang benar-benar ada.
+    const DEFAULT_LOCATION_ID = <?= json_encode($default_location_id ?? null); ?>;
+
+    // ----------------------------------------------------
+    // FITUR AUTOCOMPLETE: Load Daftar No. PO ke Datalist
+    // ----------------------------------------------------
+    function muatDatalistPO() {
+      fetch(URL_GET_PO_LIST)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data) && poDatalist) {
+            poDatalist.innerHTML = '';
+            data.forEach(po => {
+              const option = document.createElement('option');
+              const noPoVal = po.no_po || po.no_purchase_order || po;
+              const suppVal = po.supplier_nama || po.supplier || '';
+              option.value = noPoVal;
+              option.textContent = suppVal ? `${noPoVal} - ${suppVal}` : noPoVal;
+              poDatalist.appendChild(option);
+            });
+          }
+        })
+        .catch(err => console.error('Gagal memuat list PO:', err));
+    }
+
+    // Jalankan pemuatan datalist begitu halaman selesai dimuat
+    muatDatalistPO();
+
+    function buildLocationOptions(selectedId) {
+      let html = '<option value="">-- Pilih Lokasi --</option>';
+      LOCATIONS.forEach(loc => {
+        const sel = String(loc.id) === String(selectedId) ? 'selected' : '';
+        html += `<option value="${loc.id}" ${sel}>${loc.location_code} - ${loc.zone_name}</option>`;
+      });
+      return html;
+    }
+
+    function buildBarangOptions() {
+      let html = '<option value="">-- Pilih Barang --</option>';
+      BARANG_ALL.forEach(b => {
+        const namaBarang = b.nama_barang || b.nama || '-';
+        html += `<option value="${b.id}" data-kode="${b.kode_barang}">${namaBarang}</option>`;
+      });
+      return html;
+    }
 
     function rowPOTemplate(index, item) {
+      const namaBarang = item.nama || item.nama_barang || '-';
+      const kodeBarang = item.kode || item.kode_barang || '-';
+
       return `
-      <tr class="row-po">
-        <td class="row-index">${index}</td>
-        <td>
-          <input type="hidden" name="kode_barang[]" value="${item.kode}">
-          <input type="text" class="form-control form-control-sm" value="${item.kode}" readonly>
-        </td>
-        <td>
-          <input type="hidden" name="nama_barang[]" value="${item.nama}">
-          <div>${item.nama} <span class="badge-po ms-1">dari PO</span></div>
-        </td>
-        <td>
-          <input type="hidden" name="qty_po[]" value="${item.qty_po}">
-          <input type="text" class="form-control form-control-sm qty-po" value="${item.qty_po}" readonly>
-        </td>
-        <td><input type="number" name="qty_terima[]" class="form-control form-control-sm qty-terima" value="${item.qty_po}" min="0"></td>
-        <td>
-          <input type="hidden" name="satuan[]" value="${item.satuan}">
-          <input type="text" class="form-control form-control-sm" value="${item.satuan}" readonly>
-        </td>
-        <td>
-          <select name="kondisi[]" class="form-select form-select-sm">
-            <option value="baik">Baik</option>
-            <option value="rusak">Rusak</option>
-            <option value="sebagian">Sebagian Rusak</option>
-          </select>
-        </td>
-        <td><input type="text" name="keterangan_item[]" class="form-control form-control-sm" placeholder="-"></td>
-        <td></td>
-      </tr>`;
+  <tr class="row-po">
+    <td class="row-index">${index}</td>
+    <td>
+      <input type="hidden" name="id_po_detail[]" value="${item.id_po_detail || ''}">
+      <input type="hidden" name="id_barang[]" value="${item.id_barang || ''}">
+      <input type="text" class="form-control form-control-sm" value="${kodeBarang}" readonly>
+    </td>
+    <td>
+      <div>${namaBarang} <span class="badge bg-info ms-1">dari PO</span></div>
+    </td>
+    <td class="text-center">
+      <input type="checkbox" class="form-check-input rcv-item-check" checked>
+    </td>
+    <td><input type="number" step="any" name="qty_diterima[]" class="form-control form-control-sm qty-terima" value="0" min="0"></td>
+    <td>
+      <input type="hidden" name="satuan[]" value="${item.satuan || ''}">
+      <input type="text" class="form-control form-control-sm" value="${item.satuan || ''}" readonly>
+    </td>
+    <td>
+      <select name="kondisi[]" class="form-select form-select-sm rcv-kondisi">
+        <option value="baik">Baik</option>
+        <option value="rusak">Rusak</option>
+        <option value="sebagian">Sebagian Rusak</option>
+      </select>
+      <input type="file" name="foto_kondisi[]" accept="image/jpeg,image/png" class="form-control form-control-sm mt-1 rcv-foto d-none">
+      <div class="form-text text-danger d-none rcv-foto-hint">Wajib upload foto barang rusak (jpg/png, maks 2MB)</div>
+    </td>
+    <td><select name="id_location[]" class="form-select form-select-sm rcv-lokasi" required>${buildLocationOptions(DEFAULT_LOCATION_ID)}</select></td>
+    <td><input type="text" name="keterangan_item[]" class="form-control form-control-sm" placeholder="-"></td>
+    <td></td>
+  </tr>`;
     }
 
     function rowExtraTemplate(index) {
       return `
       <tr class="row-extra">
         <td class="row-index">${index}</td>
-        <td><input type="text" name="kode_barang[]" class="form-control form-control-sm" placeholder="BRG-XXX"></td>
         <td>
-          <input type="text" name="nama_barang[]" class="form-control form-control-sm" placeholder="Nama barang">
+          <input type="hidden" name="id_po_detail[]" value="">
+          <input type="text" class="form-control form-control-sm rcv-kode-extra" placeholder="Otomatis" readonly>
+        </td>
+        <td>
+          <select name="id_barang[]" class="form-select form-select-sm rcv-barang-extra">${buildBarangOptions()}</select>
           <span class="badge-tambahan mt-1 d-inline-block">Diluar PO</span>
         </td>
-        <td><input type="text" class="form-control form-control-sm" value="-" disabled><input type="hidden" name="qty_po[]" value="0"></td>
-        <td><input type="number" name="qty_terima[]" class="form-control form-control-sm qty-terima" value="0" min="0"></td>
+        <td class="text-center">
+          <input type="checkbox" class="form-check-input rcv-item-check" checked title="Centang jika barang ini benar-benar diterima">
+        </td>
+        <td><input type="number" step="any" name="qty_diterima[]" class="form-control form-control-sm qty-terima" value="0" min="0"></td>
         <td><input type="text" name="satuan[]" class="form-control form-control-sm" placeholder="pcs"></td>
         <td>
-          <select name="kondisi[]" class="form-select form-select-sm">
+          <select name="kondisi[]" class="form-select form-select-sm rcv-kondisi">
             <option value="baik">Baik</option>
             <option value="rusak">Rusak</option>
             <option value="sebagian">Sebagian Rusak</option>
           </select>
+          <input type="file" name="foto_kondisi[]" accept="image/jpeg,image/png" class="form-control form-control-sm mt-1 rcv-foto d-none">
+          <div class="form-text text-danger d-none rcv-foto-hint">Wajib upload foto barang rusak (jpg/png, maks 2MB)</div>
         </td>
+        <td><select name="id_location[]" class="form-select form-select-sm rcv-lokasi" required>${buildLocationOptions(DEFAULT_LOCATION_ID)}</select></td>
         <td><input type="text" name="keterangan_item[]" class="form-control form-control-sm" placeholder="-"></td>
         <td class="text-center">
           <button type="button" class="btn btn-sm btn-remove-row" title="Hapus baris">
@@ -465,58 +504,14 @@
     function hitungRingkasan() {
       const rows = bodyItem.querySelectorAll('tr');
       let totalQty = 0;
-      let semuaSesuai = true;
-      let adaTerisi = false;
 
       rows.forEach(tr => {
-        const qtyPoInput = tr.querySelector('input[name="qty_po[]"]');
-        const qtyPo = qtyPoInput ? (parseFloat(qtyPoInput.value) || 0) : 0;
         const qtyTerima = parseFloat(tr.querySelector('.qty-terima').value) || 0;
         totalQty += qtyTerima;
-        if (qtyPo > 0 || qtyTerima > 0) adaTerisi = true;
-        if (qtyTerima < qtyPo) semuaSesuai = false;
       });
 
       document.getElementById('rcvTotalJenis').textContent = rows.length;
       document.getElementById('rcvTotalQty').textContent = totalQty;
-
-      const statusEl = document.getElementById('rcvStatusSesuai');
-      if (!adaTerisi) {
-        statusEl.textContent = '-';
-        statusEl.className = 'val';
-      } else if (semuaSesuai) {
-        statusEl.textContent = 'Sesuai PO';
-        statusEl.className = 'val qty-diff-ok';
-      } else {
-        statusEl.textContent = 'Kurang dari PO';
-        statusEl.className = 'val qty-diff-bad';
-      }
-    }
-
-    function renderItemsFromPO(data) {
-      bodyItem.innerHTML = '';
-      inputSupplier.value = data.supplier || '';
-
-      if (!data.items || data.items.length === 0) {
-        poHint.textContent = 'PO ditemukan, tetapi tidak ada item di dalamnya.';
-        poHint.classList.add('text-danger');
-        emptyState.classList.remove('d-none');
-        wrapperTabel.classList.add('d-none');
-        btnTambahExtra.disabled = true;
-        return;
-      }
-
-      data.items.forEach((item, i) => {
-        bodyItem.insertAdjacentHTML('beforeend', rowPOTemplate(i + 1, item));
-      });
-
-      emptyState.classList.add('d-none');
-      wrapperTabel.classList.remove('d-none');
-      btnTambahExtra.disabled = false;
-      poHint.classList.remove('text-danger');
-      poHint.textContent = data.items.length + ' item dimuat otomatis dari PO. Ubah "Qty Diterima" sesuai barang fisik.';
-
-      hitungRingkasan();
     }
 
     function setLoading(isLoading) {
@@ -541,19 +536,69 @@
             'X-Requested-With': 'XMLHttpRequest'
           }
         })
-        .then(res => {
-          if (!res.ok) throw new Error('PO tidak ditemukan');
-          return res.json();
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('HTTP status ' + response.status);
+          }
+          return response.json();
         })
-        .then(data => renderItemsFromPO(data))
-        .catch(() => {
+        .then(data => {
+          setLoading(false);
+
+          if (data.status) {
+            poHint.textContent = 'Data PO berhasil dimuat.';
+
+            // 1. ISI FIELD SUPPLIER
+            inputSupplier.value = data.supplier || '-';
+
+            // 2. RENDER BARIS ITEM KE TABEL
+            if (data.items && data.items.length > 0) {
+              bodyItem.innerHTML = ''; // Kosongkan tabel
+
+              data.items.forEach((item, index) => {
+                bodyItem.insertAdjacentHTML('beforeend', rowPOTemplate(index + 1, item));
+              });
+
+              // TAMPILKAN TABEL & SEMBUNYIKAN EMPTY STATE
+              emptyState.classList.add('d-none');
+              wrapperTabel.classList.remove('d-none');
+              btnTambahExtra.disabled = false;
+              poHint.textContent = data.items.length + ' item dimuat otomatis dari PO. Isi "Qty Diterima" sesuai barang fisik.';
+
+              hitungRingkasan();
+            } else {
+              poHint.textContent = 'PO ditemukan, tetapi tidak ada item di dalamnya.';
+              poHint.classList.add('text-danger');
+              emptyState.classList.remove('d-none');
+              wrapperTabel.classList.add('d-none');
+              btnTambahExtra.disabled = true;
+            }
+
+          } else {
+            poHint.classList.add('text-danger');
+            poHint.textContent = data.message || 'PO tidak ditemukan.';
+            emptyState.classList.remove('d-none');
+            wrapperTabel.classList.add('d-none');
+            btnTambahExtra.disabled = true;
+          }
+        })
+        .catch(err => {
+          setLoading(false);
           poHint.classList.add('text-danger');
-          poHint.textContent = 'PO tidak ditemukan atau gagal memuat data.';
-        })
-        .finally(() => setLoading(false));
+          poHint.textContent = 'Gagal memuat data PO (Server Error/URL tidak valid).';
+          console.error('Fetch Error:', err);
+        });
     }
 
     btnCariPO.addEventListener('click', muatDataPO);
+
+    // Otomatis muat data jika pengguna memilih dari dropdown datalist atau menekan Enter
+    inputNoPO.addEventListener('change', function() {
+      if (this.value.trim() !== '') {
+        muatDataPO();
+      }
+    });
+
     inputNoPO.addEventListener('keydown', function(e) {
       if (e.key === 'Enter') {
         e.preventDefault();
@@ -578,5 +623,63 @@
     bodyItem.addEventListener('input', function(e) {
       if (e.target.classList.contains('qty-terima')) hitungRingkasan();
     });
+
+    function toggleFotoRequirement(selectEl) {
+      const td = selectEl.closest('td');
+      const fileInput = td.querySelector('.rcv-foto');
+      const hint = td.querySelector('.rcv-foto-hint');
+      if (!fileInput) return;
+
+      const wajibFoto = selectEl.value === 'rusak';
+      fileInput.classList.toggle('d-none', !wajibFoto);
+      fileInput.required = wajibFoto;
+      if (hint) hint.classList.toggle('d-none', !wajibFoto);
+      if (!wajibFoto) fileInput.value = '';
+    }
+
+    bodyItem.addEventListener('change', function(e) {
+      if (e.target.classList.contains('rcv-kondisi')) {
+        toggleFotoRequirement(e.target);
+      }
+    });
+
+    bodyItem.addEventListener('change', function(e) {
+      if (!e.target.classList.contains('rcv-item-check')) return;
+
+      const tr = e.target.closest('tr');
+      const enabled = e.target.checked;
+      const qtyInput = tr.querySelector('.qty-terima');
+      const kondisiEl = tr.querySelector('.rcv-kondisi');
+      const fileInput = tr.querySelector('.rcv-foto');
+
+      qtyInput.readOnly = !enabled;
+      tr.classList.toggle('opacity-50', !enabled);
+
+      if (!enabled) {
+        qtyInput.value = 0;
+        if (fileInput) fileInput.required = false;
+      } else if (kondisiEl) {
+        toggleFotoRequirement(kondisiEl);
+      }
+
+      hitungRingkasan();
+    });
+
+    bodyItem.addEventListener('change', function(e) {
+      if (e.target.classList.contains('rcv-barang-extra')) {
+        const opt = e.target.selectedOptions[0];
+        const kodeInput = e.target.closest('tr').querySelector('.rcv-kode-extra');
+        if (kodeInput) kodeInput.value = opt ? (opt.dataset.kode || '') : '';
+      }
+    });
+
+    if (defaultLokasi) {
+      defaultLokasi.addEventListener('change', function() {
+        if (!this.value) return;
+        bodyItem.querySelectorAll('.rcv-lokasi').forEach(sel => {
+          sel.value = this.value;
+        });
+      });
+    }
   })();
 </script>

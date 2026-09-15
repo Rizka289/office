@@ -40,7 +40,6 @@ class Penerimaan_barang_model extends CI_Model
             $this->db->group_start();
             $this->db->like('pb.no_penerimaan', $filter['q']);
             $this->db->or_like('po.no_po', $filter['q']);
-            // FIX: kolom supplier bernama `nama`, bukan `nama_supplier`
             $this->db->or_like('s.nama', $filter['q']);
             $this->db->group_end();
         }
@@ -84,23 +83,10 @@ class Penerimaan_barang_model extends CI_Model
         return $prefix . '/' . sprintf('%04d', $urut);
     }
 
-    // Mengambil data PO + item detailnya untuk AJAX form tambah.
-    // FIX: sebelumnya select s.nama_supplier (kolom itu tidak ada),
-    // dan tidak mengirim id_po_detail / id_barang padahal keduanya
-    // wajib (FK) saat menyimpan penerimaan_detail.
-
-    // FIX BUG UTAMA: method sebelumnya TIDAK menerima parameter $no_po,
-    // sehingga nilai yang dikirim controller diabaikan. Selain itu
-    // `$this->db->where('po.no_po')` tanpa nilai pembanding menghasilkan
-    // kondisi mentah "WHERE po.no_po" (hanya cek kolom tidak kosong/0),
-    // BUKAN "WHERE po.no_po = <input user>". Akibatnya pencarian PO
-    // selalu mengembalikan baris pertama yang "kebetulan cocok",
-    // bukan PO yang benar-benar dicari user.
+  
     public function get_po_by_no($no_po)
     {
-        // FIX: nama kolom status di tabel purchase_order adalah `status_qc`
-        // (enum: 'menunggu', 'lolos', 'ditolak') — bukan `status`. Sebelumnya
-        // ini menyebabkan SQL error "Unknown column 'po.status'" (500).
+       
         $this->db->select('po.id, po.no_po, po.status_qc, s.nama AS supplier');
         $this->db->from('purchase_order po');
         $this->db->join('supplier s', 's.id = po.id_supplier', 'left');
@@ -116,11 +102,16 @@ class Penerimaan_barang_model extends CI_Model
             pod.id_barang AS id_barang,
             b.kode_barang AS kode,
             b.nama AS nama,
-            pod.satuan    AS satuan
+            pod.satuan    AS satuan,
+            pod.qty       AS qty_pesan,
+            COALESCE(SUM(CASE WHEN pdet.kondisi = "baik" THEN pdet.qty_diterima ELSE 0 END), 0) AS qty_diterima_sebelumnya,
+            COALESCE(SUM(CASE WHEN pdet.kondisi <> "baik" THEN pdet.qty_diterima ELSE 0 END), 0) AS qty_rusak_sebelumnya
         ');
         $this->db->from('po_detail pod');
         $this->db->join('barang b', 'b.id = pod.id_barang', 'left');
+        $this->db->join('penerimaan_detail pdet', 'pdet.id_po_detail = pod.id', 'left');
         $this->db->where('pod.id_po', $po->id);
+        $this->db->group_by('pod.id');
         $items = $this->db->get()->result();
 
         return [
@@ -130,9 +121,7 @@ class Penerimaan_barang_model extends CI_Model
             'items'    => $items,
         ];
     }
-    // FIX: nama kolom status di tabel purchase_order adalah `status_qc`
-    // (enum: 'menunggu', 'lolos', 'ditolak'), bukan `status`/`supplier_nama`.
-    // Sekarang hanya PO berstatus 'menunggu' yang muncul di daftar/autocomplete.
+   
     public function get_all_active_po()
     {
         $this->db->select('po.no_po, s.nama AS supplier_nama, po.status_qc');
@@ -142,16 +131,11 @@ class Penerimaan_barang_model extends CI_Model
         $this->db->order_by('po.no_po', 'DESC');
         return $this->db->get()->result();
     }
-
-    // Dipakai simpan_penerimaan (aksi final) untuk memindahkan status_qc PO
-    // dari 'menunggu' menjadi 'lolos' setelah barangnya benar-benar diterima,
-    // supaya PO tsb tidak muncul lagi di pencarian/daftar PO "menunggu".
     public function update_status_po($id_po, $status_qc)
     {
         $this->db->where('id', $id_po);
         return $this->db->update('purchase_order', ['status_qc' => $status_qc]);
     }
-    // Daftar lokasi aktif untuk dropdown "Lokasi Penempatan" per item
     public function get_locations()
     {
         $this->db->select('id, location_code, zone_name, location_type');
@@ -162,14 +146,6 @@ class Penerimaan_barang_model extends CI_Model
         return $this->db->get()->result();
     }
 
-    // FIX BUG UTAMA: sebelumnya kode (controller & view) hardcode "id_location = 2"
-    // sebagai default. Jika baris id 2 di tabel `locations` sudah dihapus / tidak
-    // aktif / memang tidak pernah ada, maka SETIAP insert ke `penerimaan_detail`
-    // akan gagal karena melanggar foreign key `id_location` -> `locations.id`.
-    // Karena error DB tidak pernah dicatat (lihat simpan_penerimaan), kegagalan ini
-    // terlihat seolah-olah "form disubmit tapi tidak ada yang tersimpan".
-    // Fungsi ini mengambil lokasi aktif PERTAMA yang benar-benar ada di DB,
-    // dipakai sebagai default pengganti angka hardcode.
     public function get_default_location_id()
     {
         $this->db->select('id');
@@ -182,9 +158,7 @@ class Penerimaan_barang_model extends CI_Model
         return $row ? (int) $row->id : null;
     }
 
-    // Cek apakah sebuah id_location benar-benar ada & aktif di DB.
-    // Dipakai controller untuk validasi sebelum insert, supaya tidak
-    // mengandalkan angka hardcode yang bisa saja sudah tidak valid.
+   
     public function location_exists($id_location)
     {
         if (empty($id_location)) {
@@ -198,12 +172,7 @@ class Penerimaan_barang_model extends CI_Model
         return (bool) $this->db->get()->row();
     }
 
-    // FIX: controller sebelumnya fallback ke id_user = 1 (hardcode) kalau
-    // session kosong. Kalau id 1 tidak ada di tabel `users` (FK
-    // `penerimaan_barang.id_user` -> `users.id`), insert HEADER akan gagal
-    // duluan -> seluruh transaksi rollback -> tidak ada satupun data yang
-    // tersimpan, baik draft maupun final. Fungsi ini dipakai controller untuk
-    // memastikan id_user yang dipakai benar-benar ada sebelum insert.
+  
     public function user_exists($id_user)
     {
         if (empty($id_user)) {
@@ -216,8 +185,7 @@ class Penerimaan_barang_model extends CI_Model
         return (bool) $this->db->get()->row();
     }
 
-    // Daftar barang master, dipakai untuk baris "Tambah Barang Diluar PO"
-    // Modifikasi pada file Penerimaan_barang_model.php
+   
     public function get_all_barang()
     {
         $this->db->select('id, kode_barang, nama AS nama_barang'); // Tambahkan alias nama_barang
@@ -226,27 +194,130 @@ class Penerimaan_barang_model extends CI_Model
         return $this->db->get()->result();
     }
 
-    // Menyimpan header + detail penerimaan dalam satu transaksi.
-    // Catatan: key pada $header dan setiap elemen $items HARUS persis
-    // sama dengan nama kolom di tabel penerimaan_barang /
-    // penerimaan_detail (lihat cara controller menyusunnya).
+    public function get_sisa_qty_po_detail($id_po_detail)
+    {
+        
+        $this->db->select('
+            pod.qty AS qty_pesan,
+            COALESCE(SUM(CASE WHEN pd.kondisi = "baik" THEN pd.qty_diterima ELSE 0 END), 0) AS qty_diterima_sebelumnya,
+            COALESCE(SUM(CASE WHEN pd.kondisi <> "baik" THEN pd.qty_diterima ELSE 0 END), 0) AS qty_rusak_sebelumnya
+        ');
+        $this->db->from('po_detail pod');
+        $this->db->join('penerimaan_detail pd', 'pd.id_po_detail = pod.id', 'left');
+        $this->db->where('pod.id', $id_po_detail);
+        $this->db->group_by('pod.id');
+        $row = $this->db->get()->row();
+
+        if (!$row) {
+            return null;
+        }
+
+        $qty_pesan      = (float) $row->qty_pesan;
+        $sudah_diterima = (float) $row->qty_diterima_sebelumnya;
+        $sudah_rusak    = (float) $row->qty_rusak_sebelumnya;
+
+        return [
+            'qty_pesan'      => $qty_pesan,
+            'sudah_diterima' => $sudah_diterima,
+            'sudah_rusak'    => $sudah_rusak,
+            'sisa'           => $qty_pesan - $sudah_diterima,
+        ];
+    }
+
+    public function upsert_stok_barang($id_barang, $id_location, $qty)
+    {
+        $sql = "INSERT INTO stok_barang (id_barang, id_location, stok, created_at, updated_at)
+                VALUES (?, ?, ?, NOW(), NOW())
+                ON DUPLICATE KEY UPDATE
+                    stok = stok + VALUES(stok),
+                    updated_at = NOW()";
+
+        $result = $this->db->query($sql, [$id_barang, $id_location, $qty]);
+
+        $db_error = $this->db->error();
+        if (!empty($db_error['code'])) {
+            $this->last_error = 'Update stok_barang gagal (id_barang=' . $id_barang . ', id_location=' . $id_location . '): ' . $db_error['message'];
+            log_message('error', 'upsert_stok_barang - ' . $this->last_error);
+            return FALSE;
+        }
+
+        return $result !== FALSE;
+    }
+
+ 
+    public function get_po_fulfillment_status($id_po)
+    {
+        $this->db->select('
+            pod.id AS id_po_detail,
+            pod.qty AS qty_pesan,
+            COALESCE(SUM(CASE WHEN pd.kondisi = "baik" THEN pd.qty_diterima ELSE 0 END), 0) AS qty_diterima_baik,
+            COALESCE(SUM(CASE WHEN pd.kondisi <> "baik" THEN pd.qty_diterima ELSE 0 END), 0) AS qty_diterima_rusak
+        ');
+        $this->db->from('po_detail pod');
+        $this->db->join('penerimaan_detail pd', 'pd.id_po_detail = pod.id', 'left');
+        $this->db->where('pod.id_po', $id_po);
+        $this->db->group_by('pod.id');
+        $rows = $this->db->get()->result();
+
+        if (empty($rows)) {
+            return 'menunggu';
+        }
+
+        $ada_yang_diterima = false;
+        $semua_terpenuhi   = true;
+
+        foreach ($rows as $row) {
+            if ($row->qty_diterima_baik > 0 || $row->qty_diterima_rusak > 0) {
+                $ada_yang_diterima = true;
+            }
+           
+            if ($row->qty_diterima_baik < $row->qty_pesan) {
+                $semua_terpenuhi = false;
+            }
+        }
+
+        if ($semua_terpenuhi) {
+            return 'selesai';
+        }
+
+        return $ada_yang_diterima ? 'partial' : 'menunggu';
+    }
+
+    public function sync_status_qc_po($id_po)
+    {
+        if (empty($id_po)) {
+            return TRUE; // item di luar PO: tidak ada yang perlu disinkronkan
+        }
+
+        $pemenuhan = $this->get_po_fulfillment_status($id_po);
+        $status_qc = ($pemenuhan === 'selesai') ? 'lolos' : 'menunggu';
+
+        $this->db->where('id', $id_po);
+        $this->db->update('purchase_order', ['status_qc' => $status_qc]);
+
+        $db_error = $this->db->error();
+        if (!empty($db_error['code'])) {
+            $this->last_error = 'Update status_qc PO gagal (id_po=' . $id_po . '): ' . $db_error['message'];
+            log_message('error', 'sync_status_qc_po - ' . $this->last_error);
+            return FALSE;
+        }
+
+        return TRUE;
+    }
+
+  
     public function simpan_penerimaan($header, $items)
     {
         $this->last_error = null;
 
-        // FIX: tanpa trans_strict(FALSE), jika ada query lain yang gagal
-        // sebelumnya di request yang sama, CI bisa memaksa transaksi ini
-        // ikut gagal/rollback walau query di sini sendiri sukses.
+        
         $this->db->trans_strict(FALSE);
         $this->db->trans_begin();
 
         // 1. Insert ke tabel `penerimaan_barang`
         $this->db->insert('penerimaan_barang', $header);
 
-        // FIX: sebelumnya kegagalan insert (mis. kolom salah, constraint,
-        // tipe data tidak cocok) tidak pernah dicatat -> proses gagal secara
-        // "senyap" dan sangat sulit didiagnosis. Sekarang error DB ditangkap
-        // dan dicatat ke log aplikasi.
+        
         $db_error = $this->db->error();
         if (!empty($db_error['code'])) {
             $this->last_error = 'Insert header gagal: ' . $db_error['message'];
@@ -264,21 +335,22 @@ class Penerimaan_barang_model extends CI_Model
             return FALSE;
         }
 
-        // 2. Insert ke `penerimaan_detail` & tabel `photos`
         foreach ($items as $item) {
-            $foto_info = isset($item['foto_info']) ? $item['foto_info'] : null;
-            unset($item['foto_info']); // Hapus key temp agar tidak dimasukkan ke penerimaan_detail
+            
+            $fotos = [];
+            if (!empty($item['fotos']) && is_array($item['fotos'])) {
+                $fotos = $item['fotos'];
+            } elseif (!empty($item['foto_info'])) {
+                $fotos = [$item['foto_info']];
+            }
+            unset($item['fotos'], $item['foto_info']); // key temp, bukan kolom tabel
 
             $item['id_penerimaan'] = $id_penerimaan;
 
-            // Insert detail penerimaan
             $this->db->insert('penerimaan_detail', $item);
 
             $db_error = $this->db->error();
             if (!empty($db_error['code'])) {
-                // Contoh kasus paling umum: id_location tidak ada di tabel
-                // `locations` (FK violation) karena mengandalkan nilai
-                // default yang sudah tidak valid.
                 $this->last_error = 'Insert detail gagal (id_barang=' . ($item['id_barang'] ?? '-') . '): ' . $db_error['message'];
                 log_message('error', 'simpan_penerimaan - ' . $this->last_error);
                 $this->db->trans_rollback();
@@ -287,25 +359,64 @@ class Penerimaan_barang_model extends CI_Model
 
             $id_penerimaan_detail = $this->db->insert_id();
 
-            // Insert foto ke tabel polymorphic `photos` jika ada foto
-            if ($foto_info && $id_penerimaan_detail) {
-                $data_photo = [
-                    'file_name'      => $foto_info['file_name'],
-                    'file_path'      => $foto_info['file_path'],
-                    'file_size'      => $foto_info['file_size'],
-                    'mime_type'      => $foto_info['mime_type'],
-                    'imageable_type' => 'penerimaan_detail',
-                    'imageable_id'   => $id_penerimaan_detail,
-                    'uploaded_by'    => $header['id_user'] ?? null,
-                    'created_at'     => date('Y-m-d H:i:s')
-                ];
+            if (!empty($fotos) && $id_penerimaan_detail) {
+                foreach ($fotos as $foto_info) {
+                    if (empty($foto_info['file_name'])) {
+                        continue;
+                    }
 
-                $this->db->insert('photos', $data_photo);
+                    $data_photo = [
+                        'file_name'      => $foto_info['file_name'],
+                        'file_path'      => $foto_info['file_path'],
+                        'file_size'      => $foto_info['file_size'],
+                        'mime_type'      => $foto_info['mime_type'],
+                        'imageable_type' => 'penerimaan_detail',
+                        'imageable_id'   => $id_penerimaan_detail,
+                        'uploaded_by'    => $header['id_user'] ?? null,
+                        'created_at'     => date('Y-m-d H:i:s')
+                    ];
 
-                $db_error = $this->db->error();
-                if (!empty($db_error['code'])) {
-                    $this->last_error = 'Insert foto gagal (detail id=' . $id_penerimaan_detail . '): ' . $db_error['message'];
-                    log_message('error', 'simpan_penerimaan - ' . $this->last_error);
+                    $this->db->insert('photos', $data_photo);
+
+                    $db_error = $this->db->error();
+                    if (!empty($db_error['code'])) {
+                        $this->last_error = 'Insert foto gagal (detail id=' . $id_penerimaan_detail
+                            . ', payload=' . json_encode($data_photo) . '): ' . $db_error['message'];
+                        log_message('error', 'simpan_penerimaan - ' . $this->last_error);
+                        $this->db->trans_rollback();
+                        return FALSE;
+                    }
+                }
+            }
+        }
+
+     
+        $status_final = isset($header['status']) && strtolower(trim((string) $header['status'])) === 'selesai';
+
+        if ($status_final) {
+            foreach ($items as $item) {
+            
+                $kondisi_item = strtolower(trim((string) ($item['kondisi'] ?? 'baik')));
+
+                if ($kondisi_item !== 'baik') {
+                    continue;
+                }
+
+                $ok_stok = $this->upsert_stok_barang(
+                    $item['id_barang'],
+                    $item['id_location'],
+                    $item['qty_diterima']
+                );
+
+                if (!$ok_stok) {
+                    // last_error sudah diisi oleh upsert_stok_barang()
+                    $this->db->trans_rollback();
+                    return FALSE;
+                }
+            }
+
+            if (!empty($header['id_po'])) {
+                if (!$this->sync_status_qc_po($header['id_po'])) {
                     $this->db->trans_rollback();
                     return FALSE;
                 }
@@ -322,11 +433,7 @@ class Penerimaan_barang_model extends CI_Model
         return $id_penerimaan;
     }
 
-    // Mengambil header + detail item satu penerimaan, dipakai untuk
-    // halaman detail maupun halaman cetak.
-    // FIX: sebelumnya select kolom yang tidak ada sama sekali
-    // (qty_terima, kondisi, keterangan, kode_barang, nama_barang,
-    // no_surat_jalan, diterima_oleh, gudang) -> selalu error/kosong.
+    
     public function get_penerimaan_detail($id)
     {
         $this->db->select('
@@ -359,8 +466,6 @@ class Penerimaan_barang_model extends CI_Model
         pd.qty_diterima,
         pd.kondisi,
         pd.keterangan,
-        p.file_name AS foto_kondisi,
-        p.file_path AS foto_path,
         b.kode_barang,
         b.nama,
         COALESCE(pod.satuan, pd.satuan, "-") AS satuan,
@@ -371,10 +476,33 @@ class Penerimaan_barang_model extends CI_Model
         $this->db->join('barang b', 'b.id = pd.id_barang', 'left');
         $this->db->join('po_detail pod', 'pod.id = pd.id_po_detail', 'left');
         $this->db->join('locations l', 'l.id = pd.id_location', 'left');
-        // Join ke tabel photos berdasar imageable_type dan imageable_id
-        $this->db->join('photos p', "p.imageable_id = pd.id AND p.imageable_type = 'penerimaan_detail'", 'left');
         $this->db->where('pd.id_penerimaan', $id);
         $items = $this->db->get()->result();
+
+        if (!empty($items)) {
+            $detail_ids = array_map(function ($it) {
+                return $it->id;
+            }, $items);
+
+            $this->db->select('id, imageable_id, file_name, file_path, mime_type');
+            $this->db->from('photos');
+            $this->db->where('imageable_type', 'penerimaan_detail');
+            $this->db->where_in('imageable_id', $detail_ids);
+            $this->db->order_by('id', 'ASC');
+            $photos = $this->db->get()->result();
+
+            $map = [];
+            foreach ($photos as $p) {
+                $map[$p->imageable_id][] = $p;
+            }
+
+            foreach ($items as $it) {
+                $it->fotos = isset($map[$it->id]) ? $map[$it->id] : [];
+                // Kompatibilitas view lama yang masih memakai 1 foto saja.
+                $it->foto_kondisi = !empty($it->fotos) ? $it->fotos[0]->file_name : null;
+                $it->foto_path    = !empty($it->fotos) ? $it->fotos[0]->file_path : null;
+            }
+        }
 
         return [
             'header' => $header,

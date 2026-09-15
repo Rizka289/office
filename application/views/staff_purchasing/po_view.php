@@ -542,8 +542,10 @@
         <td class="text-center">
           <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-secondary" title="Detail PO" onclick="openViewPO(${po.id})"><i class="bi bi-eye"></i></button>
+            ${po.status_qc === 'menunggu' ? `
             <button class="btn btn-outline-primary" title="Edit PO" onclick="openEditPO(${po.id})"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-outline-danger" title="Hapus PO" onclick="confirmDelete(${po.id})"><i class="bi bi-trash"></i></button>
+            ` : ''}
           </div>
         </td>
       `;

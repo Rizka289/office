@@ -2,7 +2,6 @@
 
 <!--
   PENTING: File ini adalah FRAGMENT yang di-load DI DALAM header.php + footer.php
-  semua itu SUDAH disediakan oleh header.php dan akan bentrok/menimpa milik header kalau ditulis ulang.
 -->
 
 <style>
@@ -220,10 +219,27 @@
       <small>Formulir pencatatan barang masuk dari Purchase Order</small>
     </div>
     <div class="text-end">
-      <div class="fw-bold fs-5">No. Penerimaan: RCV-<?php echo isset($no_penerimaan) ? html_escape($no_penerimaan) : ''; ?></div>
+      <div class="fw-bold fs-5">No. Penerimaan: <?php echo isset($no_penerimaan) ? html_escape($no_penerimaan) : ''; ?></div>
       <span class="badge-status badge-draft"><i class="bi bi-clock-history me-1"></i>Draft</span>
     </div>
   </div>
+
+  <!-- NOTIFIKASI ERROR/SUKSES DARI SERVER -->
+  <?php if ($this->session->flashdata('error')): ?>
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <?= $this->session->flashdata('error'); ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($this->session->flashdata('success')): ?>
+    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i>
+      <?= $this->session->flashdata('success'); ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  <?php endif; ?>
 
   <?php echo form_open('penerimaan_barang/simpan', ['id' => 'formPenerimaan', 'enctype' => 'multipart/form-data']); ?>
   <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" value="<?= $this->security->get_csrf_hash(); ?>">
@@ -242,7 +258,6 @@
               <i class="bi bi-search" id="rcvIconCariPO"></i>
             </button>
           </div>
-          <!-- Datalist Autocomplete -->
           <datalist id="rcvPoList"></datalist>
           <div class="form-text" id="rcvPoHint">Ketik "PO" untuk melihat daftar opsi PO atau tekan Enter untuk mencari.</div>
         </div>
@@ -259,17 +274,6 @@
           <label class="form-label">No. Surat Jalan Supplier</label>
           <input type="text" name="no_surat_jalan" class="form-control" placeholder="Nomor surat jalan supplier">
         </div>
-        <!-- <div class="col-md-6">
-          <label class="form-label">Lokasi Default (opsional)</label>
-          <select id="rcvDefaultLocation" class="form-select">
-            <option value="">-- Terapkan ke semua baris --</option>
-            <?php if (!empty($locations)): foreach ($locations as $loc): ?>
-                <option value="<?= (int) $loc->id; ?>"><?= html_escape($loc->location_code . ' - ' . $loc->zone_name); ?></option>
-            <?php endforeach;
-            endif; ?>
-          </select>
-          <div class="form-text">Hanya membantu mengisi cepat kolom "Lokasi" di setiap baris item.</div>
-        </div> -->
 
         <div class="col-8">
           <label class="form-label">Catatan</label>
@@ -335,11 +339,9 @@
   <!-- Aksi -->
   <div class="footer-actions">
     <a href="<?php echo site_url('penerimaan_barang'); ?>" class="btn btn-outline-secondary">
-      <i class="bi bi-x-lg me-1"></i><?= translate('btn_batal') ?>
+      <i class="bi bi-x-lg me-1"></i>Batal
     </a>
-    <button type="submit" name="aksi" value="draft" class="btn btn-outline-rcv-brand">
-      <i class="bi bi-save me-1"></i>Simpan Draft
-    </button>
+   
     <button type="submit" name="aksi" value="final" class="btn btn-rcv-brand">
       <i class="bi bi-check2-circle me-1"></i>Konfirmasi Penerimaan
     </button>
@@ -371,16 +373,9 @@
     const URL_GET_PO = '<?= site_url("penerimaan_barang/get_po_items"); ?>';
     const URL_GET_PO_LIST = '<?= site_url("penerimaan_barang/get_po_list"); ?>';
 
-    // FIX: sebelumnya hardcode angka 2 sebagai id lokasi default di setiap
-    // baris (buildLocationOptions(2)). Kalau id 2 sudah tidak ada di tabel
-    // `locations`, insert ke server akan gagal (FK violation) tanpa pesan
-    // jelas. Sekarang nilai default dikirim dari controller/model yang
-    // memang mengambil lokasi aktif yang benar-benar ada.
     const DEFAULT_LOCATION_ID = <?= json_encode($default_location_id ?? null); ?>;
+    const MAX_FOTO = 5;
 
-    // ----------------------------------------------------
-    // FITUR AUTOCOMPLETE: Load Daftar No. PO ke Datalist
-    // ----------------------------------------------------
     function muatDatalistPO() {
       fetch(URL_GET_PO_LIST)
         .then(res => res.json())
@@ -400,7 +395,6 @@
         .catch(err => console.error('Gagal memuat list PO:', err));
     }
 
-    // Jalankan pemuatan datalist begitu halaman selesai dimuat
     muatDatalistPO();
 
     function buildLocationOptions(selectedId) {
@@ -424,6 +418,16 @@
     function rowPOTemplate(index, item) {
       const namaBarang = item.nama || item.nama_barang || '-';
       const kodeBarang = item.kode || item.kode_barang || '-';
+      const qtyPesan = item.qty_pesan !== undefined ? Number(item.qty_pesan) : null;
+      const sisa = item.sisa !== undefined ? Number(item.sisa) : qtyPesan;
+      const sisaHint = (sisa !== null && !isNaN(sisa))
+        ? `<div class="form-text rcv-sisa-hint" data-sisa="${sisa}">Sisa PO: <strong>${sisa}</strong> dari ${qtyPesan}</div>`
+        : '';
+
+      const qtyRusakSebelumnya = item.qty_rusak_sebelumnya !== undefined ? Number(item.qty_rusak_sebelumnya) : 0;
+      const rusakHint = (qtyRusakSebelumnya > 0)
+        ? `<div class="form-text text-danger rcv-rusak-hint">⚠ Sebelumnya diterima rusak: <strong>${qtyRusakSebelumnya}</strong> (perlu diganti/diterima ulang)</div>`
+        : '';
 
       return `
   <tr class="row-po">
@@ -439,7 +443,12 @@
     <td class="text-center">
       <input type="checkbox" class="form-check-input rcv-item-check" checked>
     </td>
-    <td><input type="number" step="any" name="qty_diterima[]" class="form-control form-control-sm qty-terima" value="0" min="0"></td>
+    <td>
+      <input type="number" step="any" name="qty_diterima[]" class="form-control form-control-sm qty-terima" value="0" min="0" ${sisa !== null && !isNaN(sisa) ? `max="${sisa}"` : ''}>
+      ${sisaHint}
+      ${rusakHint}
+      <div class="form-text text-danger d-none rcv-qty-hint">Melebihi sisa PO!</div>
+    </td>
     <td>
       <input type="hidden" name="satuan[]" value="${item.satuan || ''}">
       <input type="text" class="form-control form-control-sm" value="${item.satuan || ''}" readonly>
@@ -450,8 +459,9 @@
         <option value="rusak">Rusak</option>
         <option value="sebagian">Sebagian Rusak</option>
       </select>
-      <input type="file" name="foto_kondisi[]" accept="image/jpeg,image/png" class="form-control form-control-sm mt-1 rcv-foto d-none">
-      <div class="form-text text-danger d-none rcv-foto-hint">Wajib upload foto barang rusak (jpg/png, maks 2MB)</div>
+      <input type="file" name="foto_kondisi[${index - 1}][]" multiple accept="image/jpeg,image/png" class="form-control form-control-sm mt-1 rcv-foto d-none">
+      <div class="form-text text-danger d-none rcv-foto-hint">Wajib foto barang rusak &mdash; boleh pilih lebih dari 1 file sekaligus (jpg/png, maks 2MB per file, maks ${MAX_FOTO} foto)</div>
+      <div class="form-text text-success d-none rcv-foto-list"></div>
     </td>
     <td><select name="id_location[]" class="form-select form-select-sm rcv-lokasi" required>${buildLocationOptions(DEFAULT_LOCATION_ID)}</select></td>
     <td><input type="text" name="keterangan_item[]" class="form-control form-control-sm" placeholder="-"></td>
@@ -482,8 +492,9 @@
             <option value="rusak">Rusak</option>
             <option value="sebagian">Sebagian Rusak</option>
           </select>
-          <input type="file" name="foto_kondisi[]" accept="image/jpeg,image/png" class="form-control form-control-sm mt-1 rcv-foto d-none">
-          <div class="form-text text-danger d-none rcv-foto-hint">Wajib upload foto barang rusak (jpg/png, maks 2MB)</div>
+          <input type="file" name="foto_kondisi[${index - 1}][]" multiple accept="image/jpeg,image/png" class="form-control form-control-sm mt-1 rcv-foto d-none">
+          <div class="form-text text-danger d-none rcv-foto-hint">Wajib foto barang rusak &mdash; boleh pilih lebih dari 1 file sekaligus (jpg/png, maks 2MB per file, maks ${MAX_FOTO} foto)</div>
+          <div class="form-text text-success d-none rcv-foto-list"></div>
         </td>
         <td><select name="id_location[]" class="form-select form-select-sm rcv-lokasi" required>${buildLocationOptions(DEFAULT_LOCATION_ID)}</select></td>
         <td><input type="text" name="keterangan_item[]" class="form-control form-control-sm" placeholder="-"></td>
@@ -498,6 +509,14 @@
     function reindexRows() {
       bodyItem.querySelectorAll('tr').forEach((tr, i) => {
         tr.querySelector('.row-index').textContent = i + 1;
+      });
+      reindexFotoInputs();
+    }
+
+    function reindexFotoInputs() {
+      bodyItem.querySelectorAll('tr').forEach((tr, i) => {
+        const fileInput = tr.querySelector('.rcv-foto');
+        if (fileInput) fileInput.setAttribute('name', `foto_kondisi[${i}][]`);
       });
     }
 
@@ -547,19 +566,17 @@
 
           if (data.status) {
             poHint.textContent = 'Data PO berhasil dimuat.';
-
-            // 1. ISI FIELD SUPPLIER
             inputSupplier.value = data.supplier || '-';
 
-            // 2. RENDER BARIS ITEM KE TABEL
             if (data.items && data.items.length > 0) {
-              bodyItem.innerHTML = ''; // Kosongkan tabel
+              bodyItem.innerHTML = '';
 
               data.items.forEach((item, index) => {
                 bodyItem.insertAdjacentHTML('beforeend', rowPOTemplate(index + 1, item));
               });
 
-              // TAMPILKAN TABEL & SEMBUNYIKAN EMPTY STATE
+              reindexFotoInputs();
+
               emptyState.classList.add('d-none');
               wrapperTabel.classList.remove('d-none');
               btnTambahExtra.disabled = false;
@@ -592,7 +609,6 @@
 
     btnCariPO.addEventListener('click', muatDataPO);
 
-    // Otomatis muat data jika pengguna memilih dari dropdown datalist atau menekan Enter
     inputNoPO.addEventListener('change', function() {
       if (this.value.trim() !== '') {
         muatDataPO();
@@ -609,6 +625,7 @@
     btnTambahExtra.addEventListener('click', function() {
       const count = bodyItem.querySelectorAll('tr').length + 1;
       bodyItem.insertAdjacentHTML('beforeend', rowExtraTemplate(count));
+      reindexFotoInputs();
       hitungRingkasan();
     });
 
@@ -620,26 +637,135 @@
       hitungRingkasan();
     });
 
+    function validasiQtyRow(qtyInput) {
+      const td = qtyInput.closest('td');
+      const hint = td ? td.querySelector('.rcv-qty-hint') : null;
+      const max = qtyInput.getAttribute('max');
+
+      if (max === null || max === '') {
+        return true;
+      }
+
+      const melebihi = parseFloat(qtyInput.value || 0) > parseFloat(max);
+
+      qtyInput.classList.toggle('is-invalid', melebihi);
+      if (hint) hint.classList.toggle('d-none', !melebihi);
+
+      return !melebihi;
+    }
+
     bodyItem.addEventListener('input', function(e) {
-      if (e.target.classList.contains('qty-terima')) hitungRingkasan();
+      if (e.target.classList.contains('qty-terima')) {
+        hitungRingkasan();
+        validasiQtyRow(e.target);
+      }
     });
+
+    const formPenerimaan = document.getElementById('formPenerimaan');
+    if (formPenerimaan) {
+      formPenerimaan.addEventListener('submit', function(e) {
+        // Wajib Sinkronkan Index Foto Sebelum Form Dikirim
+        reindexFotoInputs();
+
+        let semuaValid = true;
+        let pesanError = 'Ada kesalahan input data. Perbaiki dulu sebelum menyimpan.';
+
+        bodyItem.querySelectorAll('.qty-terima').forEach(function(input) {
+          if (!validasiQtyRow(input)) {
+            semuaValid = false;
+            pesanError = 'Ada baris dengan qty diterima melebihi sisa PO.';
+          }
+        });
+
+        bodyItem.querySelectorAll('tr').forEach(function(tr, i) {
+          const kondisiEl = tr.querySelector('.rcv-kondisi');
+          const fileInput = tr.querySelector('.rcv-foto');
+          const checkEl = tr.querySelector('.rcv-item-check');
+
+          if (!kondisiEl || !fileInput) return;
+          if (checkEl && !checkEl.checked) return;
+
+          // Cek jika kondisi barang rusak atau sebagian rusak
+          if (kondisiEl.value === 'rusak' || kondisiEl.value === 'sebagian') {
+            const jml = fileInput.files ? fileInput.files.length : 0;
+
+            if (jml < 1) {
+              semuaValid = false;
+              pesanError = 'Baris ke-' + (i + 1) + ': Minimal 1 foto wajib diupload untuk barang berkondisi "Rusak".';
+            } else if (jml > MAX_FOTO) {
+              semuaValid = false;
+              pesanError = 'Baris ke-' + (i + 1) + ': Maksimal ' + MAX_FOTO + ' foto per barang.';
+            }
+          }
+        });
+
+        if (!semuaValid) {
+          e.preventDefault();
+          alert(pesanError); // Notifikasi langsung ke user
+          poHint.classList.add('text-danger');
+          poHint.textContent = pesanError;
+          poHint.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          });
+        }
+      });
+    }
 
     function toggleFotoRequirement(selectEl) {
       const td = selectEl.closest('td');
       const fileInput = td.querySelector('.rcv-foto');
       const hint = td.querySelector('.rcv-foto-hint');
+      const list = td.querySelector('.rcv-foto-list');
       if (!fileInput) return;
 
-      const wajibFoto = selectEl.value === 'rusak';
+      const wajibFoto = (selectEl.value === 'rusak' || selectEl.value === 'sebagian');
       fileInput.classList.toggle('d-none', !wajibFoto);
       fileInput.required = wajibFoto;
       if (hint) hint.classList.toggle('d-none', !wajibFoto);
-      if (!wajibFoto) fileInput.value = '';
+
+      if (!wajibFoto) {
+        fileInput.value = '';
+        if (list) {
+          list.textContent = '';
+          list.classList.add('d-none');
+        }
+      }
+    }
+
+    function tampilkanDaftarFoto(fileInput) {
+      const td = fileInput.closest('td');
+      const list = td ? td.querySelector('.rcv-foto-list') : null;
+      if (!list) return;
+
+      const files = fileInput.files;
+
+      if (!files || files.length === 0) {
+        list.textContent = '';
+        list.classList.add('d-none');
+        return;
+      }
+
+      if (files.length > MAX_FOTO) {
+        list.classList.remove('d-none', 'text-success');
+        list.classList.add('text-danger');
+        list.textContent = 'Terlalu banyak foto (' + files.length + '). Maksimal ' + MAX_FOTO + ' foto per barang.';
+        return;
+      }
+
+      const nama = Array.from(files).map(f => f.name).join(', ');
+      list.classList.remove('d-none', 'text-danger');
+      list.classList.add('text-success');
+      list.textContent = files.length + ' foto dipilih: ' + nama;
     }
 
     bodyItem.addEventListener('change', function(e) {
       if (e.target.classList.contains('rcv-kondisi')) {
         toggleFotoRequirement(e.target);
+      }
+
+      if (e.target.classList.contains('rcv-foto')) {
+        tampilkanDaftarFoto(e.target);
       }
     });
 

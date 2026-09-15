@@ -3,6 +3,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Penerimaan_barang extends MY_Controller
 {
+    // Batas jumlah foto yang boleh diupload untuk SATU baris barang rusak.
+    const MAX_FOTO_PER_ITEM = 5;
+
     public function __construct()
     {
         parent::__construct();
@@ -36,7 +39,7 @@ class Penerimaan_barang extends MY_Controller
         $penerimaan_list = $this->Penerimaan_barang_model->get_all_penerimaan($filter);
 
 
-        // Status hanya 2 (setelah migrasi enum): draft / selesai
+
         $total_draft   = 0;
         $total_selesai = 0;
 
@@ -67,19 +70,11 @@ class Penerimaan_barang extends MY_Controller
         $data['page_subtitle'] = 'Input barang masuk dari PO';
         $data['active_menu']   = 'penerimaan_barang';
         $data['no_penerimaan'] = $this->Penerimaan_barang_model->generate_no_penerimaan();
-        // Dipakai form untuk dropdown lokasi penempatan & pemilihan barang di luar PO
+
         $data['locations']   = $this->Penerimaan_barang_model->get_locations();
-        // FIX: sebelumnya baris ini memanggil get_po_by_no() TANPA argumen
-        // dan hasilnya tidak pernah dipakai di view manapun. Setelah model
-        // diperbaiki (parameter $no_po wajib), pemanggilan tanpa argumen ini
-        // akan fatal error — jadi dihapus karena memang tidak diperlukan
-        // (pencarian PO dilakukan via AJAX ke get_po_items()).
-        // FIX: $barang_list sebelumnya tidak pernah dikirim ke view, padahal
-        // dipakai JS (BARANG_ALL) untuk dropdown "Tambah Barang Diluar PO".
+
         $data['barang_list'] = $this->Penerimaan_barang_model->get_all_barang();
-        // FIX: dikirim ke view supaya dropdown "Lokasi Simpan" pre-select
-        // lokasi yang BENAR-BENAR ada di DB, bukan angka hardcode (id=2)
-        // yang bisa saja sudah tidak valid.
+
         $data['default_location_id'] = $this->Penerimaan_barang_model->get_default_location_id();
 
         $this->load->view('templates/header', $data);
@@ -87,12 +82,26 @@ class Penerimaan_barang extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // Proses Simpan Penerimaan Barang (Draft / Final)
-    // Proses Simpan Penerimaan Barang (Draft / Final)
-    // Proses Simpan Penerimaan Barang (Draft / Final)
+
     public function simpan()
     {
         if ($this->input->method() !== 'post') {
+            redirect('penerimaan_barang/tambah');
+            return;
+        }
+
+
+        $content_length = (int) ($_SERVER['CONTENT_LENGTH'] ?? 0);
+
+        if (empty($_POST) && $content_length > 0) {
+            $post_max = $this->_bytes_ini(ini_get('post_max_size'));
+            $pesan    = 'Data gagal dikirim karena ukuran total upload terlalu besar ('
+                . round($content_length / 1048576, 2) . ' MB) melebihi batas server ('
+                . round($post_max / 1048576, 2) . ' MB). Kurangi jumlah/ukuran foto, '
+                . 'atau naikkan post_max_size & upload_max_filesize di php.ini lalu restart Apache.';
+
+            log_message('error', 'Penerimaan_barang::simpan() - ' . $pesan);
+            $this->session->set_flashdata('error', $pesan);
             redirect('penerimaan_barang/tambah');
             return;
         }
@@ -109,12 +118,6 @@ class Penerimaan_barang extends MY_Controller
         }
 
         $id_po = is_array($po_data) ? $po_data['id'] : $po_data->id;
-
-        // FIX: endpoint AJAX get_po_items() menolak PO yang status_qc-nya
-        // bukan 'menunggu', tapi proses simpan() sebelumnya TIDAK melakukan
-        // pengecekan yang sama. Akibatnya PO yang sudah pernah diproses bisa
-        // "diterima" lagi dan membuat data tidak konsisten. Sekarang dicek ulang
-        // di server, jangan hanya percaya validasi sisi client/AJAX.
         $status_po = is_array($po_data) ? ($po_data['status'] ?? '') : ($po_data->status ?? '');
         $status_po = strtolower(trim((string) $status_po));
         if (!empty($status_po) && $status_po !== 'menunggu') {
@@ -131,15 +134,9 @@ class Penerimaan_barang extends MY_Controller
             $no_penerimaan = $this->Penerimaan_barang_model->generate_no_penerimaan();
         }
 
-        // Header disesuaikan PERSIS dengan kolom tabel `penerimaan_barang`
+
         $id_user_session = $this->session->userdata('user_id');
 
-        // FIX: sebelumnya langsung fallback ke angka hardcode 1 kalau session
-        // kosong, tanpa pernah memastikan user id itu (baik dari session
-        // maupun hardcode) benar-benar ada di tabel `users`. Kalau tidak ada,
-        // insert ke `penerimaan_barang` gagal karena FK id_user, dan karena
-        // ini terjadi di awal (insert header), SELURUH data batal tersimpan
-        // -- baik untuk aksi draft maupun final.
         $id_user = $id_user_session ?: 1;
 
         if (!$this->Penerimaan_barang_model->user_exists($id_user)) {
@@ -177,15 +174,11 @@ class Penerimaan_barang extends MY_Controller
         $errors_foto = [];
         $items       = [];
 
-        // FIX BUG UTAMA (penyebab data tidak pernah tersimpan):
-        // Sebelumnya baris tanpa lokasi dipilih otomatis diisi id_location = 2
-        // (angka hardcode). Kalau id 2 di tabel `locations` sudah tidak ada /
-        // tidak aktif, insert ke `penerimaan_detail` akan GAGAL karena
-        // melanggar foreign key, dan seluruh transaksi di-rollback — sehingga
-        // baik draft maupun final tidak pernah benar-benar tersimpan.
-        // Sekarang default diambil secara dinamis dari lokasi aktif yang
-        // benar-benar ada di DB.
+
         $default_location_id = $this->Penerimaan_barang_model->get_default_location_id();
+
+
+        $rows_valid = [];
 
         foreach ($id_barang_arr as $i => $id_barang) {
             $id_barang = (int) $id_barang;
@@ -195,41 +188,46 @@ class Penerimaan_barang extends MY_Controller
                 continue;
             }
 
-            $kondisi   = isset($kondisi_arr[$i]) && $kondisi_arr[$i] !== '' ? $kondisi_arr[$i] : 'baik';
-            $foto_info = null;
 
-            if ($kondisi === 'rusak') {
-                $ada_file = $foto_files
-                    && isset($foto_files['error'][$i])
-                    && $foto_files['error'][$i] === UPLOAD_ERR_OK;
+            $id_po_detail_row = !empty($id_po_detail_arr[$i]) ? (int) $id_po_detail_arr[$i] : null;
 
-                if (!$ada_file) {
-                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': foto wajib diupload untuk barang berkondisi "Rusak".';
-                    continue;
-                }
+            if ($id_po_detail_row) {
+                $info_sisa = $this->Penerimaan_barang_model->get_sisa_qty_po_detail($id_po_detail_row);
 
-                $foto_info = $this->_upload_foto_kondisi($foto_files, $i);
-
-                if ($foto_info === FALSE) {
-                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': gagal upload foto (format harus jpg/jpeg/png, maks 2MB).';
+                if ($info_sisa && $qty > $info_sisa['sisa']) {
+                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': qty diterima (' . $qty . ') melebihi sisa PO yang belum diterima (sisa: ' . $info_sisa['sisa'] . ', sudah diterima sebelumnya: ' . $info_sisa['sudah_diterima'] . ' dari total pesanan ' . $info_sisa['qty_pesan'] . ').';
                     continue;
                 }
             }
 
-            // Tentukan id_location: pakai pilihan user, atau fallback ke
-            // default yang benar-benar ada di DB (bukan angka hardcode lagi).
+            $kondisi     = isset($kondisi_arr[$i]) && $kondisi_arr[$i] !== '' ? $kondisi_arr[$i] : 'baik';
+            $wajib_foto  = ($kondisi === 'rusak');
+
+            if ($wajib_foto) {
+                $jml_file = $this->_hitung_file_terkirim($foto_files, $i);
+
+                if ($jml_file < 1) {
+                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': minimal 1 foto wajib diupload untuk barang berkondisi "Rusak".';
+                    continue;
+                }
+
+                if ($jml_file > self::MAX_FOTO_PER_ITEM) {
+                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': maksimal ' . self::MAX_FOTO_PER_ITEM . ' foto per barang (dikirim ' . $jml_file . ').';
+                    continue;
+                }
+            }
+
+
             $id_location = !empty($lokasi_arr[$i]) ? (int) $lokasi_arr[$i] : $default_location_id;
 
-            // FIX: validasi id_location benar-benar ada & aktif sebelum insert.
-            // Ini mencegah insert gagal senyap karena FK violation, dan
-            // memberi pesan yang jelas ke user alih-alih "gagal menyimpan"
-            // tanpa keterangan.
             if (empty($id_location) || !$this->Penerimaan_barang_model->location_exists($id_location)) {
                 $errors_foto[] = 'Baris ke-' . ($i + 1) . ': lokasi penyimpanan wajib dipilih dan harus valid.';
                 continue;
             }
 
-            $items[] = [
+            $rows_valid[] = [
+                'index'        => $i,
+                'wajib_foto'   => $wajib_foto,
                 'id_po_detail' => !empty($id_po_detail_arr[$i]) ? (int) $id_po_detail_arr[$i] : NULL,
                 'id_barang'    => $id_barang,
                 'qty_diterima' => $qty,
@@ -237,11 +235,37 @@ class Penerimaan_barang extends MY_Controller
                 'kondisi'      => $kondisi,
                 'keterangan'   => isset($ket_item_arr[$i]) && $ket_item_arr[$i] !== '' ? $ket_item_arr[$i] : NULL,
                 'id_location'  => $id_location,
-                'foto_info'    => $foto_info,
             ];
         }
 
         if (!empty($errors_foto)) {
+            $this->session->set_flashdata('error', implode('<br>', $errors_foto));
+            redirect('penerimaan_barang/tambah');
+            return;
+        }
+
+
+        foreach ($rows_valid as $row) {
+            $fotos = [];
+
+            if ($row['wajib_foto']) {
+                $fotos = $this->_upload_foto_kondisi($foto_files, $row['index']);
+
+                if ($fotos === FALSE) {
+                    $errors_foto[] = 'Baris ke-' . ($row['index'] + 1) . ': gagal upload foto (format harus jpg/jpeg/png, maks 2MB per file).';
+
+                    continue;
+                }
+            }
+
+            unset($row['index'], $row['wajib_foto']);
+            $row['fotos'] = $fotos;
+            $items[] = $row;
+        }
+
+        if (!empty($errors_foto)) {
+
+            $this->_hapus_file_terupload($items);
             $this->session->set_flashdata('error', implode('<br>', $errors_foto));
             redirect('penerimaan_barang/tambah');
             return;
@@ -257,33 +281,21 @@ class Penerimaan_barang extends MY_Controller
         $id_penerimaan = $this->Penerimaan_barang_model->simpan_penerimaan($header, $items);
 
         if ($id_penerimaan) {
-            if ($status === 'selesai') {
-                $this->Penerimaan_barang_model->update_status_po($id_po, 'lolos');
-            }
+
 
             $this->session->set_flashdata('success', 'Penerimaan barang berhasil disimpan.');
             redirect('penerimaan_barang/detail/' . $id_penerimaan);
         } else {
             // Hapus file fisik jika insert DB gagal
-            foreach ($items as $item) {
-                if (!empty($item['foto_info']['file_path']) && file_exists(FCPATH . $item['foto_info']['file_path'])) {
-                    unlink(FCPATH . $item['foto_info']['file_path']);
-                }
-            }
+            $this->_hapus_file_terupload($items);
 
-            // FIX: sebelumnya pesan error selalu generik ("periksa koneksi
-            // DB/log error") padahal error sebenarnya tidak pernah dicatat
-            // di mana pun. Sekarang ambil detail error dari model (yang sudah
-            // dicatat ke log aplikasi) supaya mudah didiagnosis.
+
             $detail_error = $this->Penerimaan_barang_model->get_last_error();
             $pesan_user   = 'Gagal menyimpan data penerimaan barang.';
             if ($detail_error) {
                 log_message('error', 'Penerimaan_barang::simpan() - ' . $detail_error);
-                // Tampilkan detail hanya di environment non-production supaya
-                // memudahkan debugging tanpa membocorkan detail DB ke user akhir.
-                if (defined('ENVIRONMENT') && ENVIRONMENT !== 'production') {
-                    $pesan_user .= ' Detail: ' . html_escape($detail_error);
-                }
+
+                $pesan_user .= ' Detail: ' . html_escape($detail_error);
             }
 
             $this->session->set_flashdata('error', $pesan_user);
@@ -291,21 +303,97 @@ class Penerimaan_barang extends MY_Controller
         }
     }
 
-    private function _upload_foto_kondisi(array $files, int $index)
+    private function _bytes_ini($val)
+    {
+        $val  = trim((string) $val);
+        $unit = strtolower(substr($val, -1));
+        $num  = (int) $val;
+
+        switch ($unit) {
+            case 'g':
+                $num *= 1024;
+            case 'm':
+                $num *= 1024;
+            case 'k':
+                $num *= 1024;
+        }
+
+        return $num;
+    }
+
+
+    // GANTI METHOD _files_baris DENGAN IMPLEMENTASI BERIKUT:
+    private function _files_baris(array $files = null, int $index = null)
+    {
+        if (empty($files) || !isset($files['name'][$index])) {
+            return [];
+        }
+
+        $names     = $files['name'][$index];
+        $tmp_names = $files['tmp_name'][$index] ?? [];
+        $sizes     = $files['size'][$index] ?? [];
+        $types     = $files['type'][$index] ?? [];
+        $errors    = $files['error'][$index] ?? [];
+
+        // Jika hanya 1 file dikirim bukan sebagai array sub-level
+        if (!is_array($names)) {
+            return [[
+                'name'     => $names,
+                'tmp_name' => is_array($tmp_names) ? ($tmp_names[0] ?? '') : $tmp_names,
+                'size'     => is_array($sizes) ? ($sizes[0] ?? 0) : $sizes,
+                'type'     => is_array($types) ? ($types[0] ?? '') : $types,
+                'error'    => is_array($errors) ? ($errors[0] ?? UPLOAD_ERR_NO_FILE) : $errors,
+            ]];
+        }
+
+        $out = [];
+        foreach ($names as $k => $name) {
+            if (empty($name)) continue;
+
+            $out[] = [
+                'name'     => $name,
+                'tmp_name' => $tmp_names[$k] ?? '',
+                'size'     => $sizes[$k] ?? 0,
+                'type'     => $types[$k] ?? '',
+                'error'    => $errors[$k] ?? UPLOAD_ERR_NO_FILE,
+            ];
+        }
+
+        return $out;
+    }
+
+    // GANTI METHOD _hitung_file_terkirim DENGAN IMPLEMENTASI BERIKUT:
+    private function _hitung_file_terkirim($files, int $index)
+    {
+        $jml = 0;
+        $baris_files = $this->_files_baris($files, $index);
+
+        foreach ($baris_files as $f) {
+            if (isset($f['error']) && $f['error'] === UPLOAD_ERR_OK && !empty($f['tmp_name'])) {
+                $jml++;
+            }
+        }
+
+        return $jml;
+    }
+   
+    private function _hapus_file_terupload(array $items)
+    {
+        foreach ($items as $item) {
+            $fotos = $item['fotos'] ?? [];
+
+            foreach ($fotos as $foto) {
+                if (!empty($foto['file_path']) && file_exists(FCPATH . $foto['file_path'])) {
+                    unlink(FCPATH . $foto['file_path']);
+                }
+            }
+        }
+    }
+
+    private function _upload_foto_kondisi($files, int $index)
     {
         $allowed_ext = ['jpg', 'jpeg', 'png'];
-        $max_size    = 2 * 1024 * 1024; // 2MB
-
-        $name     = $files['name'][$index] ?? '';
-        $tmp_name = $files['tmp_name'][$index] ?? '';
-        $size     = $files['size'][$index] ?? 0;
-        $type     = $files['type'][$index] ?? '';
-
-        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-
-        if (!$tmp_name || !in_array($ext, $allowed_ext, TRUE) || $size <= 0 || $size > $max_size) {
-            return FALSE;
-        }
+        $max_size    = 2 * 1024 * 1024; // 2MB per file
 
         $relative_path = 'uploads/penerimaan_barang/';
         $upload_dir    = FCPATH . $relative_path;
@@ -314,18 +402,37 @@ class Penerimaan_barang extends MY_Controller
             return FALSE;
         }
 
-        $new_name = 'rcv_' . date('YmdHis') . '_' . uniqid() . '.' . $ext;
+        $hasil = [];
 
-        if (!move_uploaded_file($tmp_name, $upload_dir . $new_name)) {
-            return FALSE;
+        foreach ($this->_files_baris($files, $index) as $f) {
+            if ($f['error'] !== UPLOAD_ERR_OK || empty($f['tmp_name'])) {
+                continue; // slot kosong: diabaikan, bukan error
+            }
+
+            $ext  = strtolower(pathinfo($f['name'], PATHINFO_EXTENSION));
+            $size = (int) $f['size'];
+
+            if (!in_array($ext, $allowed_ext, TRUE) || $size <= 0 || $size > $max_size) {
+                $this->_hapus_file_terupload([['fotos' => $hasil]]);
+                return FALSE;
+            }
+
+            $new_name = 'rcv_' . date('YmdHis') . '_' . uniqid('', TRUE) . '.' . $ext;
+
+            if (!move_uploaded_file($f['tmp_name'], $upload_dir . $new_name)) {
+                $this->_hapus_file_terupload([['fotos' => $hasil]]);
+                return FALSE;
+            }
+
+            $hasil[] = [
+                'file_name' => $new_name,
+                'file_path' => $relative_path . $new_name,
+                'file_size' => $size,
+                'mime_type' => $f['type'] ?: 'image/' . $ext,
+            ];
         }
 
-        return [
-            'file_name' => $new_name,
-            'file_path' => $relative_path . $new_name,
-            'file_size' => $size,
-            'mime_type' => $type ?: 'image/' . $ext
-        ];
+        return $hasil;
     }
 
     // Halaman Detail Penerimaan Barang
@@ -356,9 +463,7 @@ class Penerimaan_barang extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // Halaman Cetak (tanpa header/footer aplikasi, siap window.print())
-    // FIX: method ini sebelumnya sama sekali belum ada, padahal sudah
-    // dipakai sebagai link "Cetak" di halaman list & detail.
+
     public function cetak($id = null)
     {
         $id = (int) $id;
@@ -378,26 +483,23 @@ class Penerimaan_barang extends MY_Controller
         $data['penerimaan'] = $detail['header'];
         $data['items']      = $detail['items'];
 
-        // Sengaja TIDAK memuat templates/header & templates/footer supaya
-        // hasil cetak bersih dari sidebar/topbar aplikasi.
+
         $this->load->view('staff_gudang/penerimaan_barang_cetak_view', $data);
     }
 
-    // Endpoint AJAX untuk Fetch Item PO ke JavaScript
-    // Hapus salah satu method get_po_items() yang ganda
-    // Pastikan hanya tersisa SATU method seperti ini:
+
     public function get_po_list()
     {
         header('Content-Type: application/json');
 
-        // Ambil semua daftar PO yang belum selesai/diterima dari model
+
         $list_po = $this->Penerimaan_barang_model->get_all_active_po();
 
         echo json_encode($list_po);
     }
     public function get_po_items()
     {
-        // Matikan output buffer/warning agar JSON tidak rusak
+
         error_reporting(0);
         header('Content-Type: application/json');
 
@@ -411,16 +513,13 @@ class Penerimaan_barang extends MY_Controller
         $po_data = $this->Penerimaan_barang_model->get_po_by_no($no_po);
 
         if ($po_data) {
-            // Konversi ke Array jika return dari model berupa Object
             if (is_object($po_data)) {
                 $po_data = (array) $po_data;
             }
 
-            // Ambil status_qc atau status (toleran terhadap nama kolom)
             $status_raw = $po_data['status_qc'] ?? $po_data['status'] ?? '';
             $status_po  = strtolower(trim((string) $status_raw));
 
-            // Jika status_qc berisi 'menunggu' ATAU jika status_qc kosong/tidak tercek, izinkan lewat
             if (!empty($status_po) && $status_po !== 'menunggu') {
                 echo json_encode([
                     'status'  => false,
@@ -432,10 +531,21 @@ class Penerimaan_barang extends MY_Controller
             $supplier = $po_data['supplier_nama'] ?? $po_data['supplier'] ?? $po_data['nama_supplier'] ?? '';
             $items    = $po_data['items'] ?? [];
 
-            // Jika items dikirim dalam bentuk stdClass, konversi ke array
             if (is_object($items)) {
                 $items = (array) $items;
             }
+
+
+            foreach ($items as $it) {
+                if (is_object($it)) {
+                    $qty_pesan = isset($it->qty_pesan) ? (float) $it->qty_pesan : 0;
+                    $sudah     = isset($it->qty_diterima_sebelumnya) ? (float) $it->qty_diterima_sebelumnya : 0;
+                    $it->sisa  = $qty_pesan - $sudah;
+
+                    $it->qty_rusak_sebelumnya = isset($it->qty_rusak_sebelumnya) ? (float) $it->qty_rusak_sebelumnya : 0;
+                }
+            }
+            unset($it);
 
             echo json_encode([
                 'status'   => true,

@@ -19,6 +19,8 @@ class Barang extends MY_Controller
     {
         $data['title'] = translate('list_barang');
         $data['page_title']     =  translate('list_barang');
+        $data['active_menu']   = 'barang';
+
 
         // 2. Ambil data kategori list dari model untuk dikirim ke view
         $data['kategoriList'] = $this->Kategori_barang_model->get_kat_barang_paginated('', 1000, 0);
@@ -53,13 +55,7 @@ class Barang extends MY_Controller
         ]);
     }
 
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
-    }
+
 
     // Method simpan data via AJAX
     public function simpan()

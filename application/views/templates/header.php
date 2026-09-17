@@ -279,7 +279,7 @@
                     'roles' => ['super_admin'],
                 ],
                 [
-                    'key'   => 'kategori_barang',
+                    'key'   => 'kategori',
                     'label' => function_exists('translate') ? translate('kategori_barang') : 'Kategori Barang',
                     'icon'  => 'bi-list-check',
                     'url'   => 'kategori_barang',
@@ -293,7 +293,7 @@
                     'roles' => ['super_admin'],
                 ],
                 [
-                    'key'   => 'locations',
+                    'key'   => 'location',
                     'label' => function_exists('translate') ? translate('app_rak') : 'Lokasi Rak',
                     'icon'  => 'bi bi-archive',
                     'url'   => 'locations',
@@ -337,10 +337,17 @@
                     'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
                 ],
                 [
-                    'key'   => 'supplier',
-                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
-                    'icon'  => 'bi-people',
-                    'url'   => 'supplier',
+                    'key'   => 'stok_barang',
+                    'label' => function_exists('translate') ? translate('stok') : 'Stok',
+                    'icon'  => 'bi bi-clipboard-fill',
+                    'url'   => 'stok',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
+                    'key'   => 'stok_riwayat',
+                    'label' => function_exists('translate') ? translate('stok') : 'Stok',
+                    'icon'  => 'bi bi-clipboard-fill',
+                    'url'   => 'stok_riwayat',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
             ],
@@ -367,7 +374,6 @@
             }
         }
 
-        $is_first = true;
     ?>
         <ul class="nav flex-column mb-auto" id="<?= $menu_id; ?>">
             <?php foreach ($menu_groups as $group):
@@ -386,14 +392,11 @@
 
                 $group_dom_id = 'submenu_' . $group['key'] . '_' . $menu_id;
 
-                if ($active_group_key !== null) {
-                    // Ada menu aktif yang cocok -> hanya grup itu yang terbuka
-                    $group_is_open = ($group['key'] === $active_group_key);
-                } else {
-                    // Fallback (mis. halaman dashboard tanpa active_menu): grup pertama terbuka
-                    $group_is_open = $is_first;
-                }
-                $is_first = false;
+                // Grup hanya terbuka kalau memang grup ini yang memuat active_menu.
+                // Kalau active_menu kosong atau tidak cocok dengan item manapun
+                // (mis. halaman Dashboard yang bukan bagian dari grup manapun),
+                // semua grup tetap tertutup -- tidak ada fallback ke grup pertama.
+                $group_is_open = ($active_group_key !== null && $group['key'] === $active_group_key);
             ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $group_is_open ? '' : 'collapsed'; ?>" data-bs-toggle="collapse" href="#<?= $group_dom_id; ?>" role="button" aria-expanded="<?= $group_is_open ? 'true' : 'false'; ?>" aria-controls="<?= $group_dom_id; ?>">

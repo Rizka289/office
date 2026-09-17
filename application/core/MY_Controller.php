@@ -78,4 +78,20 @@ class MY_Controller extends CI_Controller
             show_error(lang('app_access_denied') ?: 'Anda tidak memiliki akses ke halaman ini.', 403, 'Akses Ditolak');
         }
     }
+
+    /**
+     * Kirim response dalam format JSON.
+     * Dipakai oleh endpoint-endpoint AJAX di semua controller anak.
+     *
+     * Contoh pemakaian:
+     *   $this->jsonResponse(['status' => true, 'data' => $data]);
+     *   $this->jsonResponse(['status' => false, 'message' => 'Gagal'], 400);
+     */
+    protected function jsonResponse($data, $statusCode = 200)
+    {
+        $this->output
+            ->set_status_header($statusCode)
+            ->set_content_type('application/json', 'utf-8')
+            ->set_output(json_encode($data));
+    }
 }

@@ -20,8 +20,8 @@ class Penerimaan_barang extends MY_Controller
     // Halaman Index (Menampilkan List Data)
     public function index()
     {
-        $data['page_title']    = 'Daftar Penerimaan Barang';
-        $data['page_subtitle'] = 'Riwayat dan status penerimaan barang dari PO';
+        $data['page_title']    = translate('penerimaan_barang') ;
+        $data['page_subtitle'] = translate('des_index_pb');
         $data['active_menu']   = 'penerimaan_barang';
 
         $filter = [

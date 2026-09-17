@@ -83,10 +83,10 @@ class Penerimaan_barang_model extends CI_Model
         return $prefix . '/' . sprintf('%04d', $urut);
     }
 
-  
+
     public function get_po_by_no($no_po)
     {
-       
+
         $this->db->select('po.id, po.no_po, po.status_qc, s.nama AS supplier');
         $this->db->from('purchase_order po');
         $this->db->join('supplier s', 's.id = po.id_supplier', 'left');
@@ -121,7 +121,7 @@ class Penerimaan_barang_model extends CI_Model
             'items'    => $items,
         ];
     }
-   
+
     public function get_all_active_po()
     {
         $this->db->select('po.no_po, s.nama AS supplier_nama, po.status_qc');
@@ -158,7 +158,7 @@ class Penerimaan_barang_model extends CI_Model
         return $row ? (int) $row->id : null;
     }
 
-   
+
     public function location_exists($id_location)
     {
         if (empty($id_location)) {
@@ -172,7 +172,7 @@ class Penerimaan_barang_model extends CI_Model
         return (bool) $this->db->get()->row();
     }
 
-  
+
     public function user_exists($id_user)
     {
         if (empty($id_user)) {
@@ -185,7 +185,7 @@ class Penerimaan_barang_model extends CI_Model
         return (bool) $this->db->get()->row();
     }
 
-   
+
     public function get_all_barang()
     {
         $this->db->select('id, kode_barang, nama AS nama_barang'); // Tambahkan alias nama_barang
@@ -196,7 +196,7 @@ class Penerimaan_barang_model extends CI_Model
 
     public function get_sisa_qty_po_detail($id_po_detail)
     {
-        
+
         $this->db->select('
             pod.qty AS qty_pesan,
             COALESCE(SUM(CASE WHEN pd.kondisi = "baik" THEN pd.qty_diterima ELSE 0 END), 0) AS qty_diterima_sebelumnya,
@@ -244,7 +244,7 @@ class Penerimaan_barang_model extends CI_Model
         return $result !== FALSE;
     }
 
- 
+
     public function get_po_fulfillment_status($id_po)
     {
         $this->db->select('
@@ -270,7 +270,7 @@ class Penerimaan_barang_model extends CI_Model
             if ($row->qty_diterima_baik > 0 || $row->qty_diterima_rusak > 0) {
                 $ada_yang_diterima = true;
             }
-           
+
             if ($row->qty_diterima_baik < $row->qty_pesan) {
                 $semua_terpenuhi = false;
             }
@@ -281,6 +281,34 @@ class Penerimaan_barang_model extends CI_Model
         }
 
         return $ada_yang_diterima ? 'partial' : 'menunggu';
+    }
+
+    public function insert_stok_riwayat($data_riwayat)
+    {
+        $data = [
+            'id_barang'       => $data_riwayat['id_barang'],
+            'id_location'     => $data_riwayat['id_location'],
+            'jenis_transaksi' => 'PENERIMAAN_SUPPLIER', // Sesuai enum di SQL
+            'id_referensi'    => $data_riwayat['id_referensi'], // ID Header Penerimaan (penerimaan_barang.id)
+            'qty_masuk'       => $data_riwayat['qty'],
+            'qty_keluar'      => 0,
+            'stok_sebelum'    => $data_riwayat['stok_sebelum'],
+            'stok_sesudah'    => $data_riwayat['stok_sesudah'],
+            'keterangan'      => $data_riwayat['keterangan'] ?? 'Penerimaan Barang Supplier',
+            'created_by'      => $data_riwayat['created_by'],
+            'created_at'      => date('Y-m-d H:i:s')
+        ];
+
+        $result = $this->db->insert('stok_riwayat', $data);
+
+        if (!$result) {
+            $db_error = $this->db->error();
+            $this->last_error = 'Insert stok_riwayat gagal: ' . $db_error['message'];
+            log_message('error', 'insert_stok_riwayat - ' . $this->last_error);
+            return FALSE;
+        }
+
+        return TRUE;
     }
 
     public function sync_status_qc_po($id_po)
@@ -305,19 +333,19 @@ class Penerimaan_barang_model extends CI_Model
         return TRUE;
     }
 
-  
+
     public function simpan_penerimaan($header, $items)
     {
         $this->last_error = null;
 
-        
+
         $this->db->trans_strict(FALSE);
         $this->db->trans_begin();
 
         // 1. Insert ke tabel `penerimaan_barang`
         $this->db->insert('penerimaan_barang', $header);
 
-        
+
         $db_error = $this->db->error();
         if (!empty($db_error['code'])) {
             $this->last_error = 'Insert header gagal: ' . $db_error['message'];
@@ -336,7 +364,7 @@ class Penerimaan_barang_model extends CI_Model
         }
 
         foreach ($items as $item) {
-            
+
             $fotos = [];
             if (!empty($item['fotos']) && is_array($item['fotos'])) {
                 $fotos = $item['fotos'];
@@ -390,26 +418,57 @@ class Penerimaan_barang_model extends CI_Model
             }
         }
 
-     
+
         $status_final = isset($header['status']) && strtolower(trim((string) $header['status'])) === 'selesai';
 
         if ($status_final) {
             foreach ($items as $item) {
-            
                 $kondisi_item = strtolower(trim((string) ($item['kondisi'] ?? 'baik')));
 
+                // Hanya barang berkondisi baik yang masuk ke stok utama & riwayat stok
                 if ($kondisi_item !== 'baik') {
                     continue;
                 }
 
+                // A. AMBIL STOK AWAL (stok_sebelum)
+                $stok_sebelum = 0;
+                $row_stok = $this->db->get_where('stok_barang', [
+                    'id_barang'   => $item['id_barang'],
+                    'id_location' => $item['id_location']
+                ])->row();
+
+                if ($row_stok) {
+                    $stok_sebelum = (int) $row_stok->stok;
+                }
+
+                $qty_masuk    = (int) $item['qty_diterima'];
+                $stok_sesudah = $stok_sebelum + $qty_masuk;
+
+                // B. UPDATE STOK UTAMA (stok_barang)
                 $ok_stok = $this->upsert_stok_barang(
                     $item['id_barang'],
                     $item['id_location'],
-                    $item['qty_diterima']
+                    $qty_masuk
                 );
 
                 if (!$ok_stok) {
-                    // last_error sudah diisi oleh upsert_stok_barang()
+                    $this->db->trans_rollback();
+                    return FALSE;
+                }
+
+                // C. INSERT LOG KE RIWAYAT STOK (stok_riwayat)
+                $ok_riwayat = $this->insert_stok_riwayat([
+                    'id_barang'    => $item['id_barang'],
+                    'id_location'  => $item['id_location'],
+                    'id_referensi' => $id_penerimaan, // ID dari $this->db->insert_id() penerimaan_barang
+                    'qty'          => $qty_masuk,
+                    'stok_sebelum' => $stok_sebelum,
+                    'stok_sesudah' => $stok_sesudah,
+                    'keterangan'   => 'Penerimaan No: ' . $header['no_penerimaan'] . ' (SJ: ' . ($header['surat_jalan_supplier'] ?? '-') . ')',
+                    'created_by'   => $header['id_user']
+                ]);
+
+                if (!$ok_riwayat) {
                     $this->db->trans_rollback();
                     return FALSE;
                 }
@@ -422,7 +481,6 @@ class Penerimaan_barang_model extends CI_Model
                 }
             }
         }
-
         if ($this->db->trans_status() === FALSE) {
             $this->last_error = $this->last_error ?: 'Transaksi gagal tanpa pesan error spesifik.';
             $this->db->trans_rollback();
@@ -433,7 +491,7 @@ class Penerimaan_barang_model extends CI_Model
         return $id_penerimaan;
     }
 
-    
+
     public function get_penerimaan_detail($id)
     {
         $this->db->select('

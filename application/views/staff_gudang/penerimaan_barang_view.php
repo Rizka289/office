@@ -1,10 +1,5 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 
-<!--
-  Fragment index/daftar Penerimaan Barang.
-  Dipakai bersama header.php + footer.php (JANGAN tambahkan <!DOCTYPE>/<html>/<head>/<body> di sini).
-  Sengaja TIDAK mendefinisikan ulang :root / --brand supaya warna tetap ikut tema global header.php.
--->
 
 <style>
   /* Hanya style baru yang belum ada di header.php, di-scope ke .rcv-index-page */
@@ -147,7 +142,7 @@
 
   <!-- KPI Ringkasan -->
   <div class="row g-3 mb-3">
-    <div class="col-6 col-lg-4">
+    <div class="col-6 col-lg-6">
       <div class="kpi-card">
         <div class="kpi-icon bg-total"><i class="bi bi-box-seam"></i></div>
         <div>
@@ -156,20 +151,11 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-lg-4">
-      <div class="kpi-card">
-        <div class="kpi-icon bg-draft"><i class="bi bi-clock-history"></i></div>
-        <div>
-          <div class="kpi-value"><?= isset($total_draft) ? $total_draft : 0; ?></div>
-          <div class="kpi-label"><?= translate('m_d') ?></div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-lg-4">
+    <div class="col-6 col-lg-6">
       <div class="kpi-card">
         <div class="kpi-icon bg-selesai"><i class="bi bi-check2-circle"></i></div>
         <div>
-          <div class="kpi-value"><?= isset($total_selesai) ? $total_selesai : 0; ?></div>
+          <div class="kpi-value"><?= isset($total_draft) ? $total_draft : 0; ?></div>
           <div class="kpi-label"><?= translate('selesai') ?></div>
         </div>
       </div>
@@ -180,7 +166,7 @@
   <div class="toolbar-card">
     <?php echo form_open('penerimaan_barang', ['method' => 'get', 'class' => 'row g-2 align-items-end']); ?>
     <div class="col-md-3">
-      <label class="form-label small text-muted mb-1">Cari</label>
+      <label class="form-label small text-muted mb-1"><?= translate('cari') ?></label>
       <div class="input-group">
         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
         <input type="text" name="q" class="form-control" placeholder="No. Penerimaan / No. PO / Supplier"
@@ -188,15 +174,15 @@
       </div>
     </div>
     <div class="col-6 col-md-2">
-      <label class="form-label small text-muted mb-1">Dari Tanggal</label>
+      <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal1') ?></label>
       <input type="date" name="dari" class="form-control" value="<?= isset($filter_dari) ? $filter_dari : ''; ?>">
     </div>
     <div class="col-6 col-md-2">
-      <label class="form-label small text-muted mb-1">Sampai Tanggal</label>
+      <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal2') ?></label>
       <input type="date" name="sampai" class="form-control" value="<?= isset($filter_sampai) ? $filter_sampai : ''; ?>">
     </div>
     <div class="col-6 col-md-2">
-      <label class="form-label small text-muted mb-1">Status</label>
+      <label class="form-label small text-muted mb-1"><?= translate('status') ?></label>
       <select name="status" class="form-select">
         <option value="">Semua Status</option>
         <option value="draft" <?= (isset($filter_status) && $filter_status === 'draft') ? 'selected' : ''; ?>>Draft</option>
@@ -228,7 +214,7 @@
             <th style="width:14%">Diterima Oleh</th>
             <th style="width:8%" class="text-center">Jml Item</th>
             <th style="width:11%">Status</th>
-            <th style="width:9%" class="text-center">Aksi</th>
+            <th style="width:9%" class="text-center"><?= translate('aksi') ?></th>
           </tr>
         </thead>
         <tbody>

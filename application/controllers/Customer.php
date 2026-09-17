@@ -18,6 +18,8 @@ class Customer extends MY_Controller
     {
         $data['title'] = translate('app_list') . ' ' . translate('pelanggan');
         $data['page_title']     =  translate('app_list') . ' ' . translate('pelanggan');
+        $data['active_menu']   = 'customer';
+
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/customer_grid_view', $data);
@@ -48,14 +50,6 @@ class Customer extends MY_Controller
         ]);
     }
 
-
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
-    }
 
     // Method simpan data via AJAX
     public function simpan()

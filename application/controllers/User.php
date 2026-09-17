@@ -52,14 +52,6 @@ class User extends MY_Controller
     }
 
 
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
-    }
-
     // Method simpan data via AJAX
     public function simpan()
     {

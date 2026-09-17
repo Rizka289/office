@@ -156,11 +156,5 @@ class Purchase_order extends MY_Controller
         );
     }
 
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        $this->output
-            ->set_content_type('application/json')
-            ->set_output(json_encode($payload));
-    }
+  
 }

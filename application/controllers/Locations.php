@@ -18,7 +18,9 @@ class Locations extends MY_Controller
     {
         $data['title'] = translate('app_rak');
         $data['page_title'] = translate('app_location');
-        // $data['kategori_barang'] = $this->Kategori_barang_model->get_all_kat_barang();
+        $data['active_menu']   = 'location';
+
+
 
         $this->load->view('templates/header', $data);
         $this->load->view('super_admin/location_view', $data);
@@ -148,13 +150,5 @@ class Locations extends MY_Controller
         }
 
         return $data;
-    }
-
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
     }
 }

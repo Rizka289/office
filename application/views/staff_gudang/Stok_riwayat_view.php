@@ -12,9 +12,9 @@
                     <label class="mr-2">Barang:</label>
                     <select name="id_barang" class="form-control">
                         <option value="">-- Semua Barang --</option>
-                        <?php foreach($list_barang as $b): ?>
+                        <?php foreach ($list_barang as $b): ?>
                             <option value="<?= $b['id']; ?>" <?= ($filter_barang == $b['id']) ? 'selected' : ''; ?>>
-                                <?= $b['kode_barang'] . ' - ' . $b['nama_barang']; ?>
+                                <?= $b['kode_barang'] . ' - ' . $b['nama']; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -24,9 +24,9 @@
                     <label class="mr-2">Lokasi/Gudang:</label>
                     <select name="id_location" class="form-control">
                         <option value="">-- Semua Lokasi --</option>
-                        <?php foreach($list_location as $l): ?>
+                        <?php foreach ($list_location as $l): ?>
                             <option value="<?= $l['id']; ?>" <?= ($filter_location == $l['id']) ? 'selected' : ''; ?>>
-                                <?= $l['nama_lokasi']; ?>
+                                <?= $l['zone_name']; ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -58,17 +58,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if(!empty($riwayat)): ?>
-                            <?php foreach($riwayat as $row): ?>
+                        <?php if (!empty($riwayat)): ?>
+                            <?php foreach ($riwayat as $row): ?>
                                 <tr>
                                     <td><?= date('d-m-Y H:i', strtotime($row['created_at'])); ?></td>
-                                    <td><?= htmlspecialchars($row['nama_barang'] ?? $row['id_barang']); ?></td>
-                                    <td><?= htmlspecialchars($row['nama_lokasi'] ?? $row['id_location']); ?></td>
-                                    <td>
-                                        <span class="badge badge-info"><?= $row['jenis_transaksi']; ?></span>
-                                    </td>
-                                    <td class="text-success font-weight-bold"><?= $row['qty_masuk'] > 0 ? '+'.$row['qty_masuk'] : '-'; ?></td>
-                                    <td class="text-danger font-weight-bold"><?= $row['qty_keluar'] > 0 ? '-'.$row['qty_keluar'] : '-'; ?></td>
+                                    <td><?= htmlspecialchars($row['nama'] ?? $row['id_barang']); ?></td>
+                                    <td><?= htmlspecialchars(($row['location_code'] ?? '') . ' - ' . ($row['zone_name'] ?? $row['id_location'])); ?></td>
+                                    <td><?= $row['jenis_transaksi']; ?></span></td>
+                                    <td class="text-success font-weight-bold"><?= $row['qty_masuk'] > 0 ? '+' . $row['qty_masuk'] : '-'; ?></td>
+                                    <td class="text-danger font-weight-bold"><?= $row['qty_keluar'] > 0 ? '-' . $row['qty_keluar'] : '-'; ?></td>
                                     <td><?= $row['stok_sebelum']; ?></td>
                                     <td><strong><?= $row['stok_sesudah']; ?></strong></td>
                                     <td><?= htmlspecialchars($row['keterangan']); ?></td>

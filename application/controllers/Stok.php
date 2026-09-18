@@ -11,8 +11,8 @@ class Stok extends MY_Controller
         parent::__construct();
         $this->requireRole('super_admin'); // hanya super admin yang boleh akses seluruh method di sini
         $this->load->model('Stok_model');
-        $this->load->model('Barang_model'); // 1. Load model kategori
-        $this->load->model('Locations_model'); // 1. Load model kategori
+        $this->load->model('Barang_model'); 
+        $this->load->model('Locations_model'); 
         $this->load->helper('url');
     }
 
@@ -23,9 +23,7 @@ class Stok extends MY_Controller
         $data['active_menu']   = translate('stok_barang');
 
 
-        // 2. Ambil data kategori list dari model untuk dikirim ke view
-        // $data['stok'] = $this->Kategori_barang_model->get_kat_barang_paginated('', 1000, 0);
-
+      
         $this->load->view('templates/header', $data);
         $this->load->view('staff_gudang/stok_grid_view', $data);
         $this->load->view('templates/footer', $data);

@@ -5,7 +5,7 @@ class Stok_riwayat_model extends CI_Model {
 
     public function get_riwayat($id_barang = NULL, $id_location = NULL)
     {
-        $this->db->select('sr.*, b.nama, b.kode_barang, l.zone_name, u.username');
+        $this->db->select('sr.*, b.nama, b.kode_barang, l.zone_name, u.username, l.location_code');
         $this->db->from('stok_riwayat sr');
         // JOIN ke tabel master barang, lokasi, dan user (sesuaikan nama tabel/kolom master kamu)
         $this->db->join('barang b', 'b.id = sr.id_barang', 'left');

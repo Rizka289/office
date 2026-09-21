@@ -1,7 +1,7 @@
 <!-- ================= GRID DATA NAMA BARANG ================= -->
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-        <h6 class="fw-bold m-0"><?= translate('list_barang') ?></h6>
+        <h6 class="fw-bold m-0"> </h6>
         <!-- Trigger Modal Tambah Nama Barang -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahNamaBarang">
             <i class="bi bi-plus-lg"></i><?= translate('add') ?>
@@ -26,9 +26,10 @@
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
-                    <th><?= translate('jenis_barang') ?></th>
+                    <th><?= translate('jenis') ?></th>
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('dimensi') ?></th>
+                    <th><?= translate('harga') ?></th>
                     <th><?= translate('min_stok') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
@@ -55,33 +56,33 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahNamaBarangLabel"><i class="bi bi-person-plus"></i> Tambah Nama Barang Baru</h5>
+                <h5 class="modal-title fs-6" id="modalTambahNamaBarangLabel"><i class="bi bi-person-plus"></i> <?= translate('add') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formTambahNamaBarang" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kode Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('kode') ?></label>
                         <input type="text" name="kode" class="form-control form-control-sm" placeholder="Masukkan kode barang" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kategori Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('kategori_barang') ?></label>
                         <select name="id_kategori" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Kategori --</option>
+                            <option value="">-- <?= translate('label_choice') . ' ' . translate('kategori_barang') ?> --</option>
                             <?php foreach ($kategoriList as $kat): ?>
                                 <option value="<?= $kat['id']; ?>"><?= htmlspecialchars($kat['nama_kategori']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('nama_barang') ?></label>
                         <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama barang" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Jenis Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('jenis') ?></label>
                         <select name="jenis" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Jenis Barang --</option>
+                            <option value="">-- <?= translate('select') ?> --</option>
                             <option value="bahan_baku">Bahan Baku</option>
                             <option value="aksesoris">Aksesoris</option>
                             <option value="finishing">Finishing</option>
@@ -91,9 +92,9 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Satuan</label>
+                        <label class="form-label small fw-bold"><?= translate('satuan') ?></label>
                         <select name="satuan" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Satuan --</option>
+                            <option value="">-- <?= translate('select') ?> --</option>
                             <option value="pcs">Pcs</option>
                             <option value="set/padang">Set/pasang</option>
                             <option value="batang">Batang</option>
@@ -105,17 +106,22 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Dimensi</label>
+                        <label class="form-label small fw-bold"><?= translate('harga') ?></label>
+                        <input type="text" name="harga_satuan" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" autocomplete="off" required>
+                        <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
                         <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Stok Minimum</label>
+                        <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" autocomplete="off" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan">Simpan Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnSimpan"><?= translate('button_save') ?></button>
                 </div>
             </form>
         </div>
@@ -127,7 +133,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalEditNamaBarangLabel"><i class="bi bi-pencil-square"></i> Edit Data Nama Barang</h5>
+                <h5 class="modal-title fs-6" id="modalEditNamaBarangLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formEditNamaBarang" autocomplete="off">
@@ -135,26 +141,26 @@
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kode Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('kode') ?></label>
                         <input type="text" name="kode" id="edit_kode" class="form-control form-control-sm" placeholder="Masukkan kode barang" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Kategori Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('kategori_barang') ?></label>
                         <select name="id_kategori" id="edit_id_kategori" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Kategori --</option>
+                            <option value="">-- <?= translate('label_choice') . ' ' . translate('kategori_barang') ?> --</option>
                             <?php foreach ($kategoriList as $kat): ?>
                                 <option value="<?= $kat['id']; ?>"><?= htmlspecialchars($kat['nama_kategori']); ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Nama Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('nama_barang') ?></label>
                         <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Jenis Barang</label>
+                        <label class="form-label small fw-bold"><?= translate('jenis') ?></label>
                         <select name="jenis" id="edit_jenis" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Jenis Barang --</option>
+                            <option value="">-- <?= translate('select') ?> --</option>
                             <option value="bahan_baku">Bahan Baku</option>
                             <option value="aksesoris">Aksesoris</option>
                             <option value="finishing">Finishing</option>
@@ -164,9 +170,9 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Satuan</label>
+                        <label class="form-label small fw-bold"><?= translate('satuan') ?></label>
                         <select name="satuan" id="edit_satuan" class="form-select form-select-sm" required>
-                            <option value="">-- Pilih Satuan --</option>
+                            <option value="">-- <?= translate('select') ?>--</option>
                             <option value="pcs">Pcs</option>
                             <option value="set/padang">Set/pasang</option>
                             <option value="batang">Batang</option>
@@ -178,17 +184,22 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Dimensi</label>
+                        <label class="form-label small fw-bold"><?= translate('harga') ?></label>
+                        <input type="text" name="harga_satuan" id="edit_harga" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" required>
+                        <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
                         <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Stok Minimum</label>
+                        <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" id="edit_stok" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdate">Update Data</button>
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+                    <button type="submit" class="btn btn-sm btn-brand" id="btnUpdate"><?= translate('update') ?></button>
                 </div>
             </form>
         </div>
@@ -256,6 +267,24 @@
                 }
             });
         }
+        // 1. Mencegah karakter selain angka, koma, dan titik pada input harga
+        $(document).on('input', '.input-harga, #edit_harga', function() {
+            // Hanya izinkan angka, titik, dan koma
+            this.value = this.value.replace(/[^0-9.,]/g, '');
+        });
+
+        // 2. Formatting Tampilan Harga di Tabel (Ubah titik DB ke koma tampilan Indonesia)
+        function formatHarga(angka) {
+            if (angka === null || angka === undefined || angka === '') return '0';
+            // Ubah angka desimal standar (misal: 15000.50) menjadi format lokal Indonesia (15.000,50)
+            var number = parseFloat(angka);
+            if (isNaN(number)) return angka;
+
+            return number.toLocaleString('id-ID', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+        }
 
         function renderTable(rows, perPage, page) {
             var $tbody = $('#tbodyNamaBarang');
@@ -278,6 +307,7 @@
                     '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
+                    '<td>Rp ' + formatHarga(brg.harga_satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.stok_minimum) + '</td>' +
                     '<td class="text-center">' +
                     '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + brg.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
@@ -366,8 +396,15 @@
                     $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat menyimpan data.');
-                    console.error(error);
+                    var msg = 'Terjadi kesalahan saat menyimpan data (HTTP ' + xhr.status + ').';
+                    if (xhr.status === 403) {
+                        msg = 'Token keamanan (CSRF) tidak valid atau sudah kedaluwarsa. Muat ulang halaman (F5) lalu coba simpan lagi.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                    // Buka F12 > Console untuk melihat isi respons server yang sebenarnya
+                    console.error('Simpan error:', status, error, xhr.responseText);
                     $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 }
             });
@@ -390,6 +427,7 @@
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
                         $('#edit_dimensi').val(response.data.dimensi);
+                        $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
 
                         $('#modalEditNamaBarang').modal('show');

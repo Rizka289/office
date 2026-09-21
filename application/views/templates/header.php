@@ -278,8 +278,17 @@
                     'url'   => 'customer',
                     'roles' => ['super_admin'],
                 ],
+            ],
+        ],
+
+        [
+            'key'   => 'produk',
+            'label' => function_exists('translate') ? translate('master_produk') : 'Master Produk',
+            'icon'  => 'bi bi-clipboard-check-fill',
+            'roles' => ['super_admin'], // hanya super_admin yang lihat grup Master Data
+            'items' => [
                 [
-                    'key'   => 'kategori_barang',
+                    'key'   => 'kategori',
                     'label' => function_exists('translate') ? translate('kategori_barang') : 'Kategori Barang',
                     'icon'  => 'bi-list-check',
                     'url'   => 'kategori_barang',
@@ -287,9 +296,16 @@
                 ],
                 [
                     'key'   => 'barang',
-                    'label' => function_exists('translate') ? translate('nama_barang') : 'Barang',
+                    'label' => function_exists('translate') ? translate('master_barang') : 'Barang',
                     'icon'  => 'bi-list-check',
                     'url'   => 'barang',
+                    'roles' => ['super_admin'],
+                ],
+                [
+                    'key'   => 'location',
+                    'label' => function_exists('translate') ? translate('app_rak') : 'Lokasi Rak',
+                    'icon'  => 'bi bi-archive',
+                    'url'   => 'locations',
                     'roles' => ['super_admin'],
                 ],
             ],
@@ -297,7 +313,7 @@
         [
             'key'   => 'purchasing',
             'label' => function_exists('translate') ? translate('purchasing') : 'Purchasing',
-            'icon'  => 'bi-receipt-cutoff',
+            'icon'  => 'bi bi-basket2',
             'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
             'items' => [
                 [
@@ -307,11 +323,57 @@
                     'url'   => 'purchase_order',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
+                 [
+                    'key'   => 'penerimaan_barang',
+                    'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
+                    'icon'  => 'bi bi-card-checklist',
+                    'url'   => 'penerimaan_barang',
+                    'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
+                ],
+            ],
+        ],
+        [
+            'key'   => 'penjualan',
+            'label' =>   'Penjualan',
+            'icon'  => 'bi bi-cart3',
+            'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
+            'items' => [
                 [
-                    'key'   => 'supplier',
-                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
-                    'icon'  => 'bi-people',
-                    'url'   => 'supplier',
+                    'key'   => 'penjualan',
+                    'label' =>  'Penjualan',
+                    'icon'  => 'bi-box',
+                    'url'   => 'penjualan',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+               
+            ],
+        ],
+        [
+            'key'   => 'inventory',
+            'label' => function_exists('translate') ? translate('inventory') : 'Inventory',
+            'icon'  => 'bi bi-box-seam-fill',
+            'roles' => ['super_admin', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
+            'items' => [
+               
+                [
+                    'key'   => 'stok_barang',
+                    'label' => function_exists('translate') ? translate('sb') : 'Stok',
+                    'icon'  => 'bi bi-clipboard-fill',
+                    'url'   => 'stok',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
+                    'key'   => 'stok_riwayat',
+                    'label' => function_exists('translate') ? translate('ks') : 'Stok',
+                    'icon'  => 'bi bi-clipboard-fill',
+                    'url'   => 'stok_riwayat',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
+                    'key'   => 'stok_opname',
+                    'label' => 'Stok Opname',
+                    'icon'  => 'bi bi-clipboard-fill',
+                    'url'   => 'stok_opname',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
             ],
@@ -326,7 +388,18 @@
 
     function render_navigation($menu_id, $menu_groups, $current_role, $active_menu = '')
     {
-        $is_first = true;
+        // Cari lebih dulu grup mana yang MEMUAT active_menu, supaya grup itu
+        // yang otomatis terbuka -- bukan selalu grup pertama.
+        $active_group_key = null;
+        foreach ($menu_groups as $group) {
+            foreach ($group['items'] as $item) {
+                if ($active_menu !== '' && $item['key'] === $active_menu) {
+                    $active_group_key = $group['key'];
+                    break 2;
+                }
+            }
+        }
+
     ?>
         <ul class="nav flex-column mb-auto" id="<?= $menu_id; ?>">
             <?php foreach ($menu_groups as $group):
@@ -343,9 +416,13 @@
                     continue;
                 }
 
-                $group_dom_id  = 'submenu_' . $group['key'] . '_' . $menu_id;
-                $group_is_open = $is_first; // grup pertama yang muncul dibuka otomatis
-                $is_first      = false;
+                $group_dom_id = 'submenu_' . $group['key'] . '_' . $menu_id;
+
+                // Grup hanya terbuka kalau memang grup ini yang memuat active_menu.
+                // Kalau active_menu kosong atau tidak cocok dengan item manapun
+                // (mis. halaman Dashboard yang bukan bagian dari grup manapun),
+                // semua grup tetap tertutup -- tidak ada fallback ke grup pertama.
+                $group_is_open = ($active_group_key !== null && $group['key'] === $active_group_key);
             ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $group_is_open ? '' : 'collapsed'; ?>" data-bs-toggle="collapse" href="#<?= $group_dom_id; ?>" role="button" aria-expanded="<?= $group_is_open ? 'true' : 'false'; ?>" aria-controls="<?= $group_dom_id; ?>">
@@ -413,10 +490,23 @@
 
                     <div class="d-flex align-items-center gap-2">
                         <div class="profile-menu" tabindex="0">
-                            <div class="profile-trigger d-flex align-items-center gap-2">
-                                <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width:34px;height:34px;">
-                                    <i class="bi bi-person-fill"></i>
-                                </div>
+                            <div class="profile-trigger d-flex align-items-center gap-2" style="cursor: pointer;">
+                                <!-- Foto Profil di Topbar -->
+                                <?php
+                                $session_foto = $this->session->userdata('foto');
+                                $topbar_foto = (!empty($session_foto) && file_exists(FCPATH . 'uploads/profiles/' . $session_foto))
+                                    ? base_url('uploads/profiles/' . $session_foto)
+                                    : null;
+                                ?>
+
+                                <?php if ($topbar_foto): ?>
+                                    <img src="<?= $topbar_foto; ?>" alt="Profile" class="rounded-circle" style="width:34px; height:34px; object-fit:cover;">
+                                <?php else: ?>
+                                    <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width:34px;height:34px;">
+                                        <i class="bi bi-person-fill"></i>
+                                    </div>
+                                <?php endif; ?>
+
                                 <div class="d-none d-md-block text-end lh-sm">
                                     <div class="fw-semibold" style="font-size:.85rem;"><?= $this->session->userdata('nama') ?: 'User'; ?></div>
                                     <div class="text-muted" style="font-size:.72rem;"><?= $this->session->userdata('username'); ?></div>
@@ -424,7 +514,7 @@
                             </div>
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
-                                    <a href="#" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= function_exists('translate') ? translate('profile') : 'Profil'; ?></a>
+                                    <a href="<?= site_url('profile'); ?>" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= function_exists('translate') ? translate('profile') : 'Profil'; ?></a>
                                     <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= function_exists('translate') ? translate('app_logout') : 'Keluar'; ?></a>
                                 </div>
                             </div>

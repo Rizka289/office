@@ -16,11 +16,13 @@ class User extends MY_Controller
 
     public function index()
     {
-        $data['title'] = 'Manajemen User';
+        $data['title'] = translate('app_list');
+        $data['page_title']     =  translate('app_list') . ' ' . translate('app_username');
+
         // $data['users'] = $this->User_model->get_all_users();
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/user_grid_view', $data);
+        $this->load->view('master_data/user_index', $data);
         $this->load->view('templates/footer', $data);
     }
 
@@ -49,14 +51,6 @@ class User extends MY_Controller
         ]);
     }
 
-
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
-    }
 
     // Method simpan data via AJAX
     public function simpan()

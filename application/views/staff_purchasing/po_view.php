@@ -140,7 +140,8 @@
     transform: translateX(-50%) translateY(0);
   }
 
-  .supplier-search-wrap, .barang-search-wrap {
+  .supplier-search-wrap,
+  .barang-search-wrap {
     position: relative;
   }
 
@@ -164,12 +165,31 @@
     background: #f4faf6;
   }
 
-  .supplier-suggest-box, .barang-suggest-box {
+  .supplier-suggest-box {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
     right: 0;
     z-index: 50;
+    background: #fff;
+    border: 1px solid var(--po-line);
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(27, 36, 48, .12);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  /* .barang-suggest-box sengaja dibuat position:fixed (bukan absolute di dalam
+     .barang-search-wrap) karena wrapper-nya berada di dalam .table-responsive.
+     Bootstrap men-set overflow-x:auto pada .table-responsive, dan begitu salah
+     satu axis di-set auto, browser otomatis meng-clip axis satunya juga —
+     akibatnya dropdown saran barang kepotong/ketindih baris tabel dan baru
+     kelihatan kalau discroll manual. Dengan position:fixed + posisi dihitung
+     lewat JS (lihat positionBarangBox()), box ini "keluar" dari alur/clip
+     table-responsive sehingga selalu tampil responsif mengikuti input aktif. */
+  .barang-suggest-box {
+    position: fixed;
+    z-index: 2000;
     background: #fff;
     border: 1px solid var(--po-line);
     border-radius: 8px;
@@ -226,10 +246,10 @@
   <div id="listView">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h4 class="mb-0 fw-bold">Purchase Order</h4>
+
       </div>
       <button class="btn btn-brand d-flex align-items-center gap-2" onclick="openForm()">
-        <i class="bi bi-plus-lg"></i> PO Baru
+        <i class="bi bi-plus-lg"></i> <?= translate('add') ?>
       </button>
     </div>
 
@@ -267,12 +287,12 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th>No. PO</th>
-              <th>Supplier</th>
-              <th>Tanggal JT</th>
-              <th>Status</th>
-              <th class="text-end">Nilai</th>
-              <th class="text-center" style="width: 130px;">Aksi</th>
+              <th><?= translate('no') ?></th>
+              <th><?= translate('list_pemasok') ?></th>
+              <th><?= translate('tgl_tempo') ?></th>
+              <th><?= translate('status') ?></th>
+              <th class="text-end"><?= translate('nilai') ?></th>
+              <th class="text-center" style="width: 130px;"><?= translate('aksi') ?></th>
             </tr>
           </thead>
           <tbody id="poTableBody"></tbody>
@@ -280,9 +300,9 @@
       </div>
 
       <div class="text-center py-5 d-none" id="emptyState">
-        <p class="text-muted mb-3">Belum ada purchase order.</p>
+        <p class="text-muted mb-3"><?= translate('placeholder_po') ?></p>
         <button class="btn btn-brand" onclick="openForm()">
-          <i class="bi bi-plus-lg me-1"></i> Buat PO Pertama
+          <i class="bi bi-plus-lg me-1"></i> <?= translate('add_po') ?>
         </button>
       </div>
     </div>
@@ -292,42 +312,42 @@
   <div id="formView" class="d-none">
     <div class="mb-3 d-flex justify-content-between align-items-center">
       <button class="btn btn-link text-decoration-none text-secondary p-0 fw-semibold" onclick="closeForm()">
-        <i class="bi bi-arrow-left me-1"></i> Kembali ke daftar
+        <i class="bi bi-arrow-left me-1"></i> <?= translate('kembali') ?>
       </button>
       <h5 class="mb-0 fw-bold" id="formTitle">Form Purchase Order</h5>
     </div>
 
     <!-- Informasi PO -->
     <div class="card card-custom p-4 mb-4">
-      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;">Informasi Purchase Order</h6>
+      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;"><?= translate('informasi') . ' ' . translate('app_purchasing')?></h6>
       <input type="hidden" id="f_id_po" value="">
       <div class="row g-3">
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">No. PO</label>
+          <label class="form-label small fw-semibold"><?= translate('no') . ' ' . translate('app_purchasing') ?></label>
           <input type="text" class="form-control bg-light" id="f_nopo" readonly>
         </div>
 
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">Tanggal Jatuh Tempo</label>
+          <label class="form-label small fw-semibold"><?= translate('tgl_tempo') ?></label>
           <input type="date" class="form-control" id="f_date">
         </div>
 
         <div class="col-md-6">
           <label class="form-label small fw-semibold d-flex justify-content-between align-items-center">
-            <span>Supplier</span>
+            <span><?= translate('list_pemasok') ?></span>
             <span class="supplier-linked-tag d-none" id="supplierLinkedTag"><i class="bi bi-link-45deg"></i> Terhubung</span>
           </label>
           <div class="supplier-search-wrap">
             <i class="bi bi-search"></i>
-            <input type="text" class="form-control" id="f_supplier_search" placeholder="Ketik nama supplier untuk mencari..." autocomplete="off">
+            <input type="text" class="form-control" id="f_supplier_search" placeholder="<?= translate('placeholder_supplier') .' ...' ?>" autocomplete="off">
             <input type="hidden" id="f_id_supplier" value="">
             <div class="supplier-suggest-box d-none" id="supplierSuggestBox"></div>
           </div>
         </div>
 
         <div class="col-md-6">
-          <label class="form-label small fw-semibold">Catatan</label>
-          <textarea class="form-control" id="f_note" rows="3" placeholder="Catatan tambahan (opsional)"></textarea>
+          <label class="form-label small fw-semibold"><?= translate('deskripsi') ?></label>
+          <textarea class="form-control" id="f_note" rows="3" placeholder="<?= translate('placeholder_deskripsi') ?>"></textarea>
         </div>
       </div>
     </div>
@@ -339,11 +359,11 @@
         <table class="table align-middle items-table mb-2">
           <thead>
             <tr>
-              <th style="width:34%">Nama Barang</th>
-              <th style="width:14%">Qty</th>
-              <th style="width:14%">Satuan</th>
-              <th style="width:18%">Harga Satuan</th>
-              <th style="width:16%" class="text-end">Subtotal</th>
+              <th style="width:34%"><?= translate('nama_barang') ?></th>
+              <th style="width:14%"><?= translate('qty') ?></th>
+              <th style="width:14%"><?= translate('satuan') ?></th>
+              <th style="width:14%"><?= translate('harga') ?></th>
+              <th style="width:16%" class="text-end"><?= translate('subtotal') ?></th>
               <th style="width:4%"></th>
             </tr>
           </thead>
@@ -351,10 +371,10 @@
         </table>
       </div>
 
-      <button class="addrow-btn mb-4" id="btnAddRow" onclick="addItemRow()">+ Tambah Baris Barang</button>
+      <button class="addrow-btn mb-4" id="btnAddRow" onclick="addItemRow()"><?= translate('+tambah') ?></button>
 
       <div class="d-flex justify-content-end align-items-center gap-3 pt-3 border-top">
-        <span class="text-secondary small fw-semibold">Total Purchase Order:</span>
+        <span class="text-secondary small fw-semibold"><?= translate('total') . ' ' . translate('app_purchasing') ?></span>
         <span class="total-row-val" id="grandTotal">Rp 0</span>
       </div>
     </div>
@@ -366,8 +386,8 @@
       </div>
       <div class="d-flex gap-2">
         <button class="btn btn-outline-danger d-none" id="deleteBtn" onclick="deleteCurrentPO()">Hapus PO</button>
-        <button class="btn btn-light border" onclick="closeForm()">Batal</button>
-        <button class="btn btn-brand" id="saveBtn" onclick="savePO()">Simpan Purchase Order</button>
+        <button class="btn btn-light border" onclick="closeForm()"><?= translate('btn_batal') ?></button>
+        <button class="btn btn-brand" id="saveBtn" onclick="savePO()"><?= translate('button_save') ?></button>
       </div>
     </div>
   </div>
@@ -376,6 +396,11 @@
 
 <!-- Element Toast -->
 <div class="po-toast" id="toast"></div>
+
+<!-- Box saran pencarian barang: sengaja diletakkan di luar .table-responsive
+     (satu elemen dipakai bergantian oleh semua baris) supaya tidak ke-clip
+     oleh overflow tabel. Posisinya diatur lewat JS mengikuti input aktif. -->
+<div class="barang-suggest-box d-none" id="barangSuggestBox"></div>
 
 <!-- Modal Konfirmasi Hapus -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
@@ -428,14 +453,22 @@
 
   async function fetchPOList(search = '', page = 1) {
     const url = `${SITE_URL}purchase_order/list_data?search=${encodeURIComponent(search)}&page=${page}`;
-    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const res = await fetch(url, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
     const json = await res.json();
     if (json.csrf_hash) csrfHash = json.csrf_hash;
     return json;
   }
 
   async function fetchPODetail(id) {
-    const res = await fetch(`${SITE_URL}purchase_order/get_detail/${id}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const res = await fetch(`${SITE_URL}purchase_order/get_detail/${id}`, {
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
     const json = await res.json();
     if (json.csrf_hash) csrfHash = json.csrf_hash;
     return json;
@@ -509,8 +542,10 @@
         <td class="text-center">
           <div class="btn-group btn-group-sm">
             <button class="btn btn-outline-secondary" title="Detail PO" onclick="openViewPO(${po.id})"><i class="bi bi-eye"></i></button>
+            ${po.status_qc === 'menunggu' ? `
             <button class="btn btn-outline-primary" title="Edit PO" onclick="openEditPO(${po.id})"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-outline-danger" title="Hapus PO" onclick="confirmDelete(${po.id})"><i class="bi bi-trash"></i></button>
+            ` : ''}
           </div>
         </td>
       `;
@@ -536,8 +571,7 @@
   function openForm() {
     document.getElementById('listView').classList.add('d-none');
     document.getElementById('formView').classList.remove('d-none');
-    document.getElementById('formTitle').textContent = 'Buat Purchase Order Baru';
-
+    document.getElementById('formTitle').textContent = <?= json_encode(translate('add') . ' ' . translate('app_purchasing')) ?>;
     setFormReadonly(false);
 
     document.getElementById('itemsBody').innerHTML = '';
@@ -725,7 +759,6 @@
           <input type="text" class="form-control form-control-sm it-barang-search" placeholder="Ketik untuk cari barang..." autocomplete="off"
                  value="${prefill ? escapeHTML(prefill.nama) : ''}">
           <input type="hidden" class="it-id-barang" value="${prefill ? prefill.id_barang : ''}">
-          <div class="barang-suggest-box d-none"></div>
         </div>
       </td>
       <td class="col-qty"><input type="number" min="0" class="form-control form-control-sm it-qty" value="${prefill ? prefill.qty : 1}" oninput="updateGrandTotal()"></td>
@@ -759,11 +792,44 @@
     return list.filter(b => b.nama.toLowerCase().includes(kw) || b.kode.toLowerCase().includes(kw)).slice(0, 8);
   }
 
+  /* Satu box saran barang dipakai bergantian oleh semua baris (lihat komentar
+     CSS/HTML-nya). activeBarangInput menyimpan input mana yang sedang aktif
+     supaya box tahu harus reposisi/hide mengikuti input yang mana. */
+  let activeBarangInput = null;
+
+  function positionBarangBox() {
+    const box = document.getElementById('barangSuggestBox');
+    if (!activeBarangInput || box.classList.contains('d-none')) return;
+    const rect = activeBarangInput.getBoundingClientRect();
+    box.style.left = rect.left + 'px';
+    box.style.top = (rect.bottom + 4) + 'px';
+    box.style.width = rect.width + 'px';
+  }
+
+  function hideBarangBox() {
+    document.getElementById('barangSuggestBox').classList.add('d-none');
+    activeBarangInput = null;
+  }
+
+  // Reposisi tiap kali di-scroll (termasuk scroll horizontal/vertikal di
+  // dalam .table-responsive) atau saat window di-resize, supaya box selalu
+  // menempel pas di bawah input yang sedang dicari — bukan ketinggalan/ketindih.
+  window.addEventListener('scroll', positionBarangBox, true);
+  window.addEventListener('resize', positionBarangBox);
+
+  // Klik di luar wrapper pencarian barang ATAU di luar box saran -> tutup box.
+  document.addEventListener('mousedown', (e) => {
+    if (!e.target.closest('.barang-search-wrap') && !e.target.closest('#barangSuggestBox')) {
+      hideBarangBox();
+    }
+  });
+
   function initBarangRowSearch(tr) {
     const input = tr.querySelector('.it-barang-search');
-    const box = tr.querySelector('.barang-suggest-box');
+    const box = document.getElementById('barangSuggestBox');
 
     function renderSuggest(list) {
+      activeBarangInput = input;
       if (list.length === 0) {
         box.innerHTML = `<div class="supplier-suggest-empty">Barang tidak ditemukan</div>`;
       } else {
@@ -782,6 +848,7 @@
         });
       }
       box.classList.remove('d-none');
+      positionBarangBox();
     }
 
     input.addEventListener('input', () => {
@@ -791,10 +858,6 @@
     });
 
     input.addEventListener('focus', () => renderSuggest(searchBarang(input.value)));
-
-    document.addEventListener('click', (e) => {
-      if (!tr.contains(e.target)) box.classList.add('d-none');
-    });
   }
 
   function selectBarangForRow(tr, id, nama) {
@@ -802,12 +865,17 @@
     const input = tr.querySelector('.it-barang-search');
     input.value = nama;
     input.classList.add('is-linked');
-    tr.querySelector('.barang-suggest-box').classList.add('d-none');
+    hideBarangBox();
   }
 
   function removeItemRow(rowId) {
     const row = document.getElementById(rowId);
-    if (row) row.remove();
+    if (row) {
+      // Kalau baris yang dihapus sedang jadi baris aktif box saran, tutup dulu
+      // supaya box tidak "menggantung" nunjuk ke input yang sudah tidak ada.
+      if (activeBarangInput && row.contains(activeBarangInput)) hideBarangBox();
+      row.remove();
+    }
     updateGrandTotal();
   }
 
@@ -825,8 +893,12 @@
 
   function escapeHTML(s) {
     return (s || '').replace(/[&<>"']/g, c => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    } [c]));
   }
 
   function renderSatuanOptions(selected) {
@@ -840,19 +912,28 @@
   }
 
   function statusLabel(s) {
-    return { menunggu: 'Menunggu QC', lolos: 'Lolos QC', ditolak: 'Ditolak QC' }[s] || s;
+    return {
+      menunggu: 'Menunggu QC',
+      lolos: 'Lolos QC',
+      ditolak: 'Ditolak QC'
+    } [s] || s;
   }
 
   function formatDateID(iso) {
     const d = new Date(iso);
-    return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+    return d.toLocaleDateString('id-ID', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   }
 
   function buildFormDataParams(obj, prefix = '') {
     let str = [];
     for (let p in obj) {
       if (obj.hasOwnProperty(p)) {
-        let k = prefix ? prefix + "[" + p + "]" : p, v = obj[p];
+        let k = prefix ? prefix + "[" + p + "]" : p,
+          v = obj[p];
         if (v !== null && typeof v === "object") {
           str.push(buildFormDataParams(v, k));
         } else {
@@ -894,7 +975,12 @@
       if (!id_barang) hasUnlinkedBarang = true;
       if (qty <= 0) hasInvalidQty = true;
 
-      items.push({ id_barang, qty, unit, price });
+      items.push({
+        id_barang,
+        qty,
+        unit,
+        price
+      });
     });
 
     if (items.length === 0) {

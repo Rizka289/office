@@ -208,7 +208,7 @@
             </div>
 
             <button type="submit" class="btn btn-brand shadow-sm">
-                <?= translate('app_login_button'); ?> <i class="bi bi-arrow-right-short ms-1"></i>
+                <?= translate('app_login_title'); ?> <i class="bi bi-arrow-right-short ms-1"></i>
             </button>
         </form>
 

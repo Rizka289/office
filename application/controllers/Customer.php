@@ -16,11 +16,13 @@ class Customer extends MY_Controller
 
     public function index()
     {
-        $data['title'] = 'Manajemen Customer';
-        // $data['customers'] = $this->Customer_model->get_all_customer();
+        $data['title'] = translate('app_list') . ' ' . translate('pelanggan');
+        $data['page_title']     =  translate('app_list') . ' ' . translate('pelanggan');
+        $data['active_menu']   = 'customer';
+
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/customer_grid_view', $data);
+        $this->load->view('master_data/customer_index', $data);
         $this->load->view('templates/footer', $data);
     }
     // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search
@@ -48,14 +50,6 @@ class Customer extends MY_Controller
         ]);
     }
 
-
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
-    }
 
     // Method simpan data via AJAX
     public function simpan()

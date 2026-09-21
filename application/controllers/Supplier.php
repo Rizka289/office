@@ -9,7 +9,7 @@ class Supplier extends MY_Controller
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole(['super_admin','staff_purchasing']); // hanya super admin yang boleh akses seluruh method di sini
+        $this->requireRole(['super_admin', 'staff_purchasing']); // hanya super admin yang boleh akses seluruh method di sini
         $this->load->model('Supplier_model');
         $this->load->helper('url');
     }
@@ -17,10 +17,13 @@ class Supplier extends MY_Controller
     public function index()
     {
         $data['title'] = 'Manajemen Supplier';
-        // $data['supplier'] = $this->Supplier_model->get_all_supplier();
+        $data['page_title']     =  translate('app_list') . ' ' . translate('list_pemasok');
+        $data['active_menu']   = 'supplier';
+
+
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/supplier_grid_view', $data);
+        $this->load->view('master_data/supplier_index', $data);
         $this->load->view('templates/footer', $data);
     }
     // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search
@@ -49,13 +52,7 @@ class Supplier extends MY_Controller
     }
 
 
-    // Helper: selipkan csrf_hash terbaru ke setiap response JSON,
-    // supaya JS di view bisa refresh token untuk request AJAX berikutnya.
-    private function jsonResponse($payload)
-    {
-        $payload['csrf_hash'] = $this->security->get_csrf_hash();
-        echo json_encode($payload);
-    }
+
 
     // Method simpan data via AJAX
     public function simpan()

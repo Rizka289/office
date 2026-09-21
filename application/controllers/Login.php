@@ -12,14 +12,14 @@ class Login extends MY_Controller
         // Jika sudah login, redirect ke dashboard — KECUALI saat mengakses logout / ganti bahasa
         $free_methods = ['logout', 'lang'];
         if ($this->session->userdata('logged_in') && !in_array($this->router->fetch_method(), $free_methods, TRUE)) {
-            redirect('dashboard');
+            redirect('dashboard/index');
         }
     }
 
     public function index()
     {
         
-        $this->load->view('login');
+        $this->load->view('auth/login');
     }
 
     public function proses()
@@ -37,7 +37,7 @@ class Login extends MY_Controller
         );
 
         if ($this->form_validation->run() === FALSE) {
-            $this->load->view('login');
+            $this->load->view('auth/login');
             return;
         }
 

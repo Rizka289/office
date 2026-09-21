@@ -12,12 +12,12 @@ class Stok_opname extends CI_Controller {
     public function index()
     {
         $data['title']        = 'Form Stok Opname';
-        $data['active_menu'] = 'stok_opname';
+        $data['active_menu'] = 'stok_opname'; 
         $data['list_barang']   = $this->Stok_opname_model->get_all_barang();
         $data['list_location'] = $this->Stok_opname_model->get_all_location();
 
         $this->load->view('templates/header', $data);
-        $this->load->view('staff_gudang/stok_opname_view', $data);
+        $this->load->view('inventory/stok_opname_view', $data);
         $this->load->view('templates/footer');
     }
 

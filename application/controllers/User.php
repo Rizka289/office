@@ -22,7 +22,7 @@ class User extends MY_Controller
         // $data['users'] = $this->User_model->get_all_users();
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/user_grid_view', $data);
+        $this->load->view('master_data/user_index', $data);
         $this->load->view('templates/footer', $data);
     }
 

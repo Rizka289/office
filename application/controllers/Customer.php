@@ -22,7 +22,7 @@ class Customer extends MY_Controller
 
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/customer_grid_view', $data);
+        $this->load->view('master_data/customer_index', $data);
         $this->load->view('templates/footer', $data);
     }
     // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search

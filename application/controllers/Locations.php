@@ -23,7 +23,7 @@ class Locations extends MY_Controller
 
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/location_view', $data);
+        $this->load->view('master_data/location_view', $data);
         $this->load->view('templates/footer', $data);
     }
 

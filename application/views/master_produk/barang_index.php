@@ -29,6 +29,7 @@
                     <th><?= translate('jenis') ?></th>
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('dimensi') ?></th>
+                    <th><?= translate('harga') ?></th>
                     <th><?= translate('min_stok') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
@@ -81,7 +82,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('jenis') ?></label>
                         <select name="jenis" class="form-select form-select-sm" required>
-                            <option value="">-- <?= translate('select')?> --</option>
+                            <option value="">-- <?= translate('select') ?> --</option>
                             <option value="bahan_baku">Bahan Baku</option>
                             <option value="aksesoris">Aksesoris</option>
                             <option value="finishing">Finishing</option>
@@ -93,7 +94,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('satuan') ?></label>
                         <select name="satuan" class="form-select form-select-sm" required>
-                            <option value="">-- <?= translate('select')?> --</option>
+                            <option value="">-- <?= translate('select') ?> --</option>
                             <option value="pcs">Pcs</option>
                             <option value="set/padang">Set/pasang</option>
                             <option value="batang">Batang</option>
@@ -103,6 +104,11 @@
                             <option value="m3">m3</option>
                             <option value="roll">Roll</option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('harga') ?></label>
+                        <input type="text" name="harga_satuan" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" autocomplete="off" required>
+                        <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
@@ -154,7 +160,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('jenis') ?></label>
                         <select name="jenis" id="edit_jenis" class="form-select form-select-sm" required>
-                            <option value="">--  <?= translate('select')?> --</option>
+                            <option value="">-- <?= translate('select') ?> --</option>
                             <option value="bahan_baku">Bahan Baku</option>
                             <option value="aksesoris">Aksesoris</option>
                             <option value="finishing">Finishing</option>
@@ -166,7 +172,7 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('satuan') ?></label>
                         <select name="satuan" id="edit_satuan" class="form-select form-select-sm" required>
-                            <option value="">-- <?= translate('select')?>--</option>
+                            <option value="">-- <?= translate('select') ?>--</option>
                             <option value="pcs">Pcs</option>
                             <option value="set/padang">Set/pasang</option>
                             <option value="batang">Batang</option>
@@ -176,6 +182,11 @@
                             <option value="m3">m3</option>
                             <option value="roll">Roll</option>
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('harga') ?></label>
+                        <input type="text" name="harga_satuan" id="edit_harga" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" required>
+                        <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
@@ -256,6 +267,24 @@
                 }
             });
         }
+        // 1. Mencegah karakter selain angka, koma, dan titik pada input harga
+        $(document).on('input', '.input-harga, #edit_harga', function() {
+            // Hanya izinkan angka, titik, dan koma
+            this.value = this.value.replace(/[^0-9.,]/g, '');
+        });
+
+        // 2. Formatting Tampilan Harga di Tabel (Ubah titik DB ke koma tampilan Indonesia)
+        function formatHarga(angka) {
+            if (angka === null || angka === undefined || angka === '') return '0';
+            // Ubah angka desimal standar (misal: 15000.50) menjadi format lokal Indonesia (15.000,50)
+            var number = parseFloat(angka);
+            if (isNaN(number)) return angka;
+
+            return number.toLocaleString('id-ID', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2
+            });
+        }
 
         function renderTable(rows, perPage, page) {
             var $tbody = $('#tbodyNamaBarang');
@@ -278,6 +307,7 @@
                     '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
+                    '<td>Rp ' + formatHarga(brg.harga_satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.stok_minimum) + '</td>' +
                     '<td class="text-center">' +
                     '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + brg.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
@@ -366,8 +396,15 @@
                     $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat menyimpan data.');
-                    console.error(error);
+                    var msg = 'Terjadi kesalahan saat menyimpan data (HTTP ' + xhr.status + ').';
+                    if (xhr.status === 403) {
+                        msg = 'Token keamanan (CSRF) tidak valid atau sudah kedaluwarsa. Muat ulang halaman (F5) lalu coba simpan lagi.';
+                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                        msg = xhr.responseJSON.message;
+                    }
+                    alert(msg);
+                    // Buka F12 > Console untuk melihat isi respons server yang sebenarnya
+                    console.error('Simpan error:', status, error, xhr.responseText);
                     $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 }
             });
@@ -390,6 +427,7 @@
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
                         $('#edit_dimensi').val(response.data.dimensi);
+                        $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
 
                         $('#modalEditNamaBarang').modal('show');

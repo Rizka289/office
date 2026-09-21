@@ -273,11 +273,20 @@
                 ],
                 [
                     'key'   => 'customer',
-                    'label' => function_exists('translate') ? translate('app_list') . ' ' . translate('pelanggan') : 'Customer',
+                    'label' => function_exists('translate') ? translate('menu_customer') : 'Customer',
                     'icon'  => 'bi-people',
                     'url'   => 'customer',
                     'roles' => ['super_admin'],
                 ],
+            ],
+        ],
+
+        [
+            'key'   => 'produk',
+            'label' => function_exists('translate') ? translate('master_produk') : 'Master Produk',
+            'icon'  => 'bi bi-clipboard-check-fill',
+            'roles' => ['super_admin'], // hanya super_admin yang lihat grup Master Data
+            'items' => [
                 [
                     'key'   => 'kategori',
                     'label' => function_exists('translate') ? translate('kategori_barang') : 'Kategori Barang',
@@ -287,7 +296,7 @@
                 ],
                 [
                     'key'   => 'barang',
-                    'label' => function_exists('translate') ? translate('nama_barang') : 'Barang',
+                    'label' => function_exists('translate') ? translate('master_barang') : 'Barang',
                     'icon'  => 'bi-list-check',
                     'url'   => 'barang',
                     'roles' => ['super_admin'],
@@ -314,13 +323,29 @@
                     'url'   => 'purchase_order',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
+                 [
+                    'key'   => 'penerimaan_barang',
+                    'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
+                    'icon'  => 'bi bi-card-checklist',
+                    'url'   => 'penerimaan_barang',
+                    'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
+                ],
+            ],
+        ],
+        [
+            'key'   => 'penjualan',
+            'label' =>   'Penjualan',
+            'icon'  => 'bi bi-cart3',
+            'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
+            'items' => [
                 [
-                    'key'   => 'supplier',
-                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
-                    'icon'  => 'bi-people',
-                    'url'   => 'supplier',
+                    'key'   => 'penjualan',
+                    'label' =>  'Penjualan',
+                    'icon'  => 'bi-box',
+                    'url'   => 'penjualan',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
+               
             ],
         ],
         [
@@ -329,13 +354,7 @@
             'icon'  => 'bi bi-box-seam-fill',
             'roles' => ['super_admin', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
             'items' => [
-                [
-                    'key'   => 'penerimaan_barang',
-                    'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
-                    'icon'  => 'bi bi-card-checklist',
-                    'url'   => 'penerimaan_barang',
-                    'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
-                ],
+               
                 [
                     'key'   => 'stok_barang',
                     'label' => function_exists('translate') ? translate('sb') : 'Stok',

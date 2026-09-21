@@ -26,8 +26,23 @@ class Barang extends MY_Controller
         $data['kategoriList'] = $this->Kategori_barang_model->get_kat_barang_paginated('', 1000, 0);
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/barang_grid_view', $data);
+        $this->load->view('master_produk/barang_index', $data);
         $this->load->view('templates/footer', $data);
+    }
+
+    // Cek "kosong" yang benar: hanya null / string kosong / spasi saja.
+    // JANGAN pakai empty(): di PHP empty("0") bernilai TRUE, sehingga isian "0" dianggap kosong.
+    private function is_blank($value)
+    {
+        return $value === null || trim((string) $value) === '';
+    }
+
+    // Wrapper jsonResponse: selalu sertakan token CSRF terbaru supaya form di halaman
+    // tidak memakai token lama (penyebab HTTP 403 pada request POST berikutnya).
+    private function respond(array $payload)
+    {
+        $payload['csrf_hash'] = $this->security->get_csrf_hash();
+        $this->jsonResponse($payload);
     }
 
     // Endpoint AJAX: ambil data nama barang dengan pagination (max 5/halaman) & search
@@ -45,7 +60,7 @@ class Barang extends MY_Controller
         $total = $this->Barang_model->count_barang($search);
         $data  = $this->Barang_model->get_barang_paginated($search, $perPage, $offset);
 
-        $this->jsonResponse([
+        $this->respond([
             'status'       => true,
             'data'         => $data,
             'total'        => (int) $total,
@@ -54,37 +69,97 @@ class Barang extends MY_Controller
             'total_pages'  => (int) ceil($total / $perPage),
         ]);
     }
+    // Helper: bersihkan input harga menjadi float yang aman untuk SQL.
+    // Aturan: bila ada titik DAN koma, pemisah yang paling akhir = desimal.
+    // Bila hanya satu jenis pemisah: muncul >1 kali = pemisah ribuan, muncul 1 kali = desimal.
+    private function parse_harga_decimal($input_harga)
+    {
+        if ($input_harga === null || $input_harga === '') return 0;
 
+        $clean = preg_replace('/[^0-9.,]/', '', trim($input_harga));
+        if ($clean === '') return 0;
+
+        $hasDot   = strpos($clean, '.') !== false;
+        $hasComma = strpos($clean, ',') !== false;
+
+        if ($hasDot && $hasComma) {
+            if (strrpos($clean, ',') > strrpos($clean, '.')) {
+                // Format Indonesia: 15.000,50
+                $clean = str_replace('.', '', $clean);
+                $clean = str_replace(',', '.', $clean);
+            } else {
+                // Format US: 15,000.50
+                $clean = str_replace(',', '', $clean);
+            }
+        } elseif ($hasComma) {
+            // 15000,50 (desimal) atau 1,000,000 (ribuan)
+            $clean = (substr_count($clean, ',') > 1)
+                ? str_replace(',', '', $clean)
+                : str_replace(',', '.', $clean);
+        } elseif ($hasDot) {
+            // 15000.50 (desimal) atau 1.000.000 (ribuan)
+            if (substr_count($clean, '.') > 1) {
+                $clean = str_replace('.', '', $clean);
+            }
+        }
+
+        return (float) $clean;
+    }
+
+    // Susun pesan gagal dari error DB (detail hanya tampil di mode development)
+    private function db_error_message($default)
+    {
+        $err = $this->Barang_model->last_error;
+
+        if (isset($err['code']) && (int) $err['code'] === 1062) {
+            return 'Kode barang sudah dipakai, gunakan kode lain.';
+        }
+        if (ENVIRONMENT === 'development' && !empty($err['message'])) {
+            return $default . ' [DB ' . $err['code'] . ': ' . $err['message'] . ']';
+        }
+        return $default;
+    }
 
 
     // Method simpan data via AJAX
     public function simpan()
     {
-        // Nama field input di form: 'kode', 'nama', 'kategori', 'jenis',
-        // 'satuan', 'dimensi', 'stok_minimum' (lihat name="..." pada
-        // modalTambahNamaBarang).
-        $kode         = $this->input->post('kode', true);
-        $nama         = $this->input->post('nama', true);
-        $idkategori     = $this->input->post('id_kategori', true);
-        $jenis        = $this->input->post('jenis', true);
-        $satuan       = $this->input->post('satuan', true);
-        $dimensi      = $this->input->post('dimensi', true);
-        $stokMinimum  = $this->input->post('stok_minimum', true);
+        // Ambil data dari input POST
+        $kode        = trim((string) $this->input->post('kode', true));
+        $nama        = trim((string) $this->input->post('nama', true));
+        $idkategori  = $this->input->post('id_kategori', true);
+        $jenis       = $this->input->post('jenis', true);
+        $satuan      = $this->input->post('satuan', true);
+        $dimensi     = trim((string) $this->input->post('dimensi', true));
+        $harga_raw   = $this->input->post('harga_satuan', true);
+        $stokMinimum = $this->input->post('stok_minimum', true);
 
+        // 1. Validasi field yang wajib diisi (Gunakan $harga_raw di sini)
         if (
-            empty($kode) || empty($nama) || empty($idkategori) || empty($jenis)
-            || empty($satuan) || empty($dimensi) || $stokMinimum === null || $stokMinimum === ''
+            $this->is_blank($kode) || $this->is_blank($nama) || empty($idkategori) || $this->is_blank($jenis)
+            || $this->is_blank($satuan) || $this->is_blank($dimensi) || $this->is_blank($harga_raw)
+            || $this->is_blank($stokMinimum)
         ) {
-            $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
             return;
         }
-        // Pastikan id_kategori yang dikirim benar-benar ada di tabel kategori_barang
+
+        // 2. Parsel & konversi harga menjadi nilai desimal yang aman untuk SQL
+        $harga_clean = $this->parse_harga_decimal($harga_raw);
+
+        // 3. Pastikan id_kategori yang dikirim benar-benar ada di tabel kategori_barang
         if (!$this->Kategori_barang_model->get_by_id($idkategori)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Kategori tidak valid!']);
+            $this->respond(['status' => false, 'message' => 'Kategori tidak valid!']);
             return;
         }
 
+        // 3b. Kode barang tidak boleh kembar
+        if ($this->Barang_model->kode_exists($kode)) {
+            $this->respond(['status' => false, 'message' => 'Kode barang sudah dipakai, gunakan kode lain.']);
+            return;
+        }
 
+        // 4. Susun array data untuk dikirim ke model
         $data = array(
             'kode_barang'  => $kode,
             'nama'         => $nama,
@@ -92,48 +167,58 @@ class Barang extends MY_Controller
             'jenis_barang' => $jenis,
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,
+            'harga_satuan' => $harga_clean,
             'stok_minimum' => $stokMinimum,
             'created_at'   => date('Y-m-d H:i:s'),
         );
 
         $simpan = $this->Barang_model->insert_nama_barang($data);
 
-        $this->jsonResponse(
+        $this->respond(
             $simpan
                 ? ['status' => true, 'message' => 'Data berhasil disimpan']
-                : ['status' => false, 'message' => 'Gagal menyimpan data']
+                : ['status' => false, 'message' => $this->db_error_message('Gagal menyimpan data')]
         );
     }
-
     // Ambil data nama barang by id (untuk mengisi form edit)
     public function get_by_id($id)
     {
         $row = $this->Barang_model->get_by_id($id);
 
         if ($row) {
-            $this->jsonResponse(['status' => true, 'data' => $row]);
+            $this->respond(['status' => true, 'data' => $row]);
         } else {
-            $this->jsonResponse(['status' => false, 'message' => 'Data tidak ditemukan']);
+            $this->respond(['status' => false, 'message' => 'Data tidak ditemukan']);
         }
     }
 
     // Method update data via AJAX
     public function update()
     {
-        $id           = $this->input->post('id', true);
-        $kode         = $this->input->post('kode', true);
-        $nama         = $this->input->post('nama', true);
-        $idkategori   = $this->input->post('id_kategori', true);
-        $jenis        = $this->input->post('jenis', true);
-        $satuan       = $this->input->post('satuan', true);
-        $dimensi      = $this->input->post('dimensi', true);
-        $stokMinimum  = $this->input->post('stok_minimum', true);
+        $id          = $this->input->post('id', true);
+        $kode        = $this->input->post('kode', true);
+        $nama        = $this->input->post('nama', true);
+        $idkategori  = $this->input->post('id_kategori', true);
+        $jenis       = $this->input->post('jenis', true);
+        $harga_raw   = $this->input->post('harga_satuan', true);
+        $satuan      = $this->input->post('satuan', true);
+        $dimensi     = $this->input->post('dimensi', true);
+        $stokMinimum = $this->input->post('stok_minimum', true);
 
         if (
-            empty($id) || empty($kode) || empty($nama) || empty($idkategori)  || empty($jenis)
-            || empty($satuan) || empty($dimensi) || $stokMinimum === null || $stokMinimum === ''
+            empty($id) || $this->is_blank($kode) || $this->is_blank($nama) || empty($idkategori) || $this->is_blank($jenis)
+            || $this->is_blank($satuan) || $this->is_blank($dimensi) || $this->is_blank($harga_raw)
+            || $this->is_blank($stokMinimum)
         ) {
-            $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            return;
+        }
+
+        // Konversi nilai harga yang diinput
+        $harga_clean = $this->parse_harga_decimal($harga_raw);
+
+        if (!$this->Kategori_barang_model->get_by_id($idkategori)) {
+            $this->respond(['status' => false, 'message' => 'Kategori tidak valid!']);
             return;
         }
 
@@ -144,12 +229,14 @@ class Barang extends MY_Controller
             'jenis_barang' => $jenis,
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,
+            'harga_satuan' => $harga_clean,
             'stok_minimum' => $stokMinimum,
         );
 
         $update = $this->Barang_model->update_nama_barang($id, $data);
 
-        $this->jsonResponse(
+        // $update bernilai true walau tidak ada data yang berubah
+        $this->respond(
             $update
                 ? ['status' => true, 'message' => 'Data berhasil diperbarui']
                 : ['status' => false, 'message' => 'Gagal memperbarui data']
@@ -161,7 +248,7 @@ class Barang extends MY_Controller
     {
         $hapus = $this->Barang_model->delete_nama_barang($id);
 
-        $this->jsonResponse(
+        $this->respond(
             $hapus
                 ? ['status' => true, 'message' => 'Data berhasil dihapus']
                 : ['status' => false, 'message' => 'Gagal menghapus data']

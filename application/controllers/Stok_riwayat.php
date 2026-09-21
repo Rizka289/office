@@ -30,7 +30,7 @@ class Stok_riwayat extends CI_Controller
         $data['filter_location'] = $id_location;
 
         $this->load->view('templates/header', $data); // Sesuaikan template template kamu
-        $this->load->view('staff_gudang/stok_riwayat_view', $data);
+        $this->load->view('inventory/stok_riwayat', $data);
         $this->load->view('templates/footer');
     }
 }

@@ -48,6 +48,8 @@
 </div>
 
 <!-- ================= MODAL TAMBAH KATEGORI BARANG ================= -->
+<!-- NOTE: token CSRF sengaja TIDAK ditaruh di hidden input form. Token dikelola JS di bawah
+     (lihat bagian CSRF) supaya tidak basi setelah form.reset() / regenerasi token. -->
 <div class="modal fade" id="modalTambahKatBarang" tabindex="-1" aria-labelledby="modalTambahKatBarangLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -57,7 +59,6 @@
             </div>
             <form id="formTambahKatBarang" autocomplete="off">
                 <div class="modal-body">
-                    <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
                         <input type="text" name="kode" class="form-control form-control-sm" placeholder="Masukkan kode kategori" autocomplete="off" required>
@@ -90,7 +91,6 @@
             </div>
             <form id="formEditKatBarang" autocomplete="off">
                 <div class="modal-body">
-                    <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
@@ -100,7 +100,7 @@
                         <label class="form-label small fw-bold"><?= translate('nama') ?></label>
                         <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan Nama Kategori" required>
                     </div>
-                     <div class="mb-3">
+                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
                         <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan deskripsi" required></textarea>
                     </div>
@@ -121,25 +121,86 @@
         var currentPage   = 1;
         var currentSearch = '';
         var searchTimer   = null;
+        var loadSeq       = 0; // penanda request terbaru (cegah hasil request lama menimpa yang baru)
 
-        // Helper ambil ulang field csrf terbaru dari salah satu form di halaman ini
-        function refreshCsrf(hash) {
-            if (hash) {
-                $('.csrf-field').val(hash);
+        // Simpan label asli tombol (hasil translate) supaya bisa dikembalikan setelah request
+        var labelSimpan = $('#btnSimpan').text();
+        var labelUpdate = $('#btnUpdate').text();
+
+        // ================= CSRF (satu sumber kebenaran) =================
+        // CI3 meregenerasi token setiap POST. Karena itu token TIDAK disimpan di hidden input
+        // (form.reset() mengembalikannya ke nilai lama yang sudah basi). Setiap POST mengambil
+        // token terbaru dari cookie CSRF; nilai dari respons JSON dipakai sebagai cadangan.
+        var CSRF = {
+            name:   '<?= $this->security->get_csrf_token_name(); ?>',
+            cookie: '<?= $this->config->item('cookie_prefix') . $this->config->item('csrf_cookie_name'); ?>',
+            hash:   '<?= $this->security->get_csrf_hash(); ?>'
+        };
+
+        function readCookie(name) {
+            var parts = document.cookie ? document.cookie.split('; ') : [];
+            for (var i = 0; i < parts.length; i++) {
+                var idx = parts[i].indexOf('=');
+                if (idx > -1 && parts[i].substring(0, idx) === name) {
+                    return decodeURIComponent(parts[i].substring(idx + 1));
+                }
+            }
+            return null;
+        }
+
+        function currentCsrfHash() {
+            return readCookie(CSRF.cookie) || CSRF.hash;
+        }
+
+        function syncCsrf(response) {
+            if (response && response.csrf_hash) {
+                CSRF.hash = response.csrf_hash;
             }
         }
 
-        // Helper untuk request yang butuh csrf tapi tanpa serialize form (mis. delete)
-        function getCsrfData() {
-            var data = {};
-            data[$('.csrf-field').attr('name')] = $('.csrf-field').val();
-            return data;
+        // Semua POST lewat sini: token selalu ditempel otomatis
+        function apiPost(url, serializedData) {
+            var token = encodeURIComponent(CSRF.name) + '=' + encodeURIComponent(currentCsrfHash());
+            return $.ajax({
+                url: url,
+                type: 'POST',
+                dataType: 'json',
+                data: serializedData ? serializedData + '&' + token : token
+            });
         }
 
-        // Escape HTML sederhana untuk data yang dirender lewat JS (hindari XSS)
+        // Penanganan error terpusat: bedakan 403 (CSRF), sesi habis / error PHP (bukan JSON), dll.
+        function ajaxFail(xhr, textStatus, fallbackMsg) {
+            console.error('AJAX gagal:', xhr.status, textStatus, xhr.responseText);
+
+            if (xhr.status === 403) {
+                alert('Token keamanan sudah tidak berlaku. Halaman akan dimuat ulang, silakan ulangi aksi Anda.');
+                location.reload();
+                return;
+            }
+
+            var msg = fallbackMsg;
+            if (xhr.responseJSON && xhr.responseJSON.message) {
+                msg = xhr.responseJSON.message;
+            } else if (textStatus === 'parsererror') {
+                msg = 'Respons server bukan JSON (sesi login mungkin habis atau ada error PHP). Coba muat ulang halaman.';
+            } else if (xhr.status === 0) {
+                msg = 'Tidak bisa terhubung ke server.';
+            } else if (xhr.status >= 500) {
+                msg = 'Terjadi error di server (' + xhr.status + '). Cek application/logs.';
+            }
+            alert(msg);
+        }
+
+        // Escape HTML untuk data yang dirender lewat JS (termasuk kutip, karena dipakai di atribut)
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
-            return $('<div>').text(str).html();
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // ================= LOAD DATA (dipakai untuk load awal, search, & pindah halaman) =================
@@ -147,18 +208,23 @@
             currentPage   = page || 1;
             currentSearch = (search !== undefined) ? search : currentSearch;
 
+            var seq = ++loadSeq;
+
             $.ajax({
                 url: "<?= site_url('kategori_barang/list_data'); ?>",
                 type: "GET",
+                cache: false, // hindari data lama dari cache browser/proxy hosting
                 data: {
                     page: currentPage,
                     search: currentSearch
                 },
                 dataType: "JSON",
                 success: function(response) {
+                    if (seq !== loadSeq) return; // sudah ada request yang lebih baru, abaikan hasil ini
+                    syncCsrf(response);
+
                     if (response.status) {
-                        // Kalau halaman yang diminta ternyata sudah tidak ada isinya
-                        // (mis. setelah menghapus data terakhir di halaman terakhir), mundur satu halaman.
+                        // Halaman yang diminta sudah kosong (mis. setelah hapus data terakhir di halaman terakhir)
                         if (response.data.length === 0 && response.current_page > 1 && response.total > 0) {
                             loadData(response.current_page - 1, currentSearch);
                             return;
@@ -170,8 +236,13 @@
                         $('#tbodyKatBarang').html('<tr><td colspan="6" class="text-center text-danger">' + escapeHtml(response.message) + '</td></tr>');
                     }
                 },
-                error: function() {
-                    $('#tbodyKatBarang').html('<tr><td colspan="6" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                error: function(xhr, textStatus) {
+                    if (seq !== loadSeq) return;
+                    console.error('Load data gagal:', xhr.status, textStatus, xhr.responseText);
+                    var msg = (textStatus === 'parsererror')
+                        ? 'Gagal memuat data (respons bukan JSON, sesi mungkin habis). Muat ulang halaman.'
+                        : 'Gagal memuat data (' + xhr.status + ').';
+                    $('#tbodyKatBarang').html('<tr><td colspan="6" class="text-center text-danger">' + msg + '</td></tr>');
                 }
             });
         }
@@ -196,8 +267,8 @@
                         '<td>' + escapeHtml(kat.deskripsi) + '</td>' +
                         '<td>' + escapeHtml(kat.created_at || '-') + '</td>' +
                         '<td class="text-center">' +
-                            '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + kat.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
-                            '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + kat.id + '" data-nama="' + escapeHtml(kat.nama_kategori) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                            '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + escapeHtml(kat.id) + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
+                            '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + escapeHtml(kat.id) + '" data-nama="' + escapeHtml(kat.nama_kategori) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
                         '</td>' +
                     '</tr>';
                 $tbody.append(tr);
@@ -245,8 +316,9 @@
             loadData(targetPage, currentSearch);
         });
 
-        // Input search (debounce 400ms), selalu kembali ke halaman 1
-        $('#searchKatBarang').on('keyup', function() {
+        // Input search (debounce 400ms), selalu kembali ke halaman 1.
+        // Pakai 'input' (bukan 'keyup') supaya paste / klik kanan > paste juga tertangkap.
+        $('#searchKatBarang').on('input', function() {
             var keyword = $(this).val();
             clearTimeout(searchTimer);
             searchTimer = setTimeout(function() {
@@ -254,7 +326,7 @@
             }, 400);
         });
 
-        // Reset modal Tambah Kategori Barang setiap kali dibuka/ditutup
+        // Reset modal Tambah setiap kali dibuka/ditutup (aman: form ini tidak lagi menyimpan token)
         $('#modalTambahKatBarang').on('show.bs.modal hidden.bs.modal', function() {
             $('#formTambahKatBarang')[0].reset();
         });
@@ -264,29 +336,22 @@
             e.preventDefault();
             $('#btnSimpan').prop('disabled', true).text('Menyimpan...');
 
-            $.ajax({
-                url: "<?= site_url('kategori_barang/simpan'); ?>",
-                type: "POST",
-                data: $(this).serialize(),
-                dataType: "JSON",
-                success: function(response) {
-                    refreshCsrf(response.csrf_hash);
+            apiPost("<?= site_url('kategori_barang/simpan'); ?>", $(this).serialize())
+                .done(function(response) {
+                    syncCsrf(response);
+                    alert(response.message);
                     if (response.status) {
-                        alert(response.message);
                         $('#modalTambahKatBarang').modal('hide');
                         // Data baru selalu masuk ke halaman pertama (urutan terbaru di atas)
                         loadData(1, currentSearch);
-                    } else {
-                        alert(response.message);
                     }
-                    $('#btnSimpan').prop('disabled', false).text('Simpan Data');
-                },
-                error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat menyimpan data.');
-                    console.error(error);
-                    $('#btnSimpan').prop('disabled', false).text('Simpan Data');
-                }
-            });
+                })
+                .fail(function(xhr, textStatus) {
+                    ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat menyimpan data.');
+                })
+                .always(function() {
+                    $('#btnSimpan').prop('disabled', false).text(labelSimpan);
+                });
         });
 
         // 2. AJAX AMBIL DATA KATEGORI BARANG BY ID (UNTUK EDIT)
@@ -294,24 +359,26 @@
             var id = $(this).data('id');
 
             $.ajax({
-                url: "<?= site_url('kategori_barang/get_by_id/'); ?>" + id,
+                url: "<?= site_url('kategori_barang/get_by_id/'); ?>" + encodeURIComponent(id),
                 type: "GET",
-                dataType: "JSON",
-                success: function(response) {
-                    if (response.status) {
-                        $('#edit_id').val(response.data.id);
-                        $('#edit_kode').val(response.data.kode_kategori);
-                        $('#edit_nama').val(response.data.nama_kategori);
-                        $('#edit_deskripsi').val(response.data.deskripsi);
+                cache: false,
+                dataType: "JSON"
+            })
+            .done(function(response) {
+                syncCsrf(response);
+                if (response.status) {
+                    $('#edit_id').val(response.data.id);
+                    $('#edit_kode').val(response.data.kode_kategori);
+                    $('#edit_nama').val(response.data.nama_kategori);
+                    $('#edit_deskripsi').val(response.data.deskripsi);
 
-                        $('#modalEditKatBarang').modal('show');
-                    } else {
-                        alert(response.message);
-                    }
-                },
-                error: function() {
-                    alert('Terjadi kesalahan saat mengambil data.');
+                    $('#modalEditKatBarang').modal('show');
+                } else {
+                    alert(response.message);
                 }
+            })
+            .fail(function(xhr, textStatus) {
+                ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat mengambil data.');
             });
         });
 
@@ -320,65 +387,50 @@
             e.preventDefault();
             $('#btnUpdate').prop('disabled', true).text('Memperbarui...');
 
-            $.ajax({
-                url: "<?= site_url('kategori_barang/update'); ?>",
-                type: "POST",
-                data: $(this).serialize(),
-                dataType: "JSON",
-                success: function(response) {
-                    refreshCsrf(response.csrf_hash);
+            apiPost("<?= site_url('kategori_barang/update'); ?>", $(this).serialize())
+                .done(function(response) {
+                    syncCsrf(response);
+                    alert(response.message);
                     if (response.status) {
-                        alert(response.message);
                         $('#modalEditKatBarang').modal('hide');
                         loadData(currentPage, currentSearch);
-                    } else {
-                        alert(response.message);
                     }
-                    $('#btnUpdate').prop('disabled', false).text('Update Data');
-                },
-                error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat memperbarui data.');
-                    console.error(error);
-                    $('#btnUpdate').prop('disabled', false).text('Update Data');
-                }
-            });
+                })
+                .fail(function(xhr, textStatus) {
+                    ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat memperbarui data.');
+                })
+                .always(function() {
+                    $('#btnUpdate').prop('disabled', false).text(labelUpdate);
+                });
         });
 
         // 4. AJAX DELETE KATEGORI BARANG
         $(document).on('click', '.btn-delete', function() {
-            var id = $(this).data('id');
-            var nama = $(this).data('nama');
+            var $btn = $(this);
+            var id   = $btn.data('id');
+            var nama = $btn.data('nama');
 
-            if (confirm('Apakah Anda yakin ingin menghapus kategori "' + nama + '"?')) {
-                $.ajax({
-                    url: "<?= site_url('kategori_barang/delete/'); ?>" + id,
-                    type: "POST",
-                    data: getCsrfData(),
-                    dataType: "JSON",
-                    success: function(response) {
-                        refreshCsrf(response.csrf_hash);
-                        if (response.status) {
-                            alert(response.message);
-                            // Kalau halaman saat ini jadi kosong setelah hapus (mis. hapus data terakhir
-                            // di halaman terakhir), mundur satu halaman.
-                            var targetPage = currentPage;
-                            loadData(targetPage, currentSearch);
-                        } else {
-                            alert(response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        // Coba baca pesan JSON dari server jika ada (mis. dari exception handler),
-                        // supaya user melihat alasan spesifik alih-alih pesan generik.
-                        var msg = 'Terjadi kesalahan saat menghapus data.';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            msg = xhr.responseJSON.message;
-                        }
-                        alert(msg);
-                        console.error('Delete error:', status, error, xhr.responseText);
-                    }
-                });
+            if (!confirm('Apakah Anda yakin ingin menghapus kategori "' + nama + '"?')) {
+                return;
             }
+
+            $btn.prop('disabled', true); // cegah klik ganda (token CSRF sekali pakai)
+
+            apiPost("<?= site_url('kategori_barang/delete/'); ?>" + encodeURIComponent(id), '')
+                .done(function(response) {
+                    syncCsrf(response);
+                    alert(response.message);
+                    // loadData otomatis mundur satu halaman kalau halaman ini jadi kosong
+                    if (response.status) {
+                        loadData(currentPage, currentSearch);
+                    }
+                })
+                .fail(function(xhr, textStatus) {
+                    ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat menghapus data.');
+                })
+                .always(function() {
+                    $btn.prop('disabled', false);
+                });
         });
 
         // Load data pertama kali halaman dibuka

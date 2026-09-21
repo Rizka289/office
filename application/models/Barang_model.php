@@ -49,14 +49,7 @@ class Barang_model extends CI_Model
         return $this->db->get('barang')->result_array();
     }
 
-    // // Hitung total data nama barang (dengan search yang sama) untuk pagination
-    // public function count_barang($search = '')
-    // {
-    //     $this->applySearchFilter($search);
-    //     return $this->db->count_all_results('barang');
-    // }
 
-    // Hitung total data nama barang (dengan search yang sama) untuk pagination
     public function count_barang($search = '')
     {
         // JOIN tetap diperlukan di sini karena filter search menyentuh kolom kategori_barang.nama_kategori
@@ -65,9 +58,6 @@ class Barang_model extends CI_Model
         return $this->db->count_all_results('barang');
     }
 
-    // Mengambil semua barang (id, kode, nama, kategori) untuk dijadikan sumber
-    // pilihan "barang" di form Purchase Order -- supaya baris detail PO
-    // BENAR-BENAR merujuk ke baris yang ada di tabel barang (via id), bukan teks bebas.
     public function get_all_for_select()
     {
         $this->selectWithKategori();
@@ -75,16 +65,38 @@ class Barang_model extends CI_Model
         return $this->db->get('barang')->result_array();
     }
 
+    // Menyimpan error DB terakhir supaya controller bisa menampilkan penyebab sebenarnya
+    public $last_error = array('code' => 0, 'message' => '');
+
     public function insert_nama_barang($data)
     {
-        return $this->db->insert('barang', $data);
+        // Matikan db_debug sementara: kalau tidak, CI3 akan menampilkan halaman error HTML
+        // (bukan JSON) sehingga AJAX hanya menerima "parsererror" tanpa alasan yang jelas.
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = false;
+
+        $ok = $this->db->insert('barang', $data);
+
+        if (!$ok) {
+            $this->last_error = $this->db->error();
+            log_message('error', 'Insert barang gagal [' . $this->last_error['code'] . ']: ' . $this->last_error['message']);
+        }
+
+        $this->db->db_debug = $debug;
+        return $ok;
     }
 
-    // // Mengambil satu data nama barang berdasarkan id (untuk isi form edit)
-    // public function get_by_id($id)
-    // {
-    //     return $this->db->get_where('barang', ['id' => $id])->row_array();
-    // }
+    // Cek apakah kode barang sudah dipakai (opsional: abaikan id tertentu saat edit)
+    public function kode_exists($kode, $exclude_id = null)
+    {
+        $this->db->where('kode_barang', $kode);
+        if (!empty($exclude_id)) {
+            $this->db->where('id !=', $exclude_id);
+        }
+        return $this->db->count_all_results('barang') > 0;
+    }
+
+
 
     // Mengambil satu data nama barang berdasarkan id (untuk isi form edit)
     public function get_by_id($id)
@@ -98,7 +110,10 @@ class Barang_model extends CI_Model
     public function update_nama_barang($id, $data)
     {
         $this->db->where('id', $id);
-        return $this->db->update('barang', $data);
+        $this->db->update('barang', $data);
+
+        // Mengecek apakah query berhasil dijalankan (bukan sekadar terpengaruh barisnya)
+        return $this->db->error()['code'] === 0;
     }
 
     // Hapus data nama barang

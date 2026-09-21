@@ -23,7 +23,7 @@ class Supplier extends MY_Controller
 
 
         $this->load->view('templates/header', $data);
-        $this->load->view('super_admin/supplier_grid_view', $data);
+        $this->load->view('master_data/supplier_index', $data);
         $this->load->view('templates/footer', $data);
     }
     // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search

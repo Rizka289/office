@@ -319,7 +319,7 @@
 
     <!-- Informasi PO -->
     <div class="card card-custom p-4 mb-4">
-      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;"><?= translate('informasi') . ' ' . translate('app_purchasing')?></h6>
+      <h6 class="text-uppercase text-muted fw-bold border-bottom pb-2 mb-3" style="font-size: 12px; letter-spacing: 0.08em;"><?= translate('informasi') . ' ' . translate('app_purchasing') ?></h6>
       <input type="hidden" id="f_id_po" value="">
       <div class="row g-3">
         <div class="col-md-6">
@@ -339,7 +339,7 @@
           </label>
           <div class="supplier-search-wrap">
             <i class="bi bi-search"></i>
-            <input type="text" class="form-control" id="f_supplier_search" placeholder="<?= translate('placeholder_supplier') .' ...' ?>" autocomplete="off">
+            <input type="text" class="form-control" id="f_supplier_search" placeholder="<?= translate('placeholder_supplier') . ' ...' ?>" autocomplete="off">
             <input type="hidden" id="f_id_supplier" value="">
             <div class="supplier-suggest-box d-none" id="supplierSuggestBox"></div>
           </div>
@@ -532,40 +532,61 @@
 
     purchaseOrders.forEach(po => {
       const total = parseFloat(po.total_nilai) || 0;
+
+      // Cek apakah sudah ada penerimaan barang
+      const hasPenerimaan = (po.has_penerimaan == true || po.has_penerimaan == "1" || po.has_penerimaan == "true");
+
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td class="po-no">${escapeHTML(po.no_po)}</td>
-        <td>${po.nama_supplier ? escapeHTML(po.nama_supplier) : '<span class="text-muted">Belum diisi</span>'}</td>
-        <td>${po.tanggal_jatuh_tempo ? formatDateID(po.tanggal_jatuh_tempo) : '-'}</td>
-        <td><span class="badge-status ${po.status_qc}">${statusLabel(po.status_qc)}</span></td>
-        <td class="amount-col">${fmtRupiah(total)}</td>
-        <td class="text-center">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-outline-secondary" title="Detail PO" onclick="openViewPO(${po.id})"><i class="bi bi-eye"></i></button>
-            ${po.status_qc === 'menunggu' ? `
-            <button class="btn btn-outline-primary" title="Edit PO" onclick="openEditPO(${po.id})"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-outline-danger" title="Hapus PO" onclick="confirmDelete(${po.id})"><i class="bi bi-trash"></i></button>
-            ` : ''}
-          </div>
-        </td>
-      `;
+      <td class="po-no">${escapeHTML(po.no_po)}</td>
+      <td>${po.nama_supplier ? escapeHTML(po.nama_supplier) : '<span class="text-muted">Belum diisi</span>'}</td>
+      <td>${po.tanggal_jatuh_tempo ? formatDateID(po.tanggal_jatuh_tempo) : '-'}</td>
+      <td><span class="badge-status ${po.status_qc}">${statusLabel(po.status_qc)}</span></td>
+      <td class="amount-col">${fmtRupiah(total)}</td>
+      <td class="text-center">
+        <div class="btn-group btn-group-sm">
+          <!-- Icon View/Detail Selalu Ada -->
+          <button type="button" class="btn btn-outline-secondary" title="Detail PO" onclick="openViewPO(${po.id})">
+            <i class="bi bi-eye"></i>
+          </button>
+          
+          <!-- DI INDEX: Edit & Delete HANYA MUNCUL jika BELUM ada penerimaan barang -->
+          ${!hasPenerimaan ? `
+            <button type="button" class="btn btn-outline-primary" title="Edit PO" onclick="openEditPO(${po.id})">
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button type="button" class="btn btn-outline-danger" title="Hapus PO" onclick="confirmDelete(${po.id})">
+              <i class="bi bi-trash"></i>
+            </button>
+          ` : ''}
+        </div>
+      </td>
+    `;
       body.appendChild(tr);
     });
-
-    document.getElementById('statTotal').textContent = totalRecords;
-    document.getElementById('statDraft').textContent = purchaseOrders.filter(p => p.status_qc === 'menunggu').length;
-    document.getElementById('statSent').textContent = purchaseOrders.filter(p => p.status_qc === 'lolos').length;
-    const totalValue = purchaseOrders.reduce((s, po) => s + (parseFloat(po.total_nilai) || 0), 0);
-    document.getElementById('statValue').textContent = fmtRupiah(totalValue);
   }
-
   /* ---------- Mode Form (Baru, View, Edit) ---------- */
-  function setFormReadonly(readonly) {
-    document.getElementById('f_date').disabled = readonly;
-    document.getElementById('f_supplier_search').disabled = readonly;
-    document.getElementById('f_note').disabled = readonly;
-    document.getElementById('btnAddRow').style.display = readonly ? 'none' : 'block';
-    document.getElementById('saveBtn').style.display = readonly ? 'none' : 'inline-block';
+  function setFormReadonly(isReadonly) {
+    const form = document.getElementById('poForm'); // Sesuaikan dengan ID form Anda
+    if (!form) return;
+
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.disabled = isReadonly;
+    });
+
+    // Tombol simpan disembunyikan jika mode view (readonly)
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn) {
+      if (isReadonly) {
+        saveBtn.classList.add('d-none');
+      } else {
+        saveBtn.classList.remove('d-none');
+      }
+    }
+
+    // Catatan: Jangan set deleteBtn.disabled = isReadonly di sini
+    // karena status aktif/hilang tombol delete ditentukan secara khusus oleh status penerimaan barang.
   }
 
   function openForm() {
@@ -595,11 +616,36 @@
 
     openForm();
     document.getElementById('formTitle').textContent = 'Detail Purchase Order';
+
+    // Set form menjadi readonly
     setFormReadonly(true);
-
     fillFormWithData(json.data);
-  }
 
+    // 1. Sembunyikan Tombol "Hapus PO" di kanan bawah
+    const deleteBtn = document.getElementById('deleteBtn'); // ID tombol Hapus PO di modal
+    if (deleteBtn) {
+      deleteBtn.classList.add('d-none');
+    }
+
+    // 2. Kunci / Nonaktifkan Icon Sampah Merah di Setiap Baris Item Barang
+    const hasPenerimaan = json.data.header.has_penerimaan || false;
+    const rowDeleteIcons = document.querySelectorAll('.btn-remove-row, .btn-delete-item, td .bi-trash, td .fa-trash');
+
+    rowDeleteIcons.forEach(icon => {
+      const parentBtn = icon.closest('button') || icon;
+      if (hasPenerimaan) {
+        // Jika SUDAH ADA penerimaan barang -> Icon tidak bisa diklik
+        parentBtn.style.pointerEvents = 'none';
+        parentBtn.style.opacity = '0.5';
+        parentBtn.disabled = true;
+      } else {
+        // Jika BELUM ADA penerimaan barang -> Icon normal
+        parentBtn.style.pointerEvents = 'auto';
+        parentBtn.style.opacity = '1';
+        parentBtn.disabled = false;
+      }
+    });
+  }
   async function openEditPO(id) {
     const json = await fetchPODetail(id);
     if (!json.status) {
@@ -609,15 +655,28 @@
 
     openForm();
     document.getElementById('formTitle').textContent = 'Edit Purchase Order';
+
+    // Buka kuncian form untuk mode Edit
     setFormReadonly(false);
-    document.getElementById('deleteBtn').classList.remove('d-none');
 
     fillFormWithData(json.data);
+
+    // Pada mode Edit, tombol delete di dalam modal juga dipastikan bisa diklik jika dipanggil
+    const deleteBtnInView = document.getElementById('deleteBtn');
+    if (deleteBtnInView) {
+      deleteBtnInView.classList.remove('d-none');
+      deleteBtnInView.disabled = false;
+      deleteBtnInView.removeAttribute('disabled');
+      deleteBtnInView.onclick = function() {
+        confirmDelete(id);
+      };
+    }
   }
 
   function fillFormWithData(data) {
     const header = data.header;
     const items = data.items || [];
+    const isLolos = header.status_qc === 'lolos'; // Cek apakah status lolos
 
     document.getElementById('f_id_po').value = header.id;
     document.getElementById('f_nopo').value = header.no_po;
@@ -636,10 +695,9 @@
         qty: item.qty,
         unit: item.satuan,
         price: item.harga
-      });
+      }, isLolos); // Sembunyikan tombol hapus jika status lolos
     });
 
-    // Sesuaikan status disabled input barang jika sedang mode readonly/view
     const isReadonly = document.getElementById('saveBtn').style.display === 'none';
     if (isReadonly) {
       itemsBody.querySelectorAll('input, select, button').forEach(el => el.disabled = true);
@@ -654,9 +712,26 @@
 
   /* ---------- Hapus Data ---------- */
   function confirmDelete(id) {
-    targetDeleteId = id;
-    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
-    deleteModal.show();
+    if (confirm('Apakah Anda yakin ingin menghapus Purchase Order ini?')) {
+      fetch(`<?= site_url('purchase_order/hapus/') ?>${id}`, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          if (data.status) {
+            // Refresh tabel setelah berhasil hapus
+            loadData();
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Terjadi kesalahan saat menghapus data.');
+        });
+    }
   }
 
   document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
@@ -748,25 +823,27 @@
   initSupplierSearch();
 
   /* ---------- Item Rows (Detail Barang) ---------- */
-  function addItemRow(prefill) {
+  function addItemRow(prefill, hideRemove = false) {
     itemSeq++;
     const rowId = 'row_' + itemSeq;
     const tr = document.createElement('tr');
     tr.id = rowId;
     tr.innerHTML = `
-      <td>
-        <div class="barang-search-wrap">
-          <input type="text" class="form-control form-control-sm it-barang-search" placeholder="Ketik untuk cari barang..." autocomplete="off"
-                 value="${prefill ? escapeHTML(prefill.nama) : ''}">
-          <input type="hidden" class="it-id-barang" value="${prefill ? prefill.id_barang : ''}">
-        </div>
-      </td>
-      <td class="col-qty"><input type="number" min="0" class="form-control form-control-sm it-qty" value="${prefill ? prefill.qty : 1}" oninput="updateGrandTotal()"></td>
-      <td><select class="form-select form-select-sm it-unit">${renderSatuanOptions(prefill ? prefill.unit : '')}</select></td>
-      <td class="col-price"><input type="number" min="0" class="form-control form-control-sm it-price" value="${prefill ? prefill.price : 0}" oninput="updateGrandTotal()"></td>
-      <td class="col-sub" id="sub_${rowId}">Rp 0</td>
-      <td class="text-center"><button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-row" onclick="removeItemRow('${rowId}')"><i class="bi bi-trash"></i></button></td>
-    `;
+    <td>
+      <div class="barang-search-wrap">
+        <input type="text" class="form-control form-control-sm it-barang-search" placeholder="Ketik untuk cari barang..." autocomplete="off"
+               value="${prefill ? escapeHTML(prefill.nama) : ''}">
+        <input type="hidden" class="it-id-barang" value="${prefill ? prefill.id_barang : ''}">
+      </div>
+    </td>
+    <td class="col-qty"><input type="number" min="0" class="form-control form-control-sm it-qty" value="${prefill ? prefill.qty : 1}" oninput="updateGrandTotal()"></td>
+    <td><select class="form-select form-select-sm it-unit">${renderSatuanOptions(prefill ? prefill.unit : '')}</select></td>
+    <td class="col-price"><input type="number" min="0" class="form-control form-control-sm it-price" value="${prefill ? prefill.price : 0}" oninput="updateGrandTotal()"></td>
+    <td class="col-sub" id="sub_${rowId}">Rp 0</td>
+    <td class="text-center">
+      ${hideRemove ? '' : `<button type="button" class="btn btn-sm btn-link text-danger p-0 btn-remove-row" onclick="removeItemRow('${rowId}')"><i class="bi bi-trash"></i></button>`}
+    </td>
+  `;
     document.getElementById('itemsBody').appendChild(tr);
 
     if (prefill && prefill.id_barang) {

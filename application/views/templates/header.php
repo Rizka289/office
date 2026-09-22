@@ -339,8 +339,15 @@
             'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
             'items' => [
                 [
+                    'key'   => 'penawaran',
+                    'label' => function_exists('translate') ? translate('penawaran') : 'Pesanan Penjualan',
+                    'icon'  => 'bi-tags',
+                    'url'   => 'penawaran',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+                [
                     'key'   => 'penjualan',
-                    'label' =>  'Penjualan',
+                    'label' => function_exists('translate') ? translate('pesanan_penjualan') : 'Pesanan Penjualan',
                     'icon'  => 'bi-box',
                     'url'   => 'penjualan',
                     'roles' => ['super_admin', 'staff_purchasing'],

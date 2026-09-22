@@ -1,4 +1,4 @@
-<?php 
+<?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
 class Purchase_order_model extends CI_Model
@@ -19,6 +19,13 @@ class Purchase_order_model extends CI_Model
         $this->db->join('supplier', 'supplier.id = purchase_order.id_supplier', 'left');
         $this->db->join('po_detail', 'po_detail.id_po = purchase_order.id', 'left');
         $this->db->group_by('purchase_order.id');
+    }
+    // mengecek apakh PO sudah ada melakukan penerimaaan barang atau belum di table penerimaan barang
+    public function has_penerimaan_barang($id_po)
+    {
+        $this->db->where('id_po', $id_po);
+        $count = $this->db->count_all_results('penerimaan_barang');
+        return $count > 0;
     }
 
     private function applySearchFilter($search)

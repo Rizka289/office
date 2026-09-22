@@ -1,8 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-// Lokasi file: application/controllers/super_admin/User.php
-// URL akses: domain.com/super_admin/user
 
 class Customer extends MY_Controller
 {

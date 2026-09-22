@@ -18,6 +18,7 @@ class User extends MY_Controller
     {
         $data['title'] = translate('app_list');
         $data['page_title']     =  translate('app_list') . ' ' . translate('app_username');
+        $data['active_menu']     =  'user';
 
         // $data['users'] = $this->User_model->get_all_users();
 

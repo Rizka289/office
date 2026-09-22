@@ -25,7 +25,7 @@ class Purchase_order extends MY_Controller
         $data['csrf_hash']      = $this->security->get_csrf_hash();
 
         $this->load->view('templates/header', $data);
-        $this->load->view('staff_purchasing/po_view', $data);
+        $this->load->view('pembelian/po_view', $data);
         $this->load->view('templates/footer', $data);
     }
 
@@ -38,6 +38,12 @@ class Purchase_order extends MY_Controller
 
         $total = $this->Purchase_order_model->count_po($search);
         $data  = $this->Purchase_order_model->get_po_paginated($search, $perPage, $offset);
+
+        // Tambahkan flag `has_penerimaan` untuk tiap PO
+        foreach ($data as &$po) {
+            $po['has_penerimaan'] = $this->Purchase_order_model->has_penerimaan_barang($po['id']);
+        }
+        unset($po);
 
         $this->jsonResponse([
             'status'       => true,
@@ -58,6 +64,7 @@ class Purchase_order extends MY_Controller
         }
 
         $items = $this->Purchase_order_model->get_po_detail($id);
+        $po['has_penerimaan'] = $this->Purchase_order_model->has_penerimaan_barang($id);
 
         $this->jsonResponse([
             'status' => true,
@@ -75,6 +82,17 @@ class Purchase_order extends MY_Controller
         $tanggal     = $this->input->post('tanggal', true);
         $note        = $this->input->post('note', true);
         $items       = $this->input->post('items');
+
+        if (!empty($id_po)) {
+            $existing_po = $this->Purchase_order_model->get_po_by_id($id_po);
+            if ($existing_po) {
+                // Sesuai requirement: Jika sudah ada penerimaan barang, PO tidak boleh di-update/edit
+                if ($this->Purchase_order_model->has_penerimaan_barang($id_po)) {
+                    $this->jsonResponse(['status' => false, 'message' => 'PO tidak dapat diperbarui karena sudah memiliki transaksi penerimaan barang!']);
+                    return;
+                }
+            }
+        }
 
         if (empty($id_supplier) || empty($tanggal) || empty($items)) {
             $this->jsonResponse(['status' => false, 'message' => 'Supplier, tanggal, dan minimal 1 baris detail barang wajib diisi!']);
@@ -97,12 +115,11 @@ class Purchase_order extends MY_Controller
             $id_barang = $item['id_barang'] ?? '';
             $qty       = $item['qty'] ?? null;
             $satuan    = $item['unit'] ?? '';
-
             if ($id_barang === '' || $id_barang === null || !in_array((int) $id_barang, $barang_ids, true)) {
                 $this->jsonResponse(['status' => false, 'message' => 'Baris barang ke-' . ($i + 1) . ' harus dipilih dari daftar barang.']);
                 return;
             }
-            if ($qty === null || $qty === '' || (float) $qty <= 0) {
+            if ($qty === null || $qty === '' || (float)$qty <= 0) {
                 $this->jsonResponse(['status' => false, 'message' => 'Qty pada baris barang ke-' . ($i + 1) . ' harus lebih dari 0.']);
                 return;
             }
@@ -146,6 +163,11 @@ class Purchase_order extends MY_Controller
             $this->jsonResponse(['status' => false, 'message' => 'ID Purchase Order tidak valid.']);
             return;
         }
+        // Cek jika sudah ada penerimaan barang
+        if ($this->Purchase_order_model->has_penerimaan_barang($id)) {
+            $this->jsonResponse(['status' => false, 'message' => 'PO tidak dapat dihapus karena sudah memiliki transaksi di penerimaan barang!']);
+            return;
+        }
 
         $deleted = $this->Purchase_order_model->delete_po($id);
 
@@ -155,6 +177,4 @@ class Purchase_order extends MY_Controller
                 : ['status' => false, 'message' => 'Gagal menghapus Purchase Order.']
         );
     }
-
-  
 }

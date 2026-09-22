@@ -55,7 +55,7 @@ class Kategori_barang extends MY_Controller
         $data['active_menu']  = 'kategori';
 
         $this->load->view('templates/header', $data);
-        $this->load->view('master_data/kategori_barang', $data);
+        $this->load->view('master_produk/kategori_barang', $data);
         $this->load->view('templates/footer', $data);
     }
 

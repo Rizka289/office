@@ -59,7 +59,7 @@ class Penerimaan_barang extends MY_Controller
         $data['total_selesai']   = $total_selesai;
 
         $this->load->view('templates/header', $data);
-        $this->load->view('gudang/penerimaan_barang_index', $data);
+        $this->load->view('pembelian/penerimaan_barang_index', $data);
         $this->load->view('templates/footer', $data);
     }
 
@@ -78,7 +78,7 @@ class Penerimaan_barang extends MY_Controller
         $data['default_location_id'] = $this->Penerimaan_barang_model->get_default_location_id();
 
         $this->load->view('templates/header', $data);
-        $this->load->view('gudang/add_penerimaan_barang', $data);
+        $this->load->view('pembelian/add_penerimaan_barang', $data);
         $this->load->view('templates/footer', $data);
     }
 
@@ -459,7 +459,7 @@ class Penerimaan_barang extends MY_Controller
         $data['items']         = $detail['items'];
 
         $this->load->view('templates/header', $data);
-        $this->load->view('gudang/penerimaan_barang_detail', $data);
+        $this->load->view('pembelian/penerimaan_barang_detail', $data);
         $this->load->view('templates/footer', $data);
     }
 
@@ -484,7 +484,7 @@ class Penerimaan_barang extends MY_Controller
         $data['items']      = $detail['items'];
 
 
-        $this->load->view('gudang/penerimaan_barang_cetak', $data);
+        $this->load->view('pembelian/penerimaan_barang_cetak', $data);
     }
 
 

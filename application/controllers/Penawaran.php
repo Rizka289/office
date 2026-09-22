@@ -1,11 +1,11 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-class Penjualan extends MY_Controller
+class Penawaran extends MY_Controller
 {
     // Tarif pajak (persen). Dipakai untuk tampilan (view) dan perhitungan di server.
     const TARIF_PPN   = 11; // PPN, ditambahkan ke total
-    const TARIF_PPH2 = 2;  // PPh 23, dipotong oleh customer dari pembayaran
+ 
 
     public function __construct()
     {
@@ -24,7 +24,6 @@ class Penjualan extends MY_Controller
         $data['list_stok']     = $this->Penjualan_model->get_all_barang_stok();
         $data['list_customer'] = $this->Penjualan_model->get_list_customer();
         $data['tarif_ppn']     = self::TARIF_PPN;
-        $data['tarif_pph2']   = self::TARIF_PPH2;
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/penjualan', $data);

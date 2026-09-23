@@ -114,6 +114,14 @@
                         <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
                         <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" autocomplete="off" required>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Metode Perolehan / Tipe Barang</label>
+                        <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
+                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
+                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" autocomplete="off" required>
@@ -191,6 +199,14 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
                         <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Metode Perolehan / Tipe Barang</label>
+                        <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
+                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
+                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
@@ -291,19 +307,24 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.html('<tr><td colspan="9" class="text-center text-muted">Data nama barang tidak ditemukan.</td></tr>');
+                $tbody.html('<tr><td colspan="10" class="text-center text-muted">Data nama barang tidak ditemukan.</td></tr>');
                 return;
             }
 
             var startNo = ((page - 1) * perPage) + 1;
 
             rows.forEach(function(brg, idx) {
+                // Pindahkan deklarasi badgeProduksi ke dalam looping agar 'brg' sudah terdefinisi
+                var badgeProduksi = (brg.is_produced == 1) ?
+                    '<span class="badge bg-success">Diproduksi / Custom</span>' :
+                    '<span class="badge bg-secondary">Dibeli / Trading</span>';
+
                 var tr = '' +
                     '<tr>' +
                     '<td>' + (startNo + idx) + '</td>' +
                     '<td class="fw-semibold">' + escapeHtml(brg.kode_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
-                    '<td>' + escapeHtml(brg.nama) + '</td>' +
+                    '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi + '</td>' +
                     '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
@@ -427,6 +448,8 @@
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
                         $('#edit_dimensi').val(response.data.dimensi);
+
+                        $('#edit_is_produced').val(response.data.is_produced);
                         $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
 

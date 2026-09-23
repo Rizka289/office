@@ -158,6 +158,7 @@ class Barang extends MY_Controller
             $this->respond(['status' => false, 'message' => 'Kode barang sudah dipakai, gunakan kode lain.']);
             return;
         }
+        $is_produced = $this->input->post('is_produced', true);
 
         // 4. Susun array data untuk dikirim ke model
         $data = array(
@@ -167,6 +168,7 @@ class Barang extends MY_Controller
             'jenis_barang' => $jenis,
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,
+            'is_produced'  => ($is_produced !== null) ? (int)$is_produced : 0,
             'harga_satuan' => $harga_clean,
             'stok_minimum' => $stokMinimum,
             'created_at'   => date('Y-m-d H:i:s'),
@@ -221,7 +223,7 @@ class Barang extends MY_Controller
             $this->respond(['status' => false, 'message' => 'Kategori tidak valid!']);
             return;
         }
-
+        $is_produced = $this->input->post('is_produced', true);
         $data = array(
             'kode_barang'  => $kode,
             'nama'         => $nama,
@@ -229,6 +231,7 @@ class Barang extends MY_Controller
             'jenis_barang' => $jenis,
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,
+            'is_produced'  => ($is_produced !== null) ? (int)$is_produced : 0,
             'harga_satuan' => $harga_clean,
             'stok_minimum' => $stokMinimum,
         );

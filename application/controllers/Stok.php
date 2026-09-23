@@ -25,7 +25,7 @@ class Stok extends MY_Controller
 
       
         $this->load->view('templates/header', $data);
-        $this->load->view('staff_gudang/stok_grid_view', $data);
+        $this->load->view('inventory/stok_grid_view', $data);
         $this->load->view('templates/footer', $data);
     }
 

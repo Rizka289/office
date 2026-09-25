@@ -23,8 +23,6 @@ class Barang_model extends CI_Model
     }
 
 
-    // Terapkan filter search ke query builder (dipakai bareng oleh get & count)
-    // Search sekarang juga menjangkau nama_kategori (hasil join), bukan cuma kode & nama barang.
     private function applySearchFilter($search)
     {
         if (!empty($search)) {

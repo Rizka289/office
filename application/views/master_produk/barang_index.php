@@ -2,7 +2,6 @@
 <div class="card card-custom p-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h6 class="fw-bold m-0"> </h6>
-        <!-- Trigger Modal Tambah Nama Barang -->
         <button type="button" class="btn btn-sm btn-brand" data-bs-toggle="modal" data-bs-target="#modalTambahNamaBarang">
             <i class="bi bi-plus-lg"></i><?= translate('add') ?>
         </button>
@@ -13,7 +12,7 @@
         <div class="col-12 col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchNamaBarang" class="form-control" placeholder="Cari kode, nama, atau kategori...">
+                <input type="text" id="searchNamaBarang" class="form-control" placeholder= " <?= translate('cari')?> ">
             </div>
         </div>
     </div>
@@ -23,9 +22,11 @@
             <thead class="table-light">
                 <tr>
                     <th><?= translate('no') ?></th>
+                    <th>Foto</th>
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
+                    <th><?= translate('warna') ?></th>
                     <th><?= translate('jenis') ?></th>
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('dimensi') ?></th>
@@ -36,13 +37,12 @@
             </thead>
             <tbody id="tbodyNamaBarang">
                 <tr>
-                    <td colspan="9" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="11" class="text-center text-muted">Memuat data...</td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Info jumlah data & pagination -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <small class="text-muted" id="infoNamaBarang"></small>
         <nav>
@@ -56,15 +56,22 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahNamaBarangLabel"><i class="bi bi-person-plus"></i> <?= translate('add') ?></h5>
+                <h5 class="modal-title fs-6" id="modalTambahNamaBarangLabel"><i class="bi bi-plus-circle"></i> <?= translate('add') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formTambahNamaBarang" autocomplete="off">
+            <form id="formTambahNamaBarang" autocomplete="off" enctype="multipart/form-data">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('fb') ?></label>
+                        <input type="file" name="gambar" class="form-control form-control-sm" accept="image/*">
+                        <div class="form-text extra-small text-muted">Format: JPG, PNG, WEBP (Maksimal 2MB)</div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
-                        <input type="text" name="kode" class="form-control form-control-sm" placeholder="Masukkan kode barang" autocomplete="off" required>
+                        <input type="text" name="kode" class="form-control form-control-sm" placeholder="<?= translate('p_bar_kode') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kategori_barang') ?></label>
@@ -77,7 +84,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama_barang') ?></label>
-                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama barang" autocomplete="off" required>
+                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="<?= translate('p_bar_nama') ?>" autocomplete="off" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('warna') ?></label>
+                        <input type="text" name="warna" class="form-control form-control-sm" placeholder="<?= translate('p_bar_warna') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('jenis') ?></label>
@@ -97,26 +108,38 @@
                             <option value="">-- <?= translate('select') ?> --</option>
                             <option value="pcs">Pcs</option>
                             <option value="set/padang">Set/pasang</option>
+                            <option value="unit">Unit</option>
                             <option value="batang">Batang</option>
                             <option value="meter">Meter</option>
                             <option value="lembar">Lembar</option>
                             <option value="m2">m2</option>
                             <option value="m3">m3</option>
+                            <option value="kaleng">Kaleng</option>
+                            <option value="kg">Kg</option>
+                            <option value="liter">Liter</option>
                             <option value="roll">Roll</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('harga') ?></label>
                         <input type="text" name="harga_satuan" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" autocomplete="off" required>
-                        <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
+                        <div class="form-text extra-small text-muted"><?= translate('p_bar_harga') ?></div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
-                        <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" autocomplete="off" required>
+                        <label class="form-label small fw-bold"><?= translate('Dimensi') ?></label>
+                        <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="<?= translate('p_bar_dimensi') ?>" autocomplete="off" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
+                        <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
+                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
+                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
-                        <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" autocomplete="off" required>
+                        <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_bar_min') ?>" autocomplete="off" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -136,10 +159,19 @@
                 <h5 class="modal-title fs-6" id="modalEditNamaBarangLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="formEditNamaBarang" autocomplete="off">
+            <form id="formEditNamaBarang" autocomplete="off" enctype="multipart/form-data">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <input type="hidden" name="id" id="edit_id">
+
+                    <div class="mb-3 text-center">
+                        <img id="edit_preview_gambar" src="" class="img-thumbnail mb-2" style="max-height: 120px;">
+                        <div>
+                            <label class="form-label small fw-bold d-block">Ubah Foto Barang (Opsional)</label>
+                            <input type="file" name="gambar" class="form-control form-control-sm" accept="image/*">
+                        </div>
+                    </div>
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
                         <input type="text" name="kode" id="edit_kode" class="form-control form-control-sm" placeholder="Masukkan kode barang" required>
@@ -156,6 +188,10 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama_barang') ?></label>
                         <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('warna') ?></label>
+                        <input type="text" name="warna" id="edit_warna" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('jenis') ?></label>
@@ -175,11 +211,15 @@
                             <option value="">-- <?= translate('select') ?>--</option>
                             <option value="pcs">Pcs</option>
                             <option value="set/padang">Set/pasang</option>
+                            <option value="unit">Unit</option>
                             <option value="batang">Batang</option>
                             <option value="meter">Meter</option>
                             <option value="lembar">Lembar</option>
                             <option value="m2">m2</option>
                             <option value="m3">m3</option>
+                            <option value="kaleng">Kaleng</option>
+                            <option value="kg">Kg</option>
+                            <option value="liter">Liter</option>
                             <option value="roll">Roll</option>
                         </select>
                     </div>
@@ -190,7 +230,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
-                        <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Nama Barang" required>
+                        <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Metode Perolehan / Tipe Barang</label>
+                        <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
+                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
+                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
@@ -206,7 +254,6 @@
     </div>
 </div>
 
-<!-- ================= JS Khusus Halaman Nama Barang (bukan bagian layout) ================= -->
 <script>
     $(document).ready(function() {
 
@@ -214,27 +261,23 @@
         var currentSearch = '';
         var searchTimer = null;
 
-        // Helper ambil ulang field csrf terbaru dari salah satu form di halaman ini
         function refreshCsrf(hash) {
             if (hash) {
                 $('.csrf-field').val(hash);
             }
         }
 
-        // Helper untuk request yang butuh csrf tapi tanpa serialize form (mis. delete)
         function getCsrfData() {
             var data = {};
             data[$('.csrf-field').attr('name')] = $('.csrf-field').val();
             return data;
         }
 
-        // Escape HTML sederhana untuk data yang dirender lewat JS (hindari XSS)
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
             return $('<div>').text(str).html();
         }
 
-        // ================= LOAD DATA (dipakai untuk load awal, search, & pindah halaman) =================
         function loadData(page, search) {
             currentPage = page || 1;
             currentSearch = (search !== undefined) ? search : currentSearch;
@@ -249,8 +292,6 @@
                 dataType: "JSON",
                 success: function(response) {
                     if (response.status) {
-                        // Kalau halaman yang diminta ternyata sudah tidak ada isinya
-                        // (mis. setelah menghapus data terakhir di halaman terakhir), mundur satu halaman.
                         if (response.data.length === 0 && response.current_page > 1 && response.total > 0) {
                             loadData(response.current_page - 1, currentSearch);
                             return;
@@ -259,24 +300,21 @@
                         renderPagination(response.total_pages, response.current_page);
                         renderInfo(response.total, response.per_page, response.current_page, response.data.length);
                     } else {
-                        $('#tbodyNamaBarang').html('<tr><td colspan="9" class="text-center text-danger">' + escapeHtml(response.message) + '</td></tr>');
+                        $('#tbodyNamaBarang').html('<tr><td colspan="11" class="text-center text-danger">' + escapeHtml(response.message) + '</td></tr>');
                     }
                 },
                 error: function() {
-                    $('#tbodyNamaBarang').html('<tr><td colspan="9" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                    $('#tbodyNamaBarang').html('<tr><td colspan="11" class="text-center text-danger">Gagal memuat data.</td></tr>');
                 }
             });
         }
-        // 1. Mencegah karakter selain angka, koma, dan titik pada input harga
+
         $(document).on('input', '.input-harga, #edit_harga', function() {
-            // Hanya izinkan angka, titik, dan koma
             this.value = this.value.replace(/[^0-9.,]/g, '');
         });
 
-        // 2. Formatting Tampilan Harga di Tabel (Ubah titik DB ke koma tampilan Indonesia)
         function formatHarga(angka) {
             if (angka === null || angka === undefined || angka === '') return '0';
-            // Ubah angka desimal standar (misal: 15000.50) menjadi format lokal Indonesia (15.000,50)
             var number = parseFloat(angka);
             if (isNaN(number)) return angka;
 
@@ -291,19 +329,27 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.html('<tr><td colspan="9" class="text-center text-muted">Data nama barang tidak ditemukan.</td></tr>');
+                $tbody.html('<tr><td colspan="11" class="text-center text-muted">Data nama barang tidak ditemukan.</td></tr>');
                 return;
             }
 
             var startNo = ((page - 1) * perPage) + 1;
 
             rows.forEach(function(brg, idx) {
+                var badgeProduksi = (brg.is_produced == 1) ?
+                    '<span class="badge bg-success">Diproduksi / Custom</span>' :
+                    '<span class="badge bg-secondary">Dibeli / Trading</span>';
+
+                var imgHtml = '<img src="' + brg.gambar_url + '" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">';
+
                 var tr = '' +
                     '<tr>' +
                     '<td>' + (startNo + idx) + '</td>' +
+                    '<td>' + imgHtml + '</td>' +
                     '<td class="fw-semibold">' + escapeHtml(brg.kode_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
-                    '<td>' + escapeHtml(brg.nama) + '</td>' +
+                    '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi + '</td>' +
+                    '<td>' + escapeHtml(brg.warna) + '</td>' +
                     '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
@@ -349,7 +395,6 @@
             $('#infoNamaBarang').text('Menampilkan ' + start + '-' + end + ' dari ' + total + ' data');
         }
 
-        // Klik nomor halaman pagination
         $(document).on('click', '#paginationNamaBarang .page-link', function(e) {
             e.preventDefault();
             var $li = $(this).closest('.page-item');
@@ -359,7 +404,6 @@
             loadData(targetPage, currentSearch);
         });
 
-        // Input search (debounce 400ms), selalu kembali ke halaman 1
         $('#searchNamaBarang').on('keyup', function() {
             var keyword = $(this).val();
             clearTimeout(searchTimer);
@@ -368,27 +412,29 @@
             }, 400);
         });
 
-        // Reset modal Tambah Nama Barang setiap kali dibuka/ditutup
         $('#modalTambahNamaBarang').on('show.bs.modal hidden.bs.modal', function() {
             $('#formTambahNamaBarang')[0].reset();
         });
 
-        // 1. AJAX TAMBAH NAMA BARANG
+        // 1. AJAX TAMBAH (FormData)
         $('#formTambahNamaBarang').on('submit', function(e) {
             e.preventDefault();
             $('#btnSimpan').prop('disabled', true).text('Menyimpan...');
 
+            var formData = new FormData(this);
+
             $.ajax({
                 url: "<?= site_url('barang/simpan'); ?>",
                 type: "POST",
-                data: $(this).serialize(),
+                data: formData,
+                contentType: false,
+                processData: false,
                 dataType: "JSON",
                 success: function(response) {
                     refreshCsrf(response.csrf_hash);
                     if (response.status) {
                         alert(response.message);
                         $('#modalTambahNamaBarang').modal('hide');
-                        // Data baru selalu masuk ke halaman pertama (urutan terbaru di atas)
                         loadData(1, currentSearch);
                     } else {
                         alert(response.message);
@@ -396,21 +442,15 @@
                     $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 },
                 error: function(xhr, status, error) {
-                    var msg = 'Terjadi kesalahan saat menyimpan data (HTTP ' + xhr.status + ').';
-                    if (xhr.status === 403) {
-                        msg = 'Token keamanan (CSRF) tidak valid atau sudah kedaluwarsa. Muat ulang halaman (F5) lalu coba simpan lagi.';
-                    } else if (xhr.responseJSON && xhr.responseJSON.message) {
-                        msg = xhr.responseJSON.message;
-                    }
+                    var msg = 'Terjadi kesalahan saat menyimpan data.';
+                    if (xhr.status === 403) msg = 'Token CSRF kadaluwarsa, silakan muat ulang halaman.';
                     alert(msg);
-                    // Buka F12 > Console untuk melihat isi respons server yang sebenarnya
-                    console.error('Simpan error:', status, error, xhr.responseText);
                     $('#btnSimpan').prop('disabled', false).text('Simpan Data');
                 }
             });
         });
 
-        // 2. AJAX AMBIL DATA NAMA BARANG BY ID (UNTUK EDIT)
+        // 2. AJAX FETCH EDIT DATA
         $(document).on('click', '.btn-edit', function() {
             var id = $(this).data('id');
 
@@ -423,12 +463,16 @@
                         $('#edit_id').val(response.data.id);
                         $('#edit_kode').val(response.data.kode_barang);
                         $('#edit_nama').val(response.data.nama);
+                        $('#edit_warna').val(response.data.warna);
                         $('#edit_id_kategori').val(response.data.id_kategori);
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
                         $('#edit_dimensi').val(response.data.dimensi);
+                        $('#edit_is_produced').val(response.data.is_produced);
                         $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
+
+                        $('#edit_preview_gambar').attr('src', response.data.gambar_url);
 
                         $('#modalEditNamaBarang').modal('show');
                     } else {
@@ -441,15 +485,19 @@
             });
         });
 
-        // 3. AJAX UPDATE NAMA BARANG
+        // 3. AJAX UPDATE (FormData)
         $('#formEditNamaBarang').on('submit', function(e) {
             e.preventDefault();
             $('#btnUpdate').prop('disabled', true).text('Memperbarui...');
 
+            var formData = new FormData(this);
+
             $.ajax({
                 url: "<?= site_url('barang/update'); ?>",
                 type: "POST",
-                data: $(this).serialize(),
+                data: formData,
+                contentType: false,
+                processData: false,
                 dataType: "JSON",
                 success: function(response) {
                     refreshCsrf(response.csrf_hash);
@@ -462,15 +510,14 @@
                     }
                     $('#btnUpdate').prop('disabled', false).text('Update Data');
                 },
-                error: function(xhr, status, error) {
+                error: function() {
                     alert('Terjadi kesalahan saat memperbarui data.');
-                    console.error(error);
                     $('#btnUpdate').prop('disabled', false).text('Update Data');
                 }
             });
         });
 
-        // 4. AJAX DELETE NAMA BARANG
+        // 4. AJAX DELETE
         $(document).on('click', '.btn-delete', function() {
             var id = $(this).data('id');
             var nama = $(this).data('nama');
@@ -485,29 +532,18 @@
                         refreshCsrf(response.csrf_hash);
                         if (response.status) {
                             alert(response.message);
-                            // Kalau halaman saat ini jadi kosong setelah hapus (mis. hapus data terakhir
-                            // di halaman terakhir), loadData akan otomatis mundur satu halaman.
-                            var targetPage = currentPage;
-                            loadData(targetPage, currentSearch);
+                            loadData(currentPage, currentSearch);
                         } else {
                             alert(response.message);
                         }
                     },
-                    error: function(xhr, status, error) {
-                        // Coba baca pesan JSON dari server jika ada (mis. dari exception handler),
-                        // supaya user melihat alasan spesifik alih-alih pesan generik.
-                        var msg = 'Terjadi kesalahan saat menghapus data.';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            msg = xhr.responseJSON.message;
-                        }
-                        alert(msg);
-                        console.error('Delete error:', status, error, xhr.responseText);
+                    error: function() {
+                        alert('Terjadi kesalahan saat menghapus data.');
                     }
                 });
             }
         });
 
-        // Load data pertama kali halaman dibuka
         loadData(1, '');
     });
 </script>

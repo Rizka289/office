@@ -13,7 +13,7 @@
         <div class="col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchUser" class="form-control" placeholder="Cari nama / username ...">
+                <input type="text" id="searchUser" class="form-control" placeholder=" <?= translate('search_user') ?>">
             </div>
         </div>
     </div>
@@ -58,15 +58,15 @@
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('form_full_name') ?></label>
-                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama lengkap" autocomplete="off" required>
+                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="<?= translate('p_user_nama') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('app_username') ?></label>
-                        <input type="text" name="username" class="form-control form-control-sm" placeholder="Masukkan username" autocomplete="new-password" required>
+                        <input type="text" name="username" class="form-control form-control-sm" placeholder="<?= translate('p_user_username') ?>" autocomplete="new-password" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('app_password') ?></label>
-                        <input type="password" name="password" class="form-control form-control-sm" placeholder="Masukkan password" autocomplete="new-password" required>
+                        <input type="password" name="password" class="form-control form-control-sm" placeholder="<?= translate('p_user_pwd') ?>" autocomplete="new-password" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
@@ -101,11 +101,11 @@
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama') ?></label>
-                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan nama lengkap" required>
+                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="<?= translate('p_user_nama') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('username') ?></label>
-                        <input type="text" name="username" id="edit_username" class="form-control form-control-sm" placeholder="Masukkan username" required>
+                        <input type="text" name="username" id="edit_username" class="form-control form-control-sm" placeholder="<?= translate('p_user_username') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('app_password') ?></label>
@@ -343,11 +343,15 @@
         });
 
         // 4. AJAX DELETE USER
+        // 1. AJAX DELETE USER (Sudah diperbaiki dengan json_encode)
         $(document).on('click', '.btn-delete', function() {
             var id = $(this).data('id');
             var nama = $(this).data('nama');
 
-            if (confirm('Apakah Anda yakin ingin menghapus user "' + nama + '"?')) {
+            var prefixMsg = <?= json_encode(translate('ajax_delete_user')); ?>;
+            var msgConfirm = prefixMsg + ' "' + nama + '"?';
+
+            if (confirm(msgConfirm)) {
                 $.ajax({
                     url: "<?= site_url('user/delete/'); ?>" + id,
                     type: "POST",
@@ -363,7 +367,8 @@
                         }
                     },
                     error: function(xhr, status, error) {
-                        alert('Terjadi kesalahan saat menghapus data.');
+                        var errorMsg = <?= json_encode(translate('error_delete_message')); ?>;
+                        alert(errorMsg);
                         console.error(error);
                     }
                 });

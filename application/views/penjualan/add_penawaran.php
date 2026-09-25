@@ -4,6 +4,7 @@
   $tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
   $tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
   $list_customer = isset($list_customer) ? (array) $list_customer : [];
+  $list_barang   = isset($list_barang) ? (array) $list_barang : [];
   $ada_customer  = !empty($list_customer);
   $tanggal_maks  = date('Y-m-d');
 ?>
@@ -46,6 +47,25 @@
   .pnw-page .btn-remove-item:hover { color: #7a1a15; }
   .pnw-page .btn-remove-item:disabled { color: #c9c9c9; }
 
+  .pnw-page .barang-picker { position: relative; }
+  .pnw-page .it-jenis.is-locked { background: #eef6f1; color: var(--pnw-brand-dark); font-weight: 600; cursor: not-allowed; }
+  .pnw-page .barang-dropdown-list {
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto;
+    margin-top: 4px;
+  }
+  .pnw-page .barang-dropdown-list .barang-opt {
+    padding: 8px 12px; cursor: pointer; font-size: .85rem; border-bottom: 1px solid #f2f4f3;
+  }
+  .pnw-page .barang-dropdown-list .barang-opt:last-child { border-bottom: none; }
+  .pnw-page .barang-dropdown-list .barang-opt:hover,
+  .pnw-page .barang-dropdown-list .barang-opt.active { background: #eef6f1; }
+  .pnw-page .barang-dropdown-list .barang-opt .bo-nama { font-weight: 600; color: #26332c; display: block; }
+  .pnw-page .barang-dropdown-list .barang-opt .bo-meta { color: #7a8a80; font-size: .76rem; }
+  .pnw-page .barang-dropdown-list .barang-empty { padding: 8px 12px; font-size: .82rem; color: #9aa39d; }
+  .pnw-page .btn-ganti-barang { font-size: .76rem; }
+
   .pnw-page .summary-box { background: #f8faf9; border: 1px dashed #cfe0d6; border-radius: 10px; padding: 16px 18px; }
   .pnw-page .total-box { background: #f8faf9; border-left: 4px solid var(--pnw-brand); border-radius: 10px; padding: 16px 18px; }
 
@@ -57,6 +77,8 @@
 </style>
 
 <div class="pnw-page">
+
+  <script id="dataBarang" type="application/json"><?= json_encode($list_barang, JSON_UNESCAPED_UNICODE); ?></script>
 
   <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
@@ -135,13 +157,15 @@
       <div class="card-modern h-100 mb-0">
         <div class="card-header"><i class="bi bi-percent me-2"></i>Pajak</div>
         <div class="card-body">
-          <div class="d-flex justify-content-between small mb-2">
-            <span class="text-muted">PPN</span><span><?= html_escape($tarif_ppn); ?>%</span>
+          <div class="form-check form-switch mb-3">
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= $ada_customer ? '' : 'disabled'; ?>>
+            <label class="form-check-label" for="pakai_ppn">Kenakan PPN <?= html_escape($tarif_ppn); ?>%</label>
           </div>
-          <div class="d-flex justify-content-between small">
-            <span class="text-muted">PPh</span><span><?= html_escape($tarif_pph); ?>%</span>
+          <div class="form-check form-switch mb-0">
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= $ada_customer ? '' : 'disabled'; ?>>
+            <label class="form-check-label" for="pakai_pph">Kenakan PPh <?= html_escape($tarif_pph); ?>%</label>
           </div>
-          <div class="form-text mt-2">Tarif tetap, mengikuti pengaturan sistem.</div>
+          <div class="form-text mt-2">Centang kalau customer/transaksi ini kena pajak. Kalau tidak dicentang, pajak tersebut tidak ditambahkan ke total.</div>
         </div>
       </div>
     </div>
@@ -191,12 +215,20 @@
     </div>
     <div class="row g-2">
       <div class="col-md-4">
-        <label class="form-label">Jenis Item <span class="text-danger">*</span></label>
-        <input type="text" name="jenis_item[]" class="form-control it-jenis" placeholder="Mis. Pintu Kayu" required>
+        <label class="form-label">Barang <span class="text-danger">*</span></label>
+        <div class="barang-picker">
+          <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
+          <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
+                 placeholder="Ketik nama/kode barang..." autocomplete="off" required>
+          <div class="barang-dropdown-list d-none"></div>
+        </div>
+        <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
+          <i class="bi bi-arrow-repeat me-1"></i>Ganti barang
+        </button>
       </div>
       <div class="col-md-4">
         <label class="form-label">Warna</label>
-        <input type="text" name="warna[]" class="form-control" placeholder="Mis. Coklat">
+        <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
       </div>
       <div class="col-md-4">
         <label class="form-label">Finishing</label>
@@ -251,8 +283,20 @@ document.addEventListener('DOMContentLoaded', function () {
   var tpl         = document.getElementById('templateItem');
   var btnTambah   = document.getElementById('btnTambahItem');
   var form        = document.getElementById('formPenawaran');
+  var chkPpn      = document.getElementById('pakai_ppn');
+  var chkPph      = document.getElementById('pakai_pph');
   var TARIF_PPN   = <?= (float) $tarif_ppn; ?>;
   var TARIF_PPH   = <?= (float) $tarif_pph; ?>;
+
+  // Data master Barang untuk pencarian di sisi client (id, kode_barang,
+  // nama, warna, harga_satuan, satuan). Kalau datanya sudah sangat banyak
+  // di kemudian hari, ini sebaiknya diganti pencarian lewat AJAX ke server.
+  var DATA_BARANG = [];
+  try {
+    DATA_BARANG = JSON.parse(document.getElementById('dataBarang').textContent || '[]') || [];
+  } catch (e) {
+    DATA_BARANG = [];
+  }
 
   function rupiah(n) {
     return 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
@@ -266,6 +310,89 @@ document.addEventListener('DOMContentLoaded', function () {
     var node = tpl.content.cloneNode(true);
     wrap.appendChild(node);
     segarkan();
+  }
+
+  function formatHargaBarang(n) {
+    return Math.round(n || 0).toLocaleString('id-ID');
+  }
+
+  function cariBarang(kata) {
+    kata = (kata || '').trim().toLowerCase();
+    if (kata === '') return [];
+    return DATA_BARANG.filter(function (b) {
+      return (b.nama || '').toLowerCase().indexOf(kata) !== -1 ||
+             (b.kode_barang || '').toLowerCase().indexOf(kata) !== -1;
+    }).slice(0, 15);
+  }
+
+  function tutupSemuaDropdown() {
+    wrap.querySelectorAll('.barang-dropdown-list').forEach(function (el) {
+      el.classList.add('d-none');
+      el.innerHTML = '';
+    });
+  }
+
+  function tampilkanDropdown(card, hasil) {
+    var list = card.querySelector('.barang-dropdown-list');
+    if (!hasil.length) {
+      list.innerHTML = '<div class="barang-empty">Barang tidak ditemukan.</div>';
+      list.classList.remove('d-none');
+      return;
+    }
+    list.innerHTML = hasil.map(function (b) {
+      return '' +
+        '<div class="barang-opt" data-id="' + b.id + '">' +
+          '<span class="bo-nama"></span>' +
+          '<span class="bo-meta"></span>' +
+        '</div>';
+    }).join('');
+    // Isi teks lewat textContent (bukan string HTML) supaya aman dari XSS
+    var opts = list.querySelectorAll('.barang-opt');
+    opts.forEach(function (el, i) {
+      var b = hasil[i];
+      el.querySelector('.bo-nama').textContent = b.nama;
+      el.querySelector('.bo-meta').textContent =
+        (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) +
+        (b.warna ? ' • ' + b.warna : '');
+    });
+    list.classList.remove('d-none');
+  }
+
+  function pilihBarang(card, idBarang) {
+    var b = DATA_BARANG.find(function (x) { return String(x.id) === String(idBarang); });
+    if (!b) return;
+
+    var inputCari  = card.querySelector('.it-barang-search');
+    var inputId    = card.querySelector('.it-id-barang');
+    var inputWarna = card.querySelector('.it-warna');
+    var inputHarga = card.querySelector('.it-harga');
+    var btnGanti   = card.querySelector('.btn-ganti-barang');
+
+    inputCari.value = b.nama;
+    inputCari.readOnly = true;
+    inputCari.classList.add('is-locked');
+    inputId.value = b.id;
+
+    // Warna & harga diambil dari master Barang, tapi tetap bisa diedit user.
+    inputWarna.value = b.warna || '';
+    inputHarga.value = parseFloat(b.harga_satuan) || 0;
+
+    btnGanti.classList.remove('d-none');
+    tutupSemuaDropdown();
+    segarkan();
+  }
+
+  function gantiBarang(card) {
+    var inputCari = card.querySelector('.it-barang-search');
+    var inputId   = card.querySelector('.it-id-barang');
+    var btnGanti  = card.querySelector('.btn-ganti-barang');
+
+    inputId.value = '';
+    inputCari.readOnly = false;
+    inputCari.classList.remove('is-locked');
+    inputCari.value = '';
+    btnGanti.classList.add('d-none');
+    inputCari.focus();
   }
 
   function hitungBaris(card) {
@@ -294,8 +421,8 @@ document.addEventListener('DOMContentLoaded', function () {
       subtotal += hitungBaris(card);
     });
 
-    var ppn   = Math.round(subtotal * TARIF_PPN / 100);
-    var pph   = Math.round(subtotal * TARIF_PPH / 100);
+    var ppn   = chkPpn.checked ? Math.round(subtotal * TARIF_PPN / 100) : 0;
+    var pph   = chkPph.checked ? Math.round(subtotal * TARIF_PPH / 100) : 0;
     var grand = subtotal + ppn + pph;
 
     document.getElementById('sumJumlahItem').textContent = rows.length;
@@ -307,15 +434,50 @@ document.addEventListener('DOMContentLoaded', function () {
 
   btnTambah.addEventListener('click', tambahItem);
 
+  chkPpn.addEventListener('change', segarkan);
+  chkPph.addEventListener('change', segarkan);
+
   wrap.addEventListener('input', function (e) {
+    if (e.target.classList.contains('it-barang-search')) {
+      var card = e.target.closest('.item-card');
+      tampilkanDropdown(card, cariBarang(e.target.value));
+      return; // segarkan() dipanggil lewat pilihBarang() setelah barang dipilih
+    }
     if (e.target.closest('.item-card')) segarkan();
   });
 
+  wrap.addEventListener('focusin', function (e) {
+    if (e.target.classList.contains('it-barang-search') && !e.target.readOnly) {
+      var card = e.target.closest('.item-card');
+      tampilkanDropdown(card, cariBarang(e.target.value));
+    }
+  });
+
   wrap.addEventListener('click', function (e) {
+    var opt = e.target.closest('.barang-opt');
+    if (opt) {
+      pilihBarang(opt.closest('.item-card'), opt.getAttribute('data-id'));
+      return;
+    }
+
+    var btnGanti = e.target.closest('.btn-ganti-barang');
+    if (btnGanti) {
+      gantiBarang(btnGanti.closest('.item-card'));
+      return;
+    }
+
     var btnHapus = e.target.closest('.btn-remove-item');
     if (btnHapus && !btnHapus.disabled) {
       btnHapus.closest('.item-card').remove();
       segarkan();
+      return;
+    }
+  });
+
+  // Tutup dropdown pencarian barang kalau klik di luar area picker
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.barang-picker')) {
+      tutupSemuaDropdown();
     }
   });
 

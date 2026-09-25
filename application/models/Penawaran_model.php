@@ -82,7 +82,8 @@ class Penawaran_model extends CI_Model
         $this->db->select('
             pd.*,
             b.kode_barang,
-            b.nama AS nama_barang
+            b.nama   AS nama_barang,
+            b.gambar AS gambar_barang
         ');
         $this->db->from('penawaran_detail pd');
         $this->db->join('barang b', 'b.id = pd.id_barang', 'left');
@@ -131,6 +132,17 @@ class Penawaran_model extends CI_Model
         return $this->db->get('customer')->result_array();
     }
 
+    // Daftar barang untuk dipilih sebagai item penawaran (pencarian di
+    // sisi client / JS). Warna & harga_satuan dipakai untuk auto-fill
+    // saat barang dipilih di form tambah penawaran, tapi nilainya tetap
+    // boleh diedit user sebelum disimpan (kecuali nama barangnya sendiri).
+    public function get_all_barang()
+    {
+        $this->db->select('id, kode_barang, nama, warna, harga_satuan, satuan');
+        $this->db->order_by('nama', 'ASC');
+        return $this->db->get('barang')->result_array();
+    }
+
     // Simpan 1 penawaran baru: insert header ke `penawaran`, lalu semua
     // item ke `penawaran_detail`, dibungkus 1 transaksi supaya konsisten
     // (kalau salah satu gagal, semuanya dibatalkan).
@@ -156,26 +168,5 @@ class Penawaran_model extends CI_Model
         return $id_penawaran;
     }
 
-    /*
-     * Catatan pembersihan:
-     * Sebelumnya file model ini berisi banyak method milik modul
-     * Penerimaan Barang (generate_no_penerimaan, get_po_by_no,
-     * get_all_active_po, update_status_po, get_locations,
-     * get_default_location_id, location_exists, user_exists,
-     * get_all_barang, get_sisa_qty_po_detail, upsert_stok_barang,
-     * simpan_penerimaan, get_penerimaan_detail, dst) — semuanya
-     * mengacu ke tabel purchase_order/po_detail/penerimaan_barang/
-     * stok_barang yang TIDAK ADA hubungannya dengan fitur Penawaran.
-     *
-     * Sepertinya file ini awalnya di-copy dari Penerimaan_barang_model.php
-     * lalu hanya ditambahkan get_all_penawaran() tanpa membersihkan isi
-     * lamanya. Method-method itu sudah dihapus dari sini karena:
-     * 1) tidak dipakai oleh controller Penawaran sama sekali, dan
-     * 2) modul Penerimaan Barang seharusnya sudah punya model sendiri
-     *    (Penerimaan_barang_model.php) yang berisi method-method asli itu.
-     *
-     * Jika ternyata ada bagian lain kode yang justru memanggil method-method
-     * tersebut dari Penawaran_model (seharusnya tidak), beri tahu saya
-     * supaya bisa disesuaikan lagi.
-     */
+ 
 }

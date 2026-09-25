@@ -116,6 +116,7 @@ class Penawaran extends MY_Controller
 
         $data['no_surat']      = $this->Penawaran_model->generate_no_penawaran();
         $data['list_customer'] = $this->Penawaran_model->get_all_customer();
+        $data['list_barang']   = $this->Penawaran_model->get_all_barang();
         $data['tarif_ppn']     = self::TARIF_PPN;
         $data['tarif_pph']     = self::TARIF_PPH;
 
@@ -139,6 +140,7 @@ class Penawaran extends MY_Controller
         }
 
         // Ambil semua baris item dari form (array per-field, index sinkron per baris)
+        $id_barang      = $this->input->post('id_barang')      ?: [];
         $jenis_item     = $this->input->post('jenis_item')     ?: [];
         $warna          = $this->input->post('warna')          ?: [];
         $finishing      = $this->input->post('finishing')      ?: [];
@@ -161,15 +163,22 @@ class Penawaran extends MY_Controller
                 continue; // baris kosong (tidak diisi) dilewati
             }
 
-            $l = max(0, (int) ($lebar_mm[$i] ?? 0));
-            $t = max(0, (int) ($tinggi_mm[$i] ?? 0));
-            $q = max(1, (int) ($qty[$i] ?? 1));
-            $h = max(0, (float) ($harga_unit[$i] ?? 0));
+            $l   = max(0, (int) ($lebar_mm[$i] ?? 0));
+            $t   = max(0, (int) ($tinggi_mm[$i] ?? 0));
+            $q   = max(1, (int) ($qty[$i] ?? 1));
+            $h   = max(0, (float) ($harga_unit[$i] ?? 0));
+            $idb = (int) ($id_barang[$i] ?? 0);
 
             $luas  = round(($l * $t) / 1000000, 4); // mm² -> m²
             $total = $q * $h;
 
             $items[] = [
+                // id_barang boleh kosong (0/null) kalau user isi item manual
+                // tanpa memilih dari master Barang. Nama barang yang sudah
+                // dipilih tetap tersimpan sebagai teks di jenis_item, jadi
+                // histori penawaran tidak berubah walau data barang di
+                // master diedit/dihapus di kemudian hari.
+                'id_barang'      => $idb > 0 ? $idb : null,
                 'jenis_item'     => $jenis,
                 'warna'          => trim($warna[$i] ?? ''),
                 'finishing'      => trim($finishing[$i] ?? ''),
@@ -192,8 +201,8 @@ class Penawaran extends MY_Controller
             redirect('penawaran/tambah');
         }
 
-        $ppn_persen  = self::TARIF_PPN;
-        $pph_persen  = self::TARIF_PPH;
+        $ppn_persen  = $this->input->post('pakai_ppn') ? self::TARIF_PPN : 0;
+        $pph_persen  = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
         $ppn_nominal = round($subtotal * $ppn_persen / 100);
         $pph_nominal = round($subtotal * $pph_persen / 100);
         $grand_total = $subtotal + $ppn_nominal + $pph_nominal;
@@ -212,7 +221,7 @@ class Penawaran extends MY_Controller
             'pph_nominal' => $pph_nominal,
             'grand_total' => $grand_total,
             'catatan'     => $catatan,
-            'id_user'     => $this->session->userdata('id_user') ?? 0,
+            'id_user'     => $this->session->userdata('user_id') ?? 0,
         ];
 
         $id_penawaran = $this->Penawaran_model->simpan_penawaran($header, $items);

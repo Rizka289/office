@@ -1,8 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-// Lokasi file: application/controllers/super_admin/User.php
-// URL akses: domain.com/super_admin/user
 
 class User extends MY_Controller
 {
@@ -78,8 +76,8 @@ class User extends MY_Controller
 
         $this->jsonResponse(
             $simpan
-                ? ['status' => true, 'message' => 'Data berhasil disimpan']
-                : ['status' => false, 'message' => 'Gagal menyimpan data']
+                ? ['status' => true, 'message' => translate('message_sukses')]
+                : ['status' => false, 'message' => translate('message_gagal')]
         );
     }
 
@@ -122,8 +120,8 @@ class User extends MY_Controller
 
         $this->jsonResponse(
             $update
-                ? ['status' => true, 'message' => 'Data berhasil diperbarui']
-                : ['status' => false, 'message' => 'Gagal memperbarui data']
+                ? ['status' => true, 'message' => translate('message_update')]
+                : ['status' => false, 'message' => translate('message_update_gagal')]
         );
     }
 
@@ -139,8 +137,8 @@ class User extends MY_Controller
 
         $this->jsonResponse(
             $delete
-                ? ['status' => true, 'message' => 'Data berhasil dihapus']
-                : ['status' => false, 'message' => 'Gagal menghapus data']
+                ? ['status' => true, 'message' => translate('message_delete_sukses')]
+                : ['status' => false, 'message' => translate('message_delete_gagal')]
         );
     }
 }

@@ -72,8 +72,8 @@ class Customer extends MY_Controller
 
         $this->jsonResponse(
             $simpan
-                ? ['status' => true, 'message' => 'Data berhasil disimpan']
-                : ['status' => false, 'message' => 'Gagal menyimpan data']
+                ? ['status' => true, 'message' =>  translate('message_sukses')]
+                : ['status' => false, 'message' => translate('message_gagal')]
         );
     }
 
@@ -112,25 +112,34 @@ class Customer extends MY_Controller
 
         $this->jsonResponse(
             $update
-                ? ['status' => true, 'message' => 'Data berhasil diperbarui']
-                : ['status' => false, 'message' => 'Gagal memperbarui data']
+                ? ['status' => true, 'message' => translate('message_update')]
+                : ['status' => false, 'message' => translate('message_update_gagal')]
         );
     }
 
-    // Delete data user via AJAX
-    public function delete($id)
+    public function delete($id = NULL)
     {
         if (empty($id)) {
             $this->jsonResponse(['status' => false, 'message' => 'ID tidak ditemukan!']);
             return;
         }
 
-        $delete = $this->Customer_model->delete_customer($id);
+        $result = $this->Customer_model->delete_customer($id);
 
-        $this->jsonResponse(
-            $delete
-                ? ['status' => true, 'message' => 'Data berhasil dihapus']
-                : ['status' => false, 'message' => 'Gagal menghapus data']
-        );
+        if ($result['success']) {
+            $this->jsonResponse(['status' => true, 'message' => translate('message_delete_sukses')]);
+            return;
+        }
+
+        $code = (int) $result['error']['code'];
+        log_message('error', 'Delete Customer gagal: ' . $result['error']['message']);
+
+        if ($code === 1451) { // foreign key constraint
+            $msg = translate('p_customer_relasi');
+        } else {
+            $msg = 'Gagal menghapus data dari database';
+        }
+
+        $this->jsonResponse(['status' => false, 'message' => $msg]);
     }
 }

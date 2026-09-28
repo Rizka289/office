@@ -13,7 +13,7 @@
         <div class="col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchCustomer" class="form-control" placeholder="Cari nama / kontak / alamat...">
+                <input type="text" id="searchCustomer" class="form-control" placeholder="<?= translate('p_search_sup') ?>">
             </div>
         </div>
     </div>
@@ -50,7 +50,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalTambahCustomerLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('pelanggan')?></h5>
+                <h5 class="modal-title fs-6" id="modalTambahCustomerLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('pelanggan') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formTambahCustomer" autocomplete="off">
@@ -58,15 +58,15 @@
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama') ?></label>
-                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama customer" autocomplete="off" required>
+                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="<?= translate('p_cus_nama') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kontak') ?></label>
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" autocomplete="off" required>
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" class="form-control form-control-sm input-numeric-only" placeholder="<?= translate('p_kontak') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('alamat') ?></label>
-                        <textarea name="alamat" class="form-control form-control-sm" rows="3" placeholder="Masukkan alamat" autocomplete="off" required></textarea>
+                        <textarea name="alamat" class="form-control form-control-sm" rows="3" placeholder="<?= translate('p_alamat') ?>" autocomplete="off" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -83,7 +83,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
-                <h5 class="modal-title fs-6" id="modalEditUserLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') . ' ' . translate('pelanggan') ?></h5>
+                <h5 class="modal-title fs-6" id="modalEditCustomerLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') . ' ' . translate('pelanggan') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="formEditCustomer" autocomplete="off">
@@ -112,7 +112,7 @@
     </div>
 </div>
 
-<!-- ================= JS Khusus Halaman User (bukan bagian layout) ================= -->
+<!-- ================= JS Khusus Halaman Customer (bukan bagian layout) ================= -->
 <script>
     $(document).ready(function() {
         var currentPage = 1;
@@ -122,8 +122,56 @@
         // Ambil url list_data sekali saja
         var listDataUrl = "<?= site_url('customer/list_data'); ?>";
 
+        // Nama token & cookie CSRF dari konfigurasi CodeIgniter
+        var csrfName = '<?= $this->security->get_csrf_token_name(); ?>';
+        var csrfCookieName = '<?= $this->config->item('cookie_prefix') . $this->config->item('csrf_cookie_name'); ?>';
+
         function escapeHtml(str) {
             return $('<div>').text(str == null ? '' : str).html();
+        }
+
+        // ===== CSRF HELPER =====
+        // Ambil token terbaru dari cookie CSRF (selalu diperbarui CI di setiap respons).
+        // Jika cookie tidak terbaca (mis. cookie_httponly = TRUE), pakai nilai input hidden.
+        function getCsrfToken() {
+            var match = document.cookie.match(new RegExp('(?:^|; )' + csrfCookieName + '=([^;]*)'));
+            return match ? decodeURIComponent(match[1]) : $('.csrf-field').first().val();
+        }
+
+        // Samakan semua input hidden CSRF dengan token terbaru
+        function syncCsrf(hash) {
+            var token = hash || getCsrfToken();
+            if (token) {
+                $('.csrf-field').val(token);
+            }
+            return token;
+        }
+
+        // Dipanggil di setiap respons (sukses maupun error) agar token tetap segar
+        function handleCsrfFromResponse(response) {
+            if (response && response.csrf_hash) {
+                if (typeof refreshCsrf === 'function') {
+                    refreshCsrf(response.csrf_hash);
+                }
+                syncCsrf(response.csrf_hash);
+            } else {
+                syncCsrf();
+            }
+        }
+
+        // Penanganan error AJAX yang seragam. Return true jika sudah ditangani (403).
+        function handleAjaxError(xhr, defaultMessage) {
+            var res = xhr.responseJSON || {};
+            handleCsrfFromResponse(res);
+
+            if (xhr.status === 403) {
+                alert('Token keamanan kedaluwarsa. Halaman akan dimuat ulang, silakan coba lagi.');
+                location.reload();
+                return true;
+            }
+
+            alert(res.message || (defaultMessage + ' (Status: ' + xhr.status + ')'));
+            return false;
         }
 
         // Render baris tabel dari data JSON
@@ -132,7 +180,8 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.append('<tr><td colspan="5" class="text-center text-muted">Data customer tidak ditemukan.</td></tr>');
+                var emptyMessage = "<?= translate('p_customer'); ?>";
+                $tbody.append('<tr><td colspan="5" class="text-center text-muted">' + emptyMessage + '</td></tr>');
                 return;
             }
 
@@ -155,7 +204,7 @@
 
         // Render kontrol pagination
         function renderPagination(currentPage, totalPages) {
-            var $pg = $('#supplierPagination');
+            var $pg = $('#customerPagination');
             $pg.empty();
 
             if (totalPages <= 1) {
@@ -230,8 +279,7 @@
             }, 400);
         });
 
-
-        // Reset modal Tambah Supplier setiap kali dibuka/ditutup
+        // Reset modal Tambah Customer setiap kali dibuka/ditutup
         // (jangan ikut mengosongkan field CSRF, hanya field input data)
         $('#modalTambahCustomer').on('show.bs.modal hidden.bs.modal', function() {
             $('#formTambahCustomer')[0].reset();
@@ -243,9 +291,10 @@
             this.value = this.value.replace(/[^0-9]/g, '');
         });
 
-        // 1. AJAX TAMBAH USER
+        // 1. AJAX TAMBAH CUSTOMER
         $('#formTambahCustomer').on('submit', function(e) {
             e.preventDefault();
+            syncCsrf(); // pastikan token yang dikirim adalah yang terbaru
             $('#btnSimpan').prop('disabled', true).text('Menyimpan...');
 
             $.ajax({
@@ -254,7 +303,7 @@
                 data: $(this).serialize(),
                 dataType: "JSON",
                 success: function(response) {
-                    refreshCsrf(response.csrf_hash);
+                    handleCsrfFromResponse(response);
                     if (response.status) {
                         alert(response.message);
                         $('#modalTambahCustomer').modal('hide');
@@ -265,14 +314,15 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat menyimpan data.');
                     console.error(error);
-                    $('#btnSimpan').prop('disabled', false).text('Simpan Data');
+                    if (!handleAjaxError(xhr, 'Terjadi kesalahan saat menyimpan data')) {
+                        $('#btnSimpan').prop('disabled', false).text('Simpan Data');
+                    }
                 }
             });
         });
 
-        // 2. AJAX AMBIL DATA USER BY ID (AMBIL UNTUK EDIT)
+        // 2. AJAX AMBIL DATA CUSTOMER BY ID (UNTUK EDIT)
         $(document).on('click', '.btn-edit', function() {
             var id = $(this).data('id');
 
@@ -298,9 +348,10 @@
             });
         });
 
-        // 3. AJAX UPDATE USER
+        // 3. AJAX UPDATE CUSTOMER
         $('#formEditCustomer').on('submit', function(e) {
             e.preventDefault();
+            syncCsrf(); // pastikan token yang dikirim adalah yang terbaru
             $('#btnUpdate').prop('disabled', true).text('Memperbarui...');
 
             $.ajax({
@@ -309,7 +360,7 @@
                 data: $(this).serialize(),
                 dataType: "JSON",
                 success: function(response) {
-                    refreshCsrf(response.csrf_hash);
+                    handleCsrfFromResponse(response);
                     if (response.status) {
                         alert(response.message);
                         $('#modalEditCustomer').modal('hide');
@@ -320,39 +371,46 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat memperbarui data.');
                     console.error(error);
-                    $('#btnUpdate').prop('disabled', false).text('Update Data');
+                    if (!handleAjaxError(xhr, 'Terjadi kesalahan saat memperbarui data')) {
+                        $('#btnUpdate').prop('disabled', false).text('Update Data');
+                    }
                 }
             });
         });
 
-        // 4. AJAX DELETE USER
+        // 4. AJAX DELETE CUSTOMER
         $(document).on('click', '.btn-delete', function() {
             var id = $(this).data('id');
             var nama = $(this).data('nama');
 
-            if (confirm('Apakah Anda yakin ingin menghapus customer "' + nama + '"?')) {
-                $.ajax({
-                    url: "<?= site_url('customer/delete/'); ?>" + id,
-                    type: "POST",
-                    data: getCsrfData(),
-                    dataType: "JSON",
-                    success: function(response) {
-                        refreshCsrf(response.csrf_hash);
-                        if (response.status) {
-                            alert(response.message);
-                            location.reload();
-                        } else {
-                            alert(response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Terjadi kesalahan saat menghapus data.');
-                        console.error(error);
-                    }
-                });
+            var confirmText = "<?= translate('p_delete_sup'); ?> \"" + nama + "\"?";
+            if (!confirm(confirmText)) {
+                return;
             }
+
+            // Token CSRF terbaru (dari cookie), bukan dari input hidden yang bisa basi
+            var postData = {};
+            postData[csrfName] = getCsrfToken();
+
+            $.ajax({
+                url: "<?= site_url('customer/delete/'); ?>" + id,
+                type: "POST",
+                data: postData,
+                dataType: "JSON",
+                success: function(response) {
+                    handleCsrfFromResponse(response);
+
+                    alert(response.message);
+                    if (response.status) {
+                        location.reload();
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error(error);
+                    handleAjaxError(xhr, 'Terjadi kesalahan saat menghapus data');
+                }
+            });
         });
     });
 </script>

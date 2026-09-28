@@ -151,7 +151,8 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.append('<tr><td colspan="5" class="text-center text-muted">Data user tidak ditemukan.</td></tr>');
+                var emptyMessage = "<?= translate('p_user'); ?>";
+                $tbody.append('<tr><td colspan="5" class="text-center text-muted">' + emptyMessage + '</td></tr>');
                 return;
             }
 

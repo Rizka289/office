@@ -66,7 +66,16 @@ class Customer_model extends CI_Model
 
     public function delete_customer($id)
     {
+        // Matikan sementara db_debug supaya error DB tidak memunculkan halaman 500
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+
         $this->db->where('id', $id);
-        return $this->db->delete('customer');
+        $ok    = $this->db->delete('customer');
+        $error = $this->db->error(); // ['code' => ..., 'message' => ...]
+
+        $this->db->db_debug = $debug;
+
+        return ['success' => (bool) $ok, 'error' => $error];
     }
 }

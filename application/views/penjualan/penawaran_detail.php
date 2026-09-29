@@ -10,6 +10,8 @@
     box-shadow: 0 2px 10px rgba(15, 42, 41, .04);
   }
 
+  .pnw-detail-page .status-lock { font-size: .8rem; }
+
   .pnw-detail-page .info-card { padding: 18px 20px; margin-bottom: 18px; }
   .pnw-detail-page .info-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .03em; color: #8a938d; margin-bottom: 2px; }
   .pnw-detail-page .info-value { font-size: .95rem; font-weight: 600; margin-bottom: 12px; }
@@ -41,16 +43,55 @@
   $pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
   $grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
   $rp = function ($v) { return 'Rp ' . number_format((float) $v, 0, ',', '.'); };
+  $approved = (($header->status ?? 'draft') === 'approved');
 ?>
 
 <div class="pnw-detail-page">
 
+  <?php if ($this->session->flashdata('success')): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i><?= html_escape($this->session->flashdata('success')); ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+  <?php endif; ?>
+  <?php if ($this->session->flashdata('error')): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i><?= html_escape($this->session->flashdata('error')); ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+  <?php endif; ?>
+
   <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
     <div>
-      <h5 class="mb-0"><?= html_escape($header->no_surat); ?></h5>
+      <h5 class="mb-0">
+        <?= html_escape($header->no_surat); ?>
+        <?php if ($approved): ?>
+          <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i>Approved</span>
+        <?php else: ?>
+          <span class="badge bg-warning text-dark ms-2 align-middle">Belum Approve</span>
+        <?php endif; ?>
+      </h5>
       <div class="text-muted small">Detail Penawaran</div>
+      <?php if ($approved): ?>
+        <div class="text-muted status-lock mt-1">
+          <i class="bi bi-info-circle me-1"></i>Sudah di-approve<?= !empty($header->approved_at) ? ' pada ' . date('d M Y H:i', strtotime($header->approved_at)) : ''; ?>, data tidak bisa diedit lagi.
+        </div>
+      <?php endif; ?>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
+      <?php if (!$approved): ?>
+        <a href="<?= site_url('penawaran/edit/' . (int) $header->id); ?>" class="btn btn-warning">
+          <i class="bi bi-pencil-square me-1"></i> Edit
+        </a>
+        <?= form_open('penawaran/approve/' . (int) $header->id, [
+              'class'    => 'd-inline',
+              'onsubmit' => "return confirm('Approve penawaran ini? Setelah di-approve, data tidak bisa diedit lagi.');"
+            ]); ?>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check2-circle me-1"></i> Approve
+          </button>
+        <?= form_close(); ?>
+      <?php endif; ?>
       <a href="<?= site_url('penawaran/cetak/' . $header->id); ?>" target="_blank" class="btn btn-brand">
         <i class="bi bi-printer me-1"></i> Cetak PDF
       </a>
@@ -112,6 +153,9 @@
                   <strong><?= html_escape($it->jenis_item); ?></strong>
                   <?php if (!empty($it->warna)): ?>
                     <span class="spek-line">Warna: <?= html_escape($it->warna); ?></span>
+                  <?php endif; ?>
+                  <?php if (!empty($it->komponen)): ?>
+                    <span class="spek-line">Komponen: <?= html_escape($it->komponen); ?></span>
                   <?php endif; ?>
                   <?php if (!empty($it->finishing)): ?>
                     <span class="spek-line">Finishing: <?= html_escape($it->finishing); ?></span>

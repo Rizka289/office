@@ -1,10 +1,6 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-// Lokasi file : application/controllers/Kategori_barang.php
-// URL akses   : domain.com/kategori_barang
-// (Kalau file ini kamu taruh di subfolder, mis. super_admin/, semua site_url() di view
-//  juga harus ikut diubah jadi 'super_admin/kategori_barang/...')
 
 class Kategori_barang extends MY_Controller
 {
@@ -16,20 +12,13 @@ class Kategori_barang extends MY_Controller
         $this->load->helper('url');
     }
 
-    // ------------------------------------------------------------------
-    // Helper internal (private => tidak bisa diakses lewat URL)
-    // ------------------------------------------------------------------
-
-    // Semua response JSON WAJIB lewat sini supaya selalu membawa csrf_hash terbaru.
-    // (CSRF di CI3 diregenerasi setiap POST; hash lama langsung tidak valid.)
     private function respond(array $payload)
     {
         $payload['csrf_hash'] = $this->security->get_csrf_hash();
         $this->jsonResponse($payload);
     }
 
-    // Aksi yang mengubah data hanya boleh lewat POST. CSRF di CI3 hanya diverifikasi
-    // untuk POST, jadi kalau delete() bisa dipanggil via GET, proteksinya bisa dilewati.
+  
     private function mustBePost()
     {
         if ($this->input->method() !== 'post') {
@@ -44,10 +33,7 @@ class Kategori_barang extends MY_Controller
         return $id !== null && ctype_digit((string) $id) && (int) $id > 0;
     }
 
-    // ------------------------------------------------------------------
-    // Halaman
-    // ------------------------------------------------------------------
-
+ 
     public function index()
     {
         $data['title']        = 'Manajemen Kategori Barang';
@@ -59,11 +45,7 @@ class Kategori_barang extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // ------------------------------------------------------------------
-    // Endpoint AJAX
-    // ------------------------------------------------------------------
-
-    // Ambil data kategori barang dengan pagination (max 5/halaman) & search
+  
     public function list_data()
     {
         $search = trim((string) $this->input->get('search', true));
@@ -88,8 +70,7 @@ class Kategori_barang extends MY_Controller
         ]);
     }
 
-    // Simpan data baru via AJAX
-    // Nama field di form: 'kode', 'nama', 'deskripsi'
+  
     public function simpan()
     {
         if (!$this->mustBePost()) {
@@ -122,7 +103,7 @@ class Kategori_barang extends MY_Controller
 
         $this->respond(
             $simpan
-                ? ['status' => true, 'message' => 'Data berhasil disimpan']
+                ? ['status' => true, 'message' => translate('message_sukses')]
                 : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message('Gagal menyimpan data')]
         );
     }
@@ -182,7 +163,7 @@ class Kategori_barang extends MY_Controller
 
         $this->respond(
             $update
-                ? ['status' => true, 'message' => 'Data berhasil diperbarui']
+                ? ['status' => true, 'message' => translate('message_update')]
                 : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message('Gagal memperbarui data')]
         );
     }
@@ -208,7 +189,7 @@ class Kategori_barang extends MY_Controller
 
         $this->respond(
             $hapus
-                ? ['status' => true, 'message' => 'Data berhasil dihapus']
+                ? ['status' => true, 'message' => translate('message_delete_sukses')]
                 : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message('Gagal menghapus data')]
         );
     }

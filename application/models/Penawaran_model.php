@@ -25,6 +25,7 @@ class Penawaran_model extends CI_Model
             pen.no_surat,
             pen.tanggal,
             pen.grand_total,
+            pen.status,
             cus.nama AS customer,
             (
                 SELECT COUNT(*)
@@ -138,9 +139,31 @@ class Penawaran_model extends CI_Model
     // boleh diedit user sebelum disimpan (kecuali nama barangnya sendiri).
     public function get_all_barang()
     {
-        $this->db->select('id, kode_barang, nama, warna, harga_satuan, satuan');
+        $this->db->select('id, kode_barang, nama, warna, komponen, harga_satuan, satuan');
         $this->db->order_by('nama', 'ASC');
         return $this->db->get('barang')->result_array();
+    }
+
+    // Ambil data master barang untuk banyak id sekaligus, hasilnya di-index
+    // per id. Dipakai controller untuk MENIMPA nama barang & komponen di
+    // sisi server, supaya nilai yang tersimpan selalu sama dengan master
+    // (field di form hanya readonly - masih bisa diakali lewat DevTools).
+    public function get_barang_by_ids(array $ids)
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (empty($ids)) {
+            return [];
+        }
+
+        $this->db->select('id, nama, komponen');
+        $this->db->where_in('id', $ids);
+        $rows = $this->db->get('barang')->result_array();
+
+        $map = [];
+        foreach ($rows as $r) {
+            $map[(int) $r['id']] = $r;
+        }
+        return $map;
     }
 
     // Simpan 1 penawaran baru: insert header ke `penawaran`, lalu semua
@@ -168,5 +191,59 @@ class Penawaran_model extends CI_Model
         return $id_penawaran;
     }
 
- 
+    // Update penawaran yang MASIH belum di-approve: header di-update, item
+    // lama dihapus lalu diinsert ulang dari form (semua dalam 1 transaksi).
+    // Status dicek ulang di dalam transaksi dengan FOR UPDATE, jadi kalau
+    // di saat yang sama penawaran ini di-approve, update akan ditolak.
+    public function update_penawaran($id, $header, $items)
+    {
+        $id = (int) $id;
+
+        $this->db->trans_start();
+
+        $row = $this->db->query('SELECT status FROM penawaran WHERE id = ? FOR UPDATE', [$id])->row();
+
+        if (!$row || $row->status === 'approved') {
+            $this->db->trans_complete();
+            $this->last_error = !$row
+                ? 'Data penawaran tidak ditemukan.'
+                : 'Penawaran sudah di-approve dan tidak bisa diubah.';
+            return false;
+        }
+
+        $this->db->where('id', $id);
+        $this->db->update('penawaran', $header);
+
+        $this->db->where('id_penawaran', $id);
+        $this->db->delete('penawaran_detail');
+
+        foreach ($items as $item) {
+            $item['id_penawaran'] = $id;
+            $this->db->insert('penawaran_detail', $item);
+        }
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->last_error = 'Transaksi database gagal, perubahan tidak disimpan.';
+            return false;
+        }
+
+        return true;
+    }
+
+    // Approve penawaran. Hanya berhasil kalau statusnya belum approved
+    // (return false kalau sudah approved / id tidak ada).
+    public function approve_penawaran($id, $id_user)
+    {
+        $this->db->where('id', (int) $id);
+        $this->db->where('status <>', 'approved');
+        $this->db->update('penawaran', [
+            'status'      => 'approved',
+            'approved_by' => (int) $id_user,
+            'approved_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        return $this->db->affected_rows() > 0;
+    }
 }

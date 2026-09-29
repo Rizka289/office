@@ -181,7 +181,8 @@
             <th><?= translate('pelanggan') ?></th>
             <th style="width:8%" class="text-center"><?= translate('item') ?></th>
             <th style="width:14%" class="text-end"><?= translate('total') ?></th>
-            <th style="width:9%" class="text-center"><?= translate('aksi') ?></th>
+            <th style="width:10%" class="text-center">Status</th>
+            <th style="width:12%" class="text-center"><?= translate('aksi') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -196,6 +197,13 @@
                 <td class="text-center"><?= (int) $row->total_item; ?></td>
                 <td class="text-end">Rp <?= number_format((float) $row->grand_total, 0, ',', '.'); ?></td>
                 <td class="text-center">
+                  <?php if (($row->status ?? 'draft') === 'approved'): ?>
+                    <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i>Approved</span>
+                  <?php else: ?>
+                    <span class="badge bg-warning text-dark">Belum Approve</span>
+                  <?php endif; ?>
+                </td>
+                <td class="text-center">
                   <a href="<?= site_url('penawaran/detail/' . $row->id); ?>"
                     class="btn btn-icon-sm btn-outline-secondary" title="Lihat Detail">
                     <i class="bi bi-eye"></i>
@@ -204,12 +212,18 @@
                     class="btn btn-icon-sm btn-outline-secondary" title="Cetak">
                     <i class="bi bi-printer"></i>
                   </a>
+                  <?php if (($row->status ?? 'draft') !== 'approved'): ?>
+                    <a href="<?= site_url('penawaran/edit/' . $row->id); ?>"
+                      class="btn btn-icon-sm btn-outline-warning" title="Edit">
+                      <i class="bi bi-pencil-square"></i>
+                    </a>
+                  <?php endif; ?>
                 </td>
               </tr>
             <?php endforeach; ?>
           <?php else: ?>
             <tr class="empty-row">
-              <td colspan="7">
+              <td colspan="8">
                 <i class="bi bi-inbox"></i>
                 Belum ada data penawaran<?= (isset($filter_q) && $filter_q !== '') ? ' untuk pencarian "' . html_escape($filter_q) . '"' : ''; ?>.
               </td>

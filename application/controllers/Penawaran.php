@@ -125,21 +125,11 @@ class Penawaran extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // Simpan penawaran baru: 1 baris ke `penawaran` (header) + N baris ke
-    // `penawaran_detail` (item), dalam satu transaksi database.
-    public function simpan()
+    // Kumpulkan item dari POST lalu hitung ulang semua nominal di server
+    // (jangan percaya angka dari browser). Dipakai oleh simpan() & update().
+    // Return: [$items, $subtotal]
+    private function _kumpulkan_item()
     {
-        $tanggal     = $this->input->post('tanggal', TRUE);
-        $id_customer = (int) $this->input->post('id_customer');
-        $catatan     = $this->input->post('catatan', TRUE);
-        $no_surat    = $this->input->post('no_surat', TRUE);
-
-        if (empty($tanggal) || $id_customer <= 0) {
-            $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
-            redirect('penawaran/tambah');
-        }
-
-        // Ambil semua baris item dari form (array per-field, index sinkron per baris)
         $id_barang      = $this->input->post('id_barang')      ?: [];
         $jenis_item     = $this->input->post('jenis_item')     ?: [];
         $warna          = $this->input->post('warna')          ?: [];
@@ -152,15 +142,17 @@ class Penawaran extends MY_Controller
         $harga_unit     = $this->input->post('harga_unit')     ?: [];
         $keterangan     = $this->input->post('keterangan')     ?: [];
 
-        // Hitung ulang semua nominal di server — jangan percaya angka dari
-        // browser (luas m² & subtotal per baris hanya untuk tampilan di form).
+        // Nama & komponen barang dipaksa sama dengan master (field di form
+        // hanya readonly, masih bisa diakali lewat DevTools).
+        $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
+
         $items    = [];
         $subtotal = 0;
 
         foreach ($jenis_item as $i => $jenis) {
             $jenis = trim($jenis);
             if ($jenis === '') {
-                continue; // baris kosong (tidak diisi) dilewati
+                continue; // baris kosong dilewati
             }
 
             $l   = max(0, (int) ($lebar_mm[$i] ?? 0));
@@ -169,18 +161,22 @@ class Penawaran extends MY_Controller
             $h   = max(0, (float) ($harga_unit[$i] ?? 0));
             $idb = (int) ($id_barang[$i] ?? 0);
 
+            if ($idb > 0 && isset($master_barang[$idb])) {
+                $jenis         = $master_barang[$idb]['nama'];
+                $komponen_item = trim((string) ($master_barang[$idb]['komponen'] ?? ''));
+            } else {
+                $idb           = 0; // item manual / id tidak valid
+                $komponen_item = '';
+            }
+
             $luas  = round(($l * $t) / 1000000, 4); // mm² -> m²
             $total = $q * $h;
 
             $items[] = [
-                // id_barang boleh kosong (0/null) kalau user isi item manual
-                // tanpa memilih dari master Barang. Nama barang yang sudah
-                // dipilih tetap tersimpan sebagai teks di jenis_item, jadi
-                // histori penawaran tidak berubah walau data barang di
-                // master diedit/dihapus di kemudian hari.
                 'id_barang'      => $idb > 0 ? $idb : null,
                 'jenis_item'     => $jenis,
                 'warna'          => trim($warna[$i] ?? ''),
+                'komponen'       => $komponen_item,
                 'finishing'      => trim($finishing[$i] ?? ''),
                 'komponen_kusen' => trim($komponen_kusen[$i] ?? ''),
                 'komponen_daun'  => trim($komponen_daun[$i] ?? ''),
@@ -196,33 +192,63 @@ class Penawaran extends MY_Controller
             $subtotal += $total;
         }
 
-        if (empty($items)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
-            redirect('penawaran/tambah');
-        }
+        return [$items, $subtotal];
+    }
 
-        $ppn_persen  = $this->input->post('pakai_ppn') ? self::TARIF_PPN : 0;
-        $pph_persen  = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
+    // Hitung PPN, PPh & grand total dari subtotal (sesuai checkbox di form).
+    // Saat edit, persen pajak dikirim dari data tersimpan ($ppn_persen /
+    // $pph_persen) karena checkbox pajak dikunci di form edit.
+    private function _hitung_total($subtotal, $ppn_persen = null, $pph_persen = null)
+    {
+        if ($ppn_persen === null) {
+            $ppn_persen = $this->input->post('pakai_ppn') ? self::TARIF_PPN : 0;
+        }
+        if ($pph_persen === null) {
+            $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
+        }
         $ppn_nominal = round($subtotal * $ppn_persen / 100);
         $pph_nominal = round($subtotal * $pph_persen / 100);
-        $grand_total = $subtotal + $ppn_nominal + $pph_nominal;
 
-        $header = [
-            // no_surat dipercaya dari form (dibuat readonly & sudah dijamin
-            // urut oleh generate_no_penawaran() saat form dibuka). Kalau
-            // kosong (mis. dikirim tanpa lewat form), buat baru sebagai jaga-jaga.
-            'no_surat'    => !empty($no_surat) ? $no_surat : $this->Penawaran_model->generate_no_penawaran($tanggal),
-            'tanggal'     => $tanggal,
-            'id_customer' => $id_customer,
+        return [
             'subtotal'    => $subtotal,
             'ppn_persen'  => $ppn_persen,
             'ppn_nominal' => $ppn_nominal,
             'pph_persen'  => $pph_persen,
             'pph_nominal' => $pph_nominal,
-            'grand_total' => $grand_total,
-            'catatan'     => $catatan,
-            'id_user'     => $this->session->userdata('user_id') ?? 0,
+            'grand_total' => $subtotal + $ppn_nominal + $pph_nominal,
         ];
+    }
+
+    // Simpan penawaran baru: 1 baris ke `penawaran` (header) + N baris ke
+    // `penawaran_detail` (item), dalam satu transaksi database.
+    // Penawaran baru selalu berstatus 'draft' (belum approve).
+    public function simpan()
+    {
+        $tanggal     = $this->input->post('tanggal', TRUE);
+        $id_customer = (int) $this->input->post('id_customer');
+        $catatan     = $this->input->post('catatan', TRUE);
+        $no_surat    = $this->input->post('no_surat', TRUE);
+
+        if (empty($tanggal) || $id_customer <= 0) {
+            $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
+            redirect('penawaran/tambah');
+        }
+
+        list($items, $subtotal) = $this->_kumpulkan_item();
+
+        if (empty($items)) {
+            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
+            redirect('penawaran/tambah');
+        }
+
+        $header = array_merge([
+            'no_surat'    => !empty($no_surat) ? $no_surat : $this->Penawaran_model->generate_no_penawaran($tanggal),
+            'tanggal'     => $tanggal,
+            'id_customer' => $id_customer,
+            'catatan'     => $catatan,
+            'status'      => 'draft',
+            'id_user'     => $this->session->userdata('user_id') ?? 0,
+        ], $this->_hitung_total($subtotal));
 
         $id_penawaran = $this->Penawaran_model->simpan_penawaran($header, $items);
 
@@ -233,5 +259,101 @@ class Penawaran extends MY_Controller
             $this->session->set_flashdata('error', 'Gagal menyimpan penawaran. Silakan coba lagi.');
             redirect('penawaran/tambah');
         }
+    }
+
+    // Form edit penawaran. Hanya boleh kalau BELUM di-approve.
+    public function edit($id)
+    {
+        $id        = (int) $id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('penawaran');
+        }
+
+        if (($penawaran['header']->status ?? 'draft') === 'approved') {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa diedit lagi.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $data['title']         = translate('penawaran');
+        $data['page_title']    = translate('penawaran');
+        $data['active_menu']   = 'penawaran';
+        $data['mode']          = 'edit';
+        $data['penawaran_edit'] = $penawaran['header'];
+        $data['items_edit']    = $penawaran['items'];
+        $data['no_surat']      = $penawaran['header']->no_surat;
+        $data['list_customer'] = $this->Penawaran_model->get_all_customer();
+        $data['list_barang']   = $this->Penawaran_model->get_all_barang();
+        $data['tarif_ppn']     = self::TARIF_PPN;
+        $data['tarif_pph']     = self::TARIF_PPH;
+
+        $this->load->view('templates/header', $data);
+        $this->load->view('penjualan/add_penawaran', $data);
+        $this->load->view('templates/footer', $data);
+    }
+
+    // Simpan hasil edit. Hanya ITEM yang berubah (header dikunci). Ditolak di
+    // controller (cek cepat) dan di model (cek final dalam transaksi)
+    // kalau penawaran sudah di-approve.
+    public function update($id)
+    {
+        $id        = (int) $id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('penawaran');
+        }
+
+        if (($penawaran['header']->status ?? 'draft') === 'approved') {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa diedit lagi.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        // Header (tanggal, customer, catatan, no. surat, pajak) TIDAK ikut
+        // diubah saat edit — hanya item yang boleh diubah. Nilai header dari
+        // form sengaja diabaikan.
+        list($items, $subtotal) = $this->_kumpulkan_item();
+
+        if (empty($items)) {
+            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
+            redirect('penawaran/edit/' . $id);
+        }
+
+        // Yang berubah di header hanya subtotal & total (dihitung ulang dari
+        // item baru, memakai persen pajak yang sudah tersimpan).
+        $header = $this->_hitung_total(
+            $subtotal,
+            (float) $penawaran['header']->ppn_persen,
+            (float) $penawaran['header']->pph_persen
+        );
+
+        if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
+            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil diperbarui.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal memperbarui penawaran.');
+        redirect('penawaran/detail/' . $id);
+    }
+
+    // Approve penawaran (hanya lewat POST). Setelah approve, edit ditolak.
+    public function approve($id)
+    {
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_404();
+        }
+
+        $id = (int) $id;
+
+        if ($this->Penawaran_model->approve_penawaran($id, $this->session->userdata('user_id') ?? 0)) {
+            $this->session->set_flashdata('success', 'Penawaran berhasil di-approve. Data tidak bisa diedit lagi.');
+        } else {
+            $this->session->set_flashdata('error', 'Penawaran tidak ditemukan atau sudah di-approve.');
+        }
+
+        redirect('penawaran/detail/' . $id);
     }
 }

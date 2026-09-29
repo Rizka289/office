@@ -7,6 +7,37 @@
   $list_barang   = isset($list_barang) ? (array) $list_barang : [];
   $ada_customer  = !empty($list_customer);
   $tanggal_maks  = date('Y-m-d');
+
+  // Mode form: 'tambah' (default) atau 'edit' (dikirim dari Penawaran::edit)
+  $is_edit     = (isset($mode) && $mode === 'edit' && !empty($penawaran_edit));
+  $pen         = $is_edit ? $penawaran_edit : null;
+  $tanggal_val = $is_edit ? substr((string) $pen->tanggal, 0, 10) : $tanggal_maks;
+  $form_action = $is_edit ? 'penawaran/update/' . (int) $pen->id : 'penawaran/simpan';
+  // Saat edit, header (tanggal, customer, catatan, pajak) dikunci: hanya item yang boleh diubah
+  $hdr_lock    = ($ada_customer && !$is_edit) ? '' : 'disabled';
+  $url_batal   = $is_edit ? site_url('penawaran/detail/' . (int) $pen->id) : site_url('penawaran');
+
+  // Item yang sudah tersimpan (mode edit) -> dikirim ke JS untuk dirender
+  $items_js = [];
+  if ($is_edit && !empty($items_edit)) {
+    foreach ($items_edit as $it) {
+      $it = (array) $it;
+      $items_js[] = [
+        'id_barang'      => (int) ($it['id_barang'] ?? 0),
+        'jenis_item'     => $it['jenis_item'] ?? '',
+        'warna'          => $it['warna'] ?? '',
+        'komponen'       => $it['komponen'] ?? '',
+        'finishing'      => $it['finishing'] ?? '',
+        'komponen_kusen' => $it['komponen_kusen'] ?? '',
+        'komponen_daun'  => $it['komponen_daun'] ?? '',
+        'lebar_mm'       => (int) ($it['lebar_mm'] ?? 0),
+        'tinggi_mm'      => (int) ($it['tinggi_mm'] ?? 0),
+        'qty'            => (int) ($it['qty'] ?? 1),
+        'harga_unit'     => (float) ($it['harga_unit'] ?? 0),
+        'keterangan'     => $it['keterangan'] ?? '',
+      ];
+    }
+  }
 ?>
 
 <style>
@@ -48,6 +79,7 @@
   .pnw-page .btn-remove-item:disabled { color: #c9c9c9; }
 
   .pnw-page .barang-picker { position: relative; }
+  .pnw-page .it-komponen[readonly] { background: #eef6f1; color: var(--pnw-brand-dark); cursor: not-allowed; }
   .pnw-page .it-jenis.is-locked { background: #eef6f1; color: var(--pnw-brand-dark); font-weight: 600; cursor: not-allowed; }
   .pnw-page .barang-dropdown-list {
     position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
@@ -78,12 +110,12 @@
 
 <div class="pnw-page">
 
-  <script id="dataBarang" type="application/json"><?= json_encode($list_barang, JSON_UNESCAPED_UNICODE); ?></script>
+  <script id="dataBarang" type="application/json"><?= json_encode($list_barang, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
 
   <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
-      <h4><i class="bi bi-file-earmark-text me-2"></i>Buat Penawaran Baru</h4>
-      <small>Isi data customer dan item barang yang ditawarkan.</small>
+      <h4><i class="bi bi-file-earmark-text me-2"></i><?= $is_edit ? 'Edit Penawaran' : 'Buat Penawaran Baru'; ?></h4>
+      <small><?= $is_edit ? 'Penawaran belum di-approve: hanya item yang bisa diubah.' : 'Isi data customer dan item barang yang ditawarkan.'; ?></small>
     </div>
     <div class="text-end">
       <div class="fw-bold fs-5">No. Surat: <?= html_escape($no_surat); ?></div>
@@ -104,12 +136,17 @@
     </div>
   <?php endif; ?>
 
-  <?= form_open('penawaran/simpan', ['id' => 'formPenawaran', 'autocomplete' => 'off']); ?>
+  <?= form_open($form_action, ['id' => 'formPenawaran', 'autocomplete' => 'off']); ?>
 
   <!-- Informasi penawaran -->
   <div class="card-modern">
     <div class="card-header"><i class="bi bi-info-circle me-2"></i>Informasi Penawaran</div>
     <div class="card-body">
+      <?php if ($is_edit): ?>
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-lock me-1"></i>Tanggal, customer, catatan, dan pajak dikunci. Yang bisa diubah hanya <strong>item penawaran</strong> di bawah.
+        </div>
+      <?php endif; ?>
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label">No. Surat</label>
@@ -118,20 +155,20 @@
         </div>
         <div class="col-md-3">
           <label for="tanggal" class="form-label">Tanggal <span class="text-danger">*</span></label>
-          <input type="date" id="tanggal" name="tanggal" class="form-control" value="<?= $tanggal_maks; ?>" required <?= $ada_customer ? '' : 'disabled'; ?>>
+          <input type="date" id="tanggal" name="tanggal" class="form-control" value="<?= html_escape($tanggal_val); ?>" required <?= $hdr_lock; ?>>
         </div>
         <div class="col-md-6">
           <label for="id_customer" class="form-label">Customer <span class="text-danger">*</span></label>
-          <select name="id_customer" id="id_customer" class="form-select" required <?= $ada_customer ? '' : 'disabled'; ?>>
+          <select name="id_customer" id="id_customer" class="form-select" required <?= $hdr_lock; ?>>
             <option value="">Pilih customer</option>
             <?php foreach ($list_customer as $c): ?>
-              <option value="<?= html_escape($c['id']); ?>"><?= html_escape($c['nama']); ?></option>
+              <option value="<?= html_escape($c['id']); ?>" <?= ($is_edit && (int) $pen->id_customer === (int) $c['id']) ? 'selected' : ''; ?>><?= html_escape($c['nama']); ?></option>
             <?php endforeach; ?>
           </select>
         </div>
         <div class="col-12">
           <label for="catatan" class="form-label">Catatan (opsional)</label>
-          <textarea id="catatan" name="catatan" class="form-control" rows="2" placeholder="Mis. estimasi pengerjaan, syarat pembayaran khusus, dll." <?= $ada_customer ? '' : 'disabled'; ?>></textarea>
+          <textarea id="catatan" name="catatan" class="form-control" rows="2" placeholder="Mis. estimasi pengerjaan, syarat pembayaran khusus, dll." <?= $hdr_lock; ?>><?= $is_edit ? html_escape($pen->catatan) : ''; ?></textarea>
         </div>
       </div>
     </div>
@@ -158,11 +195,11 @@
         <div class="card-header"><i class="bi bi-percent me-2"></i>Pajak</div>
         <div class="card-body">
           <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= $ada_customer ? '' : 'disabled'; ?>>
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= ($is_edit && (float) $pen->ppn_persen > 0) ? 'checked' : ''; ?> <?= $hdr_lock; ?>>
             <label class="form-check-label" for="pakai_ppn">Kenakan PPN <?= html_escape($tarif_ppn); ?>%</label>
           </div>
           <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= $ada_customer ? '' : 'disabled'; ?>>
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $hdr_lock; ?>>
             <label class="form-check-label" for="pakai_pph">Kenakan PPh <?= html_escape($tarif_pph); ?>%</label>
           </div>
           <div class="form-text mt-2">Centang kalau customer/transaksi ini kena pajak. Kalau tidak dicentang, pajak tersebut tidak ditambahkan ke total.</div>
@@ -196,11 +233,11 @@
   </div>
 
   <div class="footer-actions">
-    <a href="<?= site_url('penawaran'); ?>" class="btn btn-outline-secondary">
+    <a href="<?= $url_batal; ?>" class="btn btn-outline-secondary">
       <i class="bi bi-x-lg me-1"></i>Batal
     </a>
     <button type="submit" class="btn btn-success fw-bold" id="btnSimpan" <?= $ada_customer ? '' : 'disabled'; ?>>
-      <i class="bi bi-check2-circle me-1"></i>Simpan Penawaran
+      <i class="bi bi-check2-circle me-1"></i><?= $is_edit ? 'Simpan Perubahan' : 'Simpan Penawaran'; ?>
     </button>
   </div>
 
@@ -255,13 +292,17 @@
         <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
         <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
       </div>
+      <div class="col-md-4">
+        <label class="form-label">Komponen</label>
+        <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang" readonly tabindex="-1">
+      </div>
 
       <div class="col-md-3">
-        <label class="form-label">Plate Kusen (mm)</label>
+        <label class="form-label">Kusen (mm)</label>
         <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
       </div>
       <div class="col-md-3">
-        <label class="form-label">Plate Daun (mm)</label>
+        <label class="form-label">Daun (mm)</label>
         <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
       </div>
       <div class="col-md-6 text-end">
@@ -291,6 +332,7 @@ document.addEventListener('DOMContentLoaded', function () {
   // Data master Barang untuk pencarian di sisi client (id, kode_barang,
   // nama, warna, harga_satuan, satuan). Kalau datanya sudah sangat banyak
   // di kemudian hari, ini sebaiknya diganti pencarian lewat AJAX ke server.
+  var ITEMS_EDIT = <?= json_encode($items_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
   var DATA_BARANG = [];
   try {
     DATA_BARANG = JSON.parse(document.getElementById('dataBarang').textContent || '[]') || [];
@@ -306,9 +348,38 @@ document.addEventListener('DOMContentLoaded', function () {
     return Array.prototype.slice.call(wrap.querySelectorAll('.item-card'));
   }
 
-  function tambahItem() {
+  // Isi 1 kartu item dari data yang sudah tersimpan (mode edit). Nilai
+  // warna/harga yang tersimpan dipakai apa adanya (tidak ditimpa master).
+  function isiItem(card, d) {
+    function set(sel, v) {
+      var el = card.querySelector(sel);
+      if (el) el.value = (v === null || v === undefined) ? '' : v;
+    }
+    set('.it-jenis', d.jenis_item);
+    set('.it-id-barang', d.id_barang > 0 ? d.id_barang : '');
+    set('.it-warna', d.warna);
+    set('[name="finishing[]"]', d.finishing);
+    set('.it-komponen', d.komponen);
+    set('[name="komponen_kusen[]"]', d.komponen_kusen);
+    set('[name="komponen_daun[]"]', d.komponen_daun);
+    set('.it-lebar', d.lebar_mm);
+    set('.it-tinggi', d.tinggi_mm);
+    set('.it-qty', d.qty);
+    set('.it-harga', d.harga_unit);
+    set('[name="keterangan[]"]', d.keterangan);
+
+    if (d.id_barang > 0) {
+      var cari = card.querySelector('.it-barang-search');
+      cari.readOnly = true;
+      cari.classList.add('is-locked');
+      card.querySelector('.btn-ganti-barang').classList.remove('d-none');
+    }
+  }
+
+  function tambahItem(data) {
     var node = tpl.content.cloneNode(true);
     wrap.appendChild(node);
+    if (data) isiItem(wrap.lastElementChild, data);
     segarkan();
   }
 
@@ -366,6 +437,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var inputId    = card.querySelector('.it-id-barang');
     var inputWarna = card.querySelector('.it-warna');
     var inputHarga = card.querySelector('.it-harga');
+    var inputKomponen = card.querySelector('.it-komponen');
     var btnGanti   = card.querySelector('.btn-ganti-barang');
 
     inputCari.value = b.nama;
@@ -377,6 +449,9 @@ document.addEventListener('DOMContentLoaded', function () {
     inputWarna.value = b.warna || '';
     inputHarga.value = parseFloat(b.harga_satuan) || 0;
 
+    // Komponen diambil dari master Barang & TIDAK bisa diubah (readonly).
+    inputKomponen.value = b.komponen || '';
+
     btnGanti.classList.remove('d-none');
     tutupSemuaDropdown();
     segarkan();
@@ -386,6 +461,9 @@ document.addEventListener('DOMContentLoaded', function () {
     var inputCari = card.querySelector('.it-barang-search');
     var inputId   = card.querySelector('.it-id-barang');
     var btnGanti  = card.querySelector('.btn-ganti-barang');
+
+    // Barang dilepas -> komponen (milik barang lama) ikut dikosongkan
+    card.querySelector('.it-komponen').value = '';
 
     inputId.value = '';
     inputCari.readOnly = false;
@@ -432,7 +510,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('sumGrandTotal').textContent = rupiah(grand);
   }
 
-  btnTambah.addEventListener('click', tambahItem);
+  btnTambah.addEventListener('click', function () { tambahItem(); });
 
   chkPpn.addEventListener('change', segarkan);
   chkPph.addEventListener('change', segarkan);
@@ -490,12 +568,16 @@ document.addEventListener('DOMContentLoaded', function () {
       alert('Minimal harus ada 1 item dengan Jenis Item diisi.');
       return;
     }
-    if (!confirm('Simpan penawaran ini?')) {
+    if (!confirm(<?= $is_edit ? "'Simpan perubahan penawaran ini?'" : "'Simpan penawaran ini?'"; ?>)) {
       e.preventDefault();
     }
   });
 
-  // Mulai dengan satu item kosong
-  tambahItem();
+  // Mode edit: render item tersimpan. Mode tambah: mulai dengan 1 item kosong.
+  if (ITEMS_EDIT.length) {
+    ITEMS_EDIT.forEach(function (d) { tambahItem(d); });
+  } else {
+    tambahItem();
+  }
 });
 </script>

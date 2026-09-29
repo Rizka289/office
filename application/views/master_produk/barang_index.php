@@ -22,14 +22,14 @@
             <thead class="table-light">
                 <tr>
                     <th><?= translate('no') ?></th>
-                    <th>Foto</th>
+                    <th><?= translate('foto') ?> </th>
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
                     <th><?= translate('warna') ?></th>
                     <th><?= translate('jenis') ?></th>
                     <th><?= translate('satuan') ?></th>
-                    <th><?= translate('dimensi') ?></th>
+                    <th><?= translate('Dimensi') ?></th>
                     <th><?= translate('harga') ?></th>
                     <th><?= translate('min_stok') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
@@ -129,6 +129,10 @@
                         <label class="form-label small fw-bold"><?= translate('Dimensi') ?></label>
                         <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="<?= translate('p_bar_dimensi') ?>" autocomplete="off" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('komponen') ?></label>
+                        <input type="text" name="komponen" class="form-control form-control-sm" placeholder="<?= translate('p_bar_komponen') ?>" autocomplete="off" required>
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
@@ -167,7 +171,7 @@
                     <div class="mb-3 text-center">
                         <img id="edit_preview_gambar" src="" class="img-thumbnail mb-2" style="max-height: 120px;">
                         <div>
-                            <label class="form-label small fw-bold d-block">Ubah Foto Barang (Opsional)</label>
+                            <label class="form-label small fw-bold d-block"><?= translate('ubah_foto_barng') ?></label>
                             <input type="file" name="gambar" class="form-control form-control-sm" accept="image/*">
                         </div>
                     </div>
@@ -229,8 +233,12 @@
                         <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
+                        <label class="form-label small fw-bold"><?= translate('Dimensi') ?></label>
                         <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('komponen') ?></label>
+                        <input type="text" name="komponen" id="edit_komponen" class="form-control form-control-sm" placeholder="Masukkan Komponen" required>
                     </div>
 
                     <div class="mb-3">
@@ -328,8 +336,9 @@
             var $tbody = $('#tbodyNamaBarang');
             $tbody.empty();
 
-            if (!rows || rows.length === 0) {
-                $tbody.html('<tr><td colspan="11" class="text-center text-muted">Data nama barang tidak ditemukan.</td></tr>');
+             if (!rows || rows.length === 0) {
+                var emptyMessage = "<?= translate('p_nama_barang'); ?>";
+                $tbody.append('<tr><td colspan="6" class="text-center text-muted">' + emptyMessage + '</td></tr>');
                 return;
             }
 
@@ -468,6 +477,7 @@
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
                         $('#edit_dimensi').val(response.data.dimensi);
+                        $('#edit_komponen').val(response.data.komponen);
                         $('#edit_is_produced').val(response.data.is_produced);
                         $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);

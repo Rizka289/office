@@ -13,7 +13,7 @@
         <div class="col-12 col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchKatBarang" class="form-control" placeholder="Cari kode, nama, atau deskripsi...">
+                <input type="text" id="searchKatBarang" class="form-control" placeholder="<?= translate('p_search_kat') ?>">
             </div>
         </div>
     </div>
@@ -61,15 +61,15 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
-                        <input type="text" name="kode" class="form-control form-control-sm" placeholder="Masukkan kode kategori" autocomplete="off" required>
+                        <input type="text" name="kode" class="form-control form-control-sm" placeholder="<?= translate('p_kode_kat') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama_ket') ?></label>
-                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="Masukkan nama kategori" autocomplete="off" required>
+                        <input type="text" name="nama" class="form-control form-control-sm" placeholder="<?= translate('p_nama_kat') ?>" autocomplete="off" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
-                        <textarea name="deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan deskripsi" autocomplete="off" required></textarea>
+                        <textarea name="deskripsi" class="form-control form-control-sm" rows="3" placeholder="<?= translate('p_deskripsi') ?>" autocomplete="off" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -251,10 +251,12 @@
             var $tbody = $('#tbodyKatBarang');
             $tbody.empty();
 
-            if (!rows || rows.length === 0) {
-                $tbody.html('<tr><td colspan="6" class="text-center text-muted">Data kategori barang tidak ditemukan.</td></tr>');
+           if (!rows || rows.length === 0) {
+                var emptyMessage = "<?= translate('p_load_kat'); ?>";
+                $tbody.append('<tr><td colspan="6" class="text-center text-muted">' + emptyMessage + '</td></tr>');
                 return;
             }
+
 
             var startNo = ((page - 1) * perPage) + 1;
 
@@ -410,10 +412,10 @@
             var id   = $btn.data('id');
             var nama = $btn.data('nama');
 
-            if (!confirm('Apakah Anda yakin ingin menghapus kategori "' + nama + '"?')) {
+           var confirmText = "<?= translate('p_delete_kat'); ?> \"" + nama + "\"?";
+            if (!confirm(confirmText)) {
                 return;
             }
-
             $btn.prop('disabled', true); // cegah klik ganda (token CSRF sekali pakai)
 
             apiPost("<?= site_url('kategori_barang/delete/'); ?>" + encodeURIComponent(id), '')

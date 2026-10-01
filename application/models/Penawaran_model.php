@@ -109,17 +109,17 @@ class Penawaran_model extends CI_Model
         $bulan = $tanggal ? date('m', strtotime($tanggal)) : date('m');
         $tahun = $tanggal ? date('Y', strtotime($tanggal)) : date('Y');
 
-        $this->db->select('no_surat');
-        $this->db->from('penawaran');
-        $this->db->like('no_surat', '/OPJI/' . $bulan . '/' . $tahun, 'after');
-        $this->db->order_by('id', 'DESC');
-        $this->db->limit(1);
-        $last = $this->db->get()->row();
+        // no_surat berformat "NN/OPJI/MM/YYYY": bagian bulan/tahun ada di
+        // BELAKANG, jadi pola LIKE-nya harus diawali '%' (bukan diakhiri '%').
+        // Nomor urut terbesar diambil dari angka sebelum '/' pertama.
+        $row = $this->db->query(
+            "SELECT MAX(CAST(SUBSTRING_INDEX(no_surat, '/', 1) AS UNSIGNED)) AS maks
+             FROM penawaran
+             WHERE no_surat LIKE ?",
+            ['%/OPJI/' . $bulan . '/' . $tahun]
+        )->row();
 
-        $urut = 1;
-        if ($last && preg_match('/^(\d+)\//', $last->no_surat, $m)) {
-            $urut = ((int) $m[1]) + 1;
-        }
+        $urut = ($row && $row->maks !== null) ? ((int) $row->maks) + 1 : 1;
 
         return sprintf('%02d', $urut) . '/OPJI/' . $bulan . '/' . $tahun;
     }

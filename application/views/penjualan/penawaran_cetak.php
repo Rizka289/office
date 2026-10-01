@@ -1,10 +1,6 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 <?php
-// Kelompokkan baris item per "jenis barang" (id_barang kalau ada, atau
-// kombinasi jenis/warna/finishing/komponen kalau item diisi manual tanpa
-// pilih dari master Barang). Tujuannya supaya foto & deskripsi cukup
-// ditampilkan sekali, sedangkan ukuran/qty/harga tetap tampil per varian —
-// persis seperti contoh dokumen surat penawaran aslinya.
+// Kelompokkan baris item per "jenis barang"
 $kelompok = [];
 
 foreach ($items as $it) {
@@ -37,8 +33,6 @@ foreach ($items as $it) {
   $kelompok[$kunci]['baris'][] = $it;
 }
 
-// Folder tempat file gambar barang diupload. SESUAIKAN path ini kalau
-// ternyata beda dengan folder upload yang dipakai modul master Barang.
 $folder_gambar_barang = 'uploads/barang/';
 ?>
 <!DOCTYPE html>
@@ -75,68 +69,95 @@ $folder_gambar_barang = 'uploads/barang/';
       padding: 28px 32px;
       border-radius: 6px;
       box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+      position: relative;
     }
 
-    .no-print {
+    /* TOMBOL CETAK DIPISAH KE POJOK KANAN ATAS */
+    .action-bar {
       text-align: right;
-      margin-bottom: 14px;
+      margin-bottom: 10px;
     }
 
-    .no-print button {
+    .btn-cetak {
       background: var(--brand);
       color: #fff;
       border: none;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
     }
 
+    .btn-cetak:hover {
+      background: var(--brand-dark);
+    }
+
+    /* KOP SURAT (GAMBAR DI KIRI, TEKS DITENGAH) */
     .kop {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 14px;
-      border-bottom: 3px solid var(--brand);
-      padding-bottom: 12px;
-      margin-bottom: 16px;
+      border-bottom: 3px double var(--brand);
+      padding-bottom: 14px;
+      margin-bottom: 20px;
+      position: relative;
     }
 
     .kop-logo {
-      width: 46px;
-      height: 46px;
-      border-radius: 8px;
-      background: var(--brand-light);
-      color: var(--brand-dark);
+      width: 80px;
+      height: 80px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      font-size: 18px;
-      overflow: hidden;
+      flex-shrink: 0;
     }
 
     .kop-logo img {
-      width: 100%;
-      height: 100%;
+      max-width: 100%;
+      max-height: 100%;
       object-fit: contain;
     }
 
-    .kop-text {
+    .kop-info {
+      flex: 1;
       text-align: center;
+      padding-right: 80px; /* Menjaga agar teks tetap tepat di tengah halaman */
     }
 
-    .kop-text .nama {
+    .kop-info h2 {
+      margin: 0 0 3px 0;
+      font-size: 20px;
       font-weight: 700;
-      font-size: 16px;
       color: var(--brand-dark);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
     }
 
-    .kop-text .sub {
+    .kop-info .sub-title {
+      font-size: 12px;
+      color: #333;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .kop-info .alamat-kontak {
       font-size: 11px;
-      color: #666;
+      color: #555;
+      line-height: 1.4;
     }
 
+    .cn {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 400;
+      color: #6b8a76;
+    }
+
+    /* INFO SURAT */
     .info-surat {
       width: 100%;
       margin-bottom: 16px;
@@ -157,13 +178,7 @@ $folder_gambar_barang = 'uploads/barang/';
       width: 12px;
     }
 
-    .cn {
-      display: block;
-      font-size: 9.5px;
-      font-weight: 400;
-      color: #6b8a76;
-    }
-
+    /* TABEL ITEM */
     table.item-table {
       width: 100%;
       border-collapse: collapse;
@@ -279,12 +294,7 @@ $folder_gambar_barang = 'uploads/barang/';
       margin-top: 2px;
     }
 
-    .keterangan-block .spek-label {
-      display: block;
-      color: #555;
-      margin-bottom: 2px;
-    }
-
+    /* TOTAL TABLE */
     table.total-table {
       width: 100%;
       border-collapse: collapse;
@@ -358,7 +368,7 @@ $folder_gambar_barang = 'uploads/barang/';
       }
 
       .no-print {
-        display: none;
+        display: none !important;
       }
 
       table.item-table {
@@ -376,18 +386,25 @@ $folder_gambar_barang = 'uploads/barang/';
 
   <div class="sheet">
 
-    <div class="no-print">
-      <button onclick="window.print()"><i class="bi bi-printer"></i> Cetak / Simpan PDF</button>
+    <!-- Tombol Aksi (Tidak Ikut Tercetak) -->
+    <div class="action-bar no-print">
+      <button onclick="window.print()" class="btn-cetak">
+        <i class="bi bi-printer"></i> Cetak / Simpan PDF
+      </button>
     </div>
 
-    <!-- Kop Surat -->
+    <!-- Kop Surat: Gambar di Kiri, Teks Rata Tengah -->
     <div class="kop">
       <div class="kop-logo">
-        <img src="<?= base_url('uploads/logo/Logo.jpeg'); ?>" alt="Logo" onerror="this.style.display='none'">
+        <img src="<?= base_url('uploads/logo/Logo.jpeg'); ?>" alt="Logo PT Oupai" onerror="this.style.display='none'">
       </div>
-      <div class="kop-text">
-        <div class="nama">PT OUPAI PINTU JENDELA INDONESIA</div>
-        <div class="sub">Manufaktur Pintu &amp; Jendela</div>
+      <div class="kop-info">
+        <h2>PT OUPAI PINTU JENDELA INDONESIA</h2>
+        <div class="sub-title">Manufaktur Pintu & Jendela <span class="cn">| 门窗制造厂</span></div>
+        <div class="alamat-kontak">
+          Jl. Prof. Dr. Hamka No.45, Tambakaji, 50185, Kec. Ngaliyan Kota Semarang, Jawa Tengah, Indonesia<br>
+          Telp: 085819570958 &bull; Email: ptoupaipintujendelaindonesia@gmail.com
+        </div>
       </div>
     </div>
 
@@ -424,14 +441,14 @@ $folder_gambar_barang = 'uploads/barang/';
     <table class="item-table">
       <thead>
         <tr>
-          <th>GAMBAR<span class="cn">图片</span></th>
-          <th>Deskripsi<span class="cn">描述</span></th>
-          <th>Lebar (mm)<span class="cn">宽 (mm)</span></th>
-          <th>Tinggi (mm)<span class="cn">高 (mm)</span></th>
-          <th>Total Luas (m²)<span class="cn">总面积 (m²)</span></th>
-          <th>Qty<span class="cn">数量</span></th>
+          <th>GAMBAR<br><span class="cn">图片</span></th>
+          <th>Deskripsi<br><span class="cn">描述</span></th>
+          <th>Lebar (mm)<br><span class="cn">宽 (mm)</span></th>
+          <th>Tinggi (mm)<br><span class="cn">高 (mm)</span></th>
+          <th>Total Luas (m²)<br><span class="cn">总面积 (m²)</span></th>
+          <th>Qty<br><span class="cn">数量</span></th>
           <th>Harga / Unit</th>
-          <th>Total Harga<span class="cn">总计</span></th>
+          <th>Total Harga<br><span class="cn">总计</span></th>
         </tr>
       </thead>
       <tbody>
@@ -440,7 +457,6 @@ $folder_gambar_barang = 'uploads/barang/';
           <?php
           $jumlah_baris  = count($grp['baris']);
           $baris_pertama = TRUE;
-          // var_dump($kelompok);die;
           ?>
           <?php foreach ($grp['baris'] as $it): $jumlah_unit += (int) $it->qty; ?>
             <tr>
@@ -476,19 +492,24 @@ $folder_gambar_barang = 'uploads/barang/';
 
                     <?php if (!empty($grp['komponen_kusen']) || !empty($grp['komponen_daun'])): ?>
                       <tr>
-                        <td colspan="2" class="spek-label">Komponen<span class="cn">成分</span></td>
-                      </tr>
-                      <tr>
+                        <td class="spek-label" style="vertical-align: middle; width: 35%;">
+                          Ketebalan Plate<br> Aluminium <br>
+                          <span class="cn">铝板厚度</span>
+                        </td>
                         <td colspan="2">
-                          <table class="komponen-table">
-                            <tr>
-                              <th>Kusen (mm)<span class="cn">门框 (mm)</span></th>
-                              <th>Daun (mm)<span class="cn">叶子 (mm)</span></th>
-                            </tr>
-                            <tr>
-                              <td><?= html_escape($grp['komponen_kusen'] ?: '-'); ?></td>
-                              <td><?= html_escape($grp['komponen_daun'] ?: '-'); ?></td>
-                            </tr>
+                          <table class="komponen-table" style="width: 100%;">
+                            <thead>
+                              <tr>
+                                <th>Kusen (mm) <br><span class="cn">门框 (mm)</span></th>
+                                <th>Daun (mm) <br><span class="cn">叶子 (mm)</span></th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td><?= html_escape($grp['komponen_kusen'] ?: '-'); ?></td>
+                                <td><?= html_escape($grp['komponen_daun'] ?: '-'); ?></td>
+                              </tr>
+                            </tbody>
                           </table>
                         </td>
                       </tr>
@@ -501,8 +522,11 @@ $folder_gambar_barang = 'uploads/barang/';
                     <?php endif; ?>
                     <?php if (!empty($grp['keterangan'])): ?>
                       <tr>
-                        <td colspan="2" class="keterangan-block">
-                          <span class="spek-label">Keterangan<span class="cn">信息</span></span>
+                        <td class="spek-label" style="vertical-align: top; width: 35%;">
+                          Keterangan <br>
+                          <span class="cn">信息</span>
+                        </td>
+                        <td class="keterangan-block" style="vertical-align: top;">
                           <?= nl2br(html_escape(implode("\n", $grp['keterangan']))); ?>
                         </td>
                       </tr>
@@ -528,6 +552,18 @@ $folder_gambar_barang = 'uploads/barang/';
         <td class="tlabel">Jumlah unit / 单元数量 : <?= $jumlah_unit; ?></td>
         <td class="tval">Subtotal: Rp <?= number_format((float) $header->subtotal, 0, ',', '.'); ?></td>
       </tr>
+      <?php if ((float) ($header->biaya_pasang ?? 0) > 0): ?>
+        <tr>
+          <td class="tlabel">Biaya Pemasangan / 安装费</td>
+          <td class="tval">Rp <?= number_format((float) $header->biaya_pasang, 0, ',', '.'); ?></td>
+        </tr>
+      <?php endif; ?>
+      <?php if ((float) ($header->biaya_ongkir ?? 0) > 0): ?>
+        <tr>
+          <td class="tlabel">Biaya Pengiriman / 运费</td>
+          <td class="tval">Rp <?= number_format((float) $header->biaya_ongkir, 0, ',', '.'); ?></td>
+        </tr>
+      <?php endif; ?>
       <?php if ((float) $header->ppn_persen > 0): ?>
         <tr>
           <td class="tlabel">PPN <?= rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.'); ?>%</td>
@@ -547,34 +583,50 @@ $folder_gambar_barang = 'uploads/barang/';
     </table>
 
     <!-- Syarat & Ketentuan -->
-    <?php if (!empty($header->ppn_persen)) : ?>
+    <?php
+    // Teks termin pembayaran sesuai pilihan saat cetak (?termin=50_50 | 100).
+    // Tambah opsi baru di sini + di whitelist Penawaran::cetak().
+    $termin_teks = [
+      '50_50' => 'Pembayaran dibayarkan 50% saat memesan dan 50% sebelum barang dikirim / 付款方式为：下单时支付50%，发货前支付剩余50%。',
+      '100'   => 'Pembayaran dibayarkan 100% saat memesan / 付款方式为：下单时一次性支付100%。',
+    ];
+    $teks_bayar = $termin_teks[isset($termin) && isset($termin_teks[$termin]) ? $termin : '50_50'];
+    $is_ppn_exist = !empty($header->ppn_persen) && $header->ppn_persen !== 'null' && $header->ppn_persen > 0;
+    ?>
 
-      <div class="syarat">
-        <strong>Syarat &amp; Ketentuan:</strong>
-        <ol>
-          <li>Pembayaran dibayarkan 50% saat memesan dan 50% sebelum barang dikirim / 付款方式为：下单时支付50%，发货前支付剩余50%。</li>
-          <li>Pembayaran transfer ke Bank Mandiri 1360077787882 atas nama PT OUPAI PINTU JENDELA INDONESIA.</li>
-          <li>Barang pesanan yang sudah diproduksi tidak dapat dibatalkan / 已生产完毕的订单商品无法取消。</li>
-          <li>Penawaran ini tidak bisa untuk dipilih pilih itemnya, apabila ada perubahan dibuatkan penawaran baru / 此优惠不适用于特定商品。如有变更，我们将提供新的优惠。 </li>
-          <li>Toleransi untuk produksi &plusmn; 2.0mm / 生产容差 &plusmn; 2.0mm </li>
-          <li>Harga yang ditawarkan tidak termasuk biaya pemasangan dan pengiriman / 所报价格不包含安装和运费。 </li>
-        </ol>
-      </div>
-    <?php else : ?>
+    <?php
+    // Biaya pemasangan & pengiriman: NULL = tidak dipilih ("belum termasuk"),
+    // angka (termasuk 0) = dipilih ("sudah termasuk").
+    $ada_pasang = (($header->biaya_pasang ?? null) !== null);
+    $ada_ongkir = (($header->biaya_ongkir ?? null) !== null);
 
-      <div class="syarat">
-        <strong>Syarat &amp; Ketentuan:</strong>
-        <ol>
-          <li>Pembayaran dibayarkan 50% saat memesan dan 50% sebelum barang dikirim / 付款方式为：下单时支付50%，发货前支付剩余50%。</li>
-          <li>Pembayaran transfer ke Bank BCA 8715845471 atas nama MAHMUDI / 请将款项转账至 BCA 银行 8715845471 账户，收款人为 MAHMUDI。 </li>
-          <li>Barang pesanan yang sudah diproduksi tidak dapat dibatalkan / 已生产完毕的订单商品无法取消。</li>
-          <li>Penawaran ini tidak bisa untuk dipilih pilih itemnya, apabila ada perubahan dibuatkan penawaran baru / 此优惠不适用于特定商品。如有变更，我们将提供新的优惠。 </li>
-          <li>Toleransi untuk produksi &plusmn; 2.0mm / 生产容差 &plusmn; 2.0mm </li>
-          <li>Harga yang ditawarkan tidak termasuk biaya pemasangan dan pengiriman / 所报价格不包含安装和运费。 </li>
-        </ol>
-      </div>
+    if ($ada_pasang && $ada_ongkir) {
+      $teks_biaya = 'Harga yang ditawarkan sudah termasuk biaya pemasangan dan pengiriman / 所报价格已包含安装和运费。';
+    } elseif ($ada_pasang) {
+      $teks_biaya = 'Harga yang ditawarkan sudah termasuk biaya pemasangan, belum termasuk biaya pengiriman / 所报价格已包含安装费，不含运费。';
+    } elseif ($ada_ongkir) {
+      $teks_biaya = 'Harga yang ditawarkan sudah termasuk biaya pengiriman, belum termasuk biaya pemasangan / 所报价格已包含运费，不含安装费。';
+    } else {
+      $teks_biaya = 'Harga yang ditawarkan belum termasuk biaya pemasangan dan pengiriman / 所报价格不包含安装和运费。';
+    }
 
-    <?php endif; ?>
+    // Hanya rekening tujuan yang berbeda antara penawaran ber-PPN dan tanpa PPN
+    $teks_bank = $is_ppn_exist
+      ? 'Pembayaran transfer ke Bank Mandiri 1360077787882 atas nama PT OUPAI PINTU JENDELA INDONESIA.'
+      : 'Pembayaran transfer ke Bank BCA 8715845471 atas nama MAHMUDI / 请将款项转账至 BCA 银行 8715845471 账户，收款人为 MAHMUDI。';
+    ?>
+
+    <div class="syarat">
+      <strong>Syarat &amp; Ketentuan:</strong>
+      <ol>
+        <li><?= $teks_bayar; ?></li>
+        <li><?= $teks_bank; ?></li>
+        <li>Barang pesanan yang sudah diproduksi tidak dapat dibatalkan / 已生产完毕的订单商品无法取消。</li>
+        <li>Penawaran ini tidak bisa untuk dipilih pilih itemnya, apabila ada perubahan dibuatkan penawaran baru / 此优惠不适用于特定商品。如有变更，我们将提供新的优惠。 </li>
+        <li>Toleransi untuk produksi &plusmn; 2.0mm / 生产容差 &plusmn; 2.0mm </li>
+        <li><?= $teks_biaya; ?></li>
+      </ol>
+    </div>
 
     <?php if (!empty($header->catatan)): ?>
       <p><strong>Catatan tambahan:</strong> <?= nl2br(html_escape($header->catatan)); ?></p>

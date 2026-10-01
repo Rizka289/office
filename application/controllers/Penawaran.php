@@ -101,8 +101,13 @@ class Penawaran extends MY_Controller
             show_404();
         }
 
+        // Termin pembayaran untuk Syarat & Ketentuan (dipilih saat klik
+        // Cetak PDF). Hanya nilai di whitelist yang diterima; default 50_50.
+        $termin = $this->input->get('termin', TRUE);
+
         $data['header'] = $penawaran['header'];
         $data['items']  = $penawaran['items'];
+        $data['termin'] = in_array($termin, ['50_50', '100'], TRUE) ? $termin : '50_50';
 
         $this->load->view('penjualan/penawaran_cetak', $data);
     }
@@ -172,12 +177,17 @@ class Penawaran extends MY_Controller
             $luas  = round(($l * $t) / 1000000, 4); // mm² -> m²
             $total = $q * $h;
 
+            $fin_val = trim($finishing[$i] ?? '');
+            if ($fin_val === '') {
+                $fin_val = 'Powder Coating / 粉末涂料';
+            }
+
             $items[] = [
                 'id_barang'      => $idb > 0 ? $idb : null,
                 'jenis_item'     => $jenis,
                 'warna'          => trim($warna[$i] ?? ''),
                 'komponen'       => $komponen_item,
-                'finishing'      => trim($finishing[$i] ?? ''),
+                'finishing'      => $fin_val,
                 'komponen_kusen' => trim($komponen_kusen[$i] ?? ''),
                 'komponen_daun'  => trim($komponen_daun[$i] ?? ''),
                 'lebar_mm'       => $l,
@@ -196,8 +206,8 @@ class Penawaran extends MY_Controller
     }
 
     // Hitung PPN, PPh & grand total dari subtotal (sesuai checkbox di form).
-    // Saat edit, persen pajak dikirim dari data tersimpan ($ppn_persen /
-    // $pph_persen) karena checkbox pajak dikunci di form edit.
+    // Saat edit, checkbox pajak juga boleh diubah (selama belum approve),
+    // jadi persen dibaca dari POST sama seperti saat tambah.
     private function _hitung_total($subtotal, $ppn_persen = null, $pph_persen = null)
     {
         if ($ppn_persen === null) {
@@ -206,16 +216,30 @@ class Penawaran extends MY_Controller
         if ($pph_persen === null) {
             $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
         }
-        $ppn_nominal = round($subtotal * $ppn_persen / 100);
-        $pph_nominal = round($subtotal * $pph_persen / 100);
+
+        // Biaya pemasangan & pengiriman (ongkir): switch mati -> NULL (S&K cetak
+        // "belum termasuk"); switch hidup -> angka >= 0 (S&K cetak "sudah termasuk").
+        // Nominal diabaikan di server kalau switch-nya tidak dicentang.
+        $biaya_pasang = $this->input->post('pakai_pasang')
+            ? max(0, (float) $this->input->post('biaya_pasang')) : null;
+        $biaya_ongkir = $this->input->post('pakai_ongkir')
+            ? max(0, (float) $this->input->post('biaya_ongkir')) : null;
+
+        // Biaya tambahan ikut menjadi dasar perhitungan PPN/PPh
+        $dasar_pajak = $subtotal + (float) $biaya_pasang + (float) $biaya_ongkir;
+
+        $ppn_nominal = round($dasar_pajak * $ppn_persen / 100);
+        $pph_nominal = round($dasar_pajak * $pph_persen / 100);
 
         return [
-            'subtotal'    => $subtotal,
-            'ppn_persen'  => $ppn_persen,
-            'ppn_nominal' => $ppn_nominal,
-            'pph_persen'  => $pph_persen,
-            'pph_nominal' => $pph_nominal,
-            'grand_total' => $subtotal + $ppn_nominal + $pph_nominal,
+            'subtotal'     => $subtotal,
+            'biaya_pasang' => $biaya_pasang,
+            'biaya_ongkir' => $biaya_ongkir,
+            'ppn_persen'   => $ppn_persen,
+            'ppn_nominal'  => $ppn_nominal,
+            'pph_persen'   => $pph_persen,
+            'pph_nominal'  => $pph_nominal,
+            'grand_total'  => $dasar_pajak + $ppn_nominal + $pph_nominal,
         ];
     }
 
@@ -227,7 +251,6 @@ class Penawaran extends MY_Controller
         $tanggal     = $this->input->post('tanggal', TRUE);
         $id_customer = (int) $this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
-        $no_surat    = $this->input->post('no_surat', TRUE);
 
         if (empty($tanggal) || $id_customer <= 0) {
             $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
@@ -242,7 +265,7 @@ class Penawaran extends MY_Controller
         }
 
         $header = array_merge([
-            'no_surat'    => !empty($no_surat) ? $no_surat : $this->Penawaran_model->generate_no_penawaran($tanggal),
+            'no_surat'    => $this->Penawaran_model->generate_no_penawaran($tanggal), // selalu dibuat ulang di server sesuai bulan/tahun tanggal penawaran
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
@@ -312,9 +335,9 @@ class Penawaran extends MY_Controller
             redirect('penawaran/detail/' . $id);
         }
 
-        // Header (tanggal, customer, catatan, no. surat, pajak) TIDAK ikut
-        // diubah saat edit — hanya item yang boleh diubah. Nilai header dari
-        // form sengaja diabaikan.
+        // Header (tanggal, customer, catatan, no. surat) TIDAK ikut diubah
+        // saat edit. Yang boleh berubah: item dan pajak (PPN/PPh), selama
+        // penawaran belum di-approve.
         list($items, $subtotal) = $this->_kumpulkan_item();
 
         if (empty($items)) {
@@ -322,13 +345,9 @@ class Penawaran extends MY_Controller
             redirect('penawaran/edit/' . $id);
         }
 
-        // Yang berubah di header hanya subtotal & total (dihitung ulang dari
-        // item baru, memakai persen pajak yang sudah tersimpan).
-        $header = $this->_hitung_total(
-            $subtotal,
-            (float) $penawaran['header']->ppn_persen,
-            (float) $penawaran['header']->pph_persen
-        );
+        // Yang berubah di header: subtotal, persen & nominal pajak, grand total
+        // (dihitung ulang dari item baru + checkbox PPN/PPh yang dikirim form).
+        $header = $this->_hitung_total($subtotal);
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
             $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil diperbarui.');

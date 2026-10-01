@@ -1,121 +1,261 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed'); ?>
 
 <?php
-  $tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
-  $tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
-  $list_customer = isset($list_customer) ? (array) $list_customer : [];
-  $list_barang   = isset($list_barang) ? (array) $list_barang : [];
-  $ada_customer  = !empty($list_customer);
-  $tanggal_maks  = date('Y-m-d');
+$tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
+$tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
+$list_customer = isset($list_customer) ? (array) $list_customer : [];
+$list_barang   = isset($list_barang) ? (array) $list_barang : [];
+$ada_customer  = !empty($list_customer);
+$tanggal_maks  = date('Y-m-d');
 
-  // Mode form: 'tambah' (default) atau 'edit' (dikirim dari Penawaran::edit)
-  $is_edit     = (isset($mode) && $mode === 'edit' && !empty($penawaran_edit));
-  $pen         = $is_edit ? $penawaran_edit : null;
-  $tanggal_val = $is_edit ? substr((string) $pen->tanggal, 0, 10) : $tanggal_maks;
-  $form_action = $is_edit ? 'penawaran/update/' . (int) $pen->id : 'penawaran/simpan';
-  // Saat edit, header (tanggal, customer, catatan, pajak) dikunci: hanya item yang boleh diubah
-  $hdr_lock    = ($ada_customer && !$is_edit) ? '' : 'disabled';
-  $url_batal   = $is_edit ? site_url('penawaran/detail/' . (int) $pen->id) : site_url('penawaran');
+// Mode form: 'tambah' (default) atau 'edit' (dikirim dari Penawaran::edit)
+$is_edit     = (isset($mode) && $mode === 'edit' && !empty($penawaran_edit));
+$pen         = $is_edit ? $penawaran_edit : null;
+$tanggal_val = $is_edit ? substr((string) $pen->tanggal, 0, 10) : $tanggal_maks;
+$form_action = $is_edit ? 'penawaran/update/' . (int) $pen->id : 'penawaran/simpan';
+// Saat edit, header (tanggal, customer, catatan, pajak) dikunci: hanya item yang boleh diubah
+$hdr_lock    = ($ada_customer && !$is_edit) ? '' : 'disabled';
+// Pajak (PPN/PPh) TIDAK ikut dikunci saat edit: selama belum di-approve masih boleh diubah
+$pajak_lock  = $ada_customer ? '' : 'disabled';
+$url_batal   = $is_edit ? site_url('penawaran/detail/' . (int) $pen->id) : site_url('penawaran');
 
-  // Item yang sudah tersimpan (mode edit) -> dikirim ke JS untuk dirender
-  $items_js = [];
-  if ($is_edit && !empty($items_edit)) {
-    foreach ($items_edit as $it) {
-      $it = (array) $it;
-      $items_js[] = [
-        'id_barang'      => (int) ($it['id_barang'] ?? 0),
-        'jenis_item'     => $it['jenis_item'] ?? '',
-        'warna'          => $it['warna'] ?? '',
-        'komponen'       => $it['komponen'] ?? '',
-        'finishing'      => $it['finishing'] ?? '',
-        'komponen_kusen' => $it['komponen_kusen'] ?? '',
-        'komponen_daun'  => $it['komponen_daun'] ?? '',
-        'lebar_mm'       => (int) ($it['lebar_mm'] ?? 0),
-        'tinggi_mm'      => (int) ($it['tinggi_mm'] ?? 0),
-        'qty'            => (int) ($it['qty'] ?? 1),
-        'harga_unit'     => (float) ($it['harga_unit'] ?? 0),
-        'keterangan'     => $it['keterangan'] ?? '',
-      ];
-    }
+// Biaya pemasangan & pengiriman (kolom penawaran.biaya_pasang / biaya_ongkir):
+//   NULL   = tidak dipilih -> S&K cetak: "belum termasuk"
+//   angka  = dipilih (0 = sudah termasuk di harga item, >0 = ditagih terpisah)
+//            -> S&K cetak: "sudah termasuk"
+$biaya_pasang_db = $is_edit ? ($pen->biaya_pasang ?? null) : null;
+$biaya_ongkir_db = $is_edit ? ($pen->biaya_ongkir ?? null) : null;
+$pasang_on  = ($biaya_pasang_db !== null);
+$ongkir_on  = ($biaya_ongkir_db !== null);
+$pasang_val = $pasang_on ? (string) round((float) $biaya_pasang_db) : '';
+$ongkir_val = $ongkir_on ? (string) round((float) $biaya_ongkir_db) : '';
+
+// Item yang sudah tersimpan (mode edit) -> dikirim ke JS untuk dirender
+$items_js = [];
+if ($is_edit && !empty($items_edit)) {
+  foreach ($items_edit as $it) {
+    $it = (array) $it;
+    $items_js[] = [
+      'id_barang'      => (int) ($it['id_barang'] ?? 0),
+      'jenis_item'     => $it['jenis_item'] ?? '',
+      'warna'          => $it['warna'] ?? '',
+      'komponen'       => $it['komponen'] ?? '',
+      'finishing'      => $it['finishing'] ?? '',
+      'komponen_kusen' => $it['komponen_kusen'] ?? '',
+      'komponen_daun'  => $it['komponen_daun'] ?? '',
+      'lebar_mm'       => (int) ($it['lebar_mm'] ?? 0),
+      'tinggi_mm'      => (int) ($it['tinggi_mm'] ?? 0),
+      'qty'            => (int) ($it['qty'] ?? 1),
+      'harga_unit'     => (float) ($it['harga_unit'] ?? 0),
+      'keterangan'     => $it['keterangan'] ?? '',
+    ];
   }
+}
 ?>
 
 <style>
-  .pnw-page { --pnw-brand: #2f6f4f; --pnw-brand-dark: #234f38; --pnw-radius: 14px; }
+  .pnw-page {
+    --pnw-brand: #2f6f4f;
+    --pnw-brand-dark: #234f38;
+    --pnw-radius: 14px;
+  }
 
   .pnw-page .page-header {
     background: linear-gradient(135deg, var(--pnw-brand), var(--pnw-brand-dark));
-    color: #fff; padding: 22px 28px; border-radius: var(--pnw-radius);
-    margin-bottom: 22px; box-shadow: 0 6px 18px rgba(35,79,56,.25);
+    color: #fff;
+    padding: 22px 28px;
+    border-radius: var(--pnw-radius);
+    margin-bottom: 22px;
+    box-shadow: 0 6px 18px rgba(35, 79, 56, .25);
   }
-  .pnw-page .page-header h4 { margin: 0; font-weight: 600; }
-  .pnw-page .page-header small { opacity: .85; }
+
+  .pnw-page .page-header h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .pnw-page .page-header small {
+    opacity: .85;
+  }
 
   .pnw-page .card-modern {
-    background: #fff; border: none; border-radius: var(--pnw-radius);
-    box-shadow: 0 2px 10px rgba(0,0,0,.06); margin-bottom: 20px;
+    background: #fff;
+    border: none;
+    border-radius: var(--pnw-radius);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
+    margin-bottom: 20px;
   }
-  .pnw-page .card-modern .card-header {
-    background: #fff; border-bottom: 1px solid #eef1ef;
-    border-radius: var(--pnw-radius) var(--pnw-radius) 0 0;
-    font-weight: 600; color: var(--pnw-brand-dark); padding: 14px 20px;
-  }
-  .pnw-page .card-modern .card-body { padding: 20px; }
 
-  .pnw-page .form-label { font-weight: 500; font-size: .84rem; color: #4a4a4a; }
-  .pnw-page .form-control[readonly] { background: #f3f6f4; color: #5a5a5a; }
-  .pnw-page .form-control:focus, .pnw-page .form-select:focus {
-    border-color: var(--pnw-brand); box-shadow: 0 0 0 .2rem rgba(47,111,79,.15);
+  .pnw-page .card-modern .card-header {
+    background: #fff;
+    border-bottom: 1px solid #eef1ef;
+    border-radius: var(--pnw-radius) var(--pnw-radius) 0 0;
+    font-weight: 600;
+    color: var(--pnw-brand-dark);
+    padding: 14px 20px;
+  }
+
+  .pnw-page .card-modern .card-body {
+    padding: 20px;
+  }
+
+  .pnw-page .form-label {
+    font-weight: 500;
+    font-size: .84rem;
+    color: #4a4a4a;
+  }
+
+  .pnw-page .form-control[readonly] {
+    background: #f3f6f4;
+    color: #5a5a5a;
+  }
+
+  .pnw-page .form-control:focus,
+  .pnw-page .form-select:focus {
+    border-color: var(--pnw-brand);
+    box-shadow: 0 0 0 .2rem rgba(47, 111, 79, .15);
   }
 
   .pnw-page .item-card {
-    border: 1px solid #eef1ef; border-radius: 12px; padding: 16px;
-    margin-bottom: 14px; position: relative; background: #fbfdfc;
+    border: 1px solid #eef1ef;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    position: relative;
+    background: #fbfdfc;
   }
-  .pnw-page .item-card .item-title { font-weight: 700; color: var(--pnw-brand-dark); font-size: .88rem; }
-  .pnw-page .item-card .item-subtotal { font-weight: 700; color: var(--pnw-brand-dark); }
-  .pnw-page .btn-remove-item { color: #b3261e; }
-  .pnw-page .btn-remove-item:hover { color: #7a1a15; }
-  .pnw-page .btn-remove-item:disabled { color: #c9c9c9; }
 
-  .pnw-page .barang-picker { position: relative; }
-  .pnw-page .it-komponen[readonly] { background: #eef6f1; color: var(--pnw-brand-dark); cursor: not-allowed; }
-  .pnw-page .it-jenis.is-locked { background: #eef6f1; color: var(--pnw-brand-dark); font-weight: 600; cursor: not-allowed; }
+  .pnw-page .item-card .item-title {
+    font-weight: 700;
+    color: var(--pnw-brand-dark);
+    font-size: .88rem;
+  }
+
+  .pnw-page .item-card .item-subtotal {
+    font-weight: 700;
+    color: var(--pnw-brand-dark);
+  }
+
+  .pnw-page .btn-remove-item {
+    color: #b3261e;
+  }
+
+  .pnw-page .btn-remove-item:hover {
+    color: #7a1a15;
+  }
+
+  .pnw-page .btn-remove-item:disabled {
+    color: #c9c9c9;
+  }
+
+  .pnw-page .barang-picker {
+    position: relative;
+  }
+
+  .pnw-page .it-komponen[readonly] {
+    background: #eef6f1;
+    color: var(--pnw-brand-dark);
+    cursor: not-allowed;
+  }
+
+  .pnw-page .it-jenis.is-locked {
+    background: #eef6f1;
+    color: var(--pnw-brand-dark);
+    font-weight: 600;
+    cursor: not-allowed;
+  }
+
   .pnw-page .barang-dropdown-list {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
-    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid #dfe6e2;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    max-height: 220px;
+    overflow-y: auto;
     margin-top: 4px;
   }
-  .pnw-page .barang-dropdown-list .barang-opt {
-    padding: 8px 12px; cursor: pointer; font-size: .85rem; border-bottom: 1px solid #f2f4f3;
-  }
-  .pnw-page .barang-dropdown-list .barang-opt:last-child { border-bottom: none; }
-  .pnw-page .barang-dropdown-list .barang-opt:hover,
-  .pnw-page .barang-dropdown-list .barang-opt.active { background: #eef6f1; }
-  .pnw-page .barang-dropdown-list .barang-opt .bo-nama { font-weight: 600; color: #26332c; display: block; }
-  .pnw-page .barang-dropdown-list .barang-opt .bo-meta { color: #7a8a80; font-size: .76rem; }
-  .pnw-page .barang-dropdown-list .barang-empty { padding: 8px 12px; font-size: .82rem; color: #9aa39d; }
-  .pnw-page .btn-ganti-barang { font-size: .76rem; }
 
-  .pnw-page .summary-box { background: #f8faf9; border: 1px dashed #cfe0d6; border-radius: 10px; padding: 16px 18px; }
-  .pnw-page .total-box { background: #f8faf9; border-left: 4px solid var(--pnw-brand); border-radius: 10px; padding: 16px 18px; }
+  .pnw-page .barang-dropdown-list .barang-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .85rem;
+    border-bottom: 1px solid #f2f4f3;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt:last-child {
+    border-bottom: none;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt:hover,
+  .pnw-page .barang-dropdown-list .barang-opt.active {
+    background: #eef6f1;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt .bo-nama {
+    font-weight: 600;
+    color: #26332c;
+    display: block;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt .bo-meta {
+    color: #7a8a80;
+    font-size: .76rem;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-empty {
+    padding: 8px 12px;
+    font-size: .82rem;
+    color: #9aa39d;
+  }
+
+  .pnw-page .btn-ganti-barang {
+    font-size: .76rem;
+  }
+
+  .pnw-page .summary-box {
+    background: #f8faf9;
+    border: 1px dashed #cfe0d6;
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .pnw-page .total-box {
+    background: #f8faf9;
+    border-left: 4px solid var(--pnw-brand);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
 
   .pnw-page .footer-actions {
-    position: sticky; bottom: 0; background: #fff; padding: 14px 20px;
-    border-radius: var(--pnw-radius); box-shadow: 0 -4px 14px rgba(0,0,0,.06);
-    display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; z-index: 5;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 14px 20px;
+    border-radius: var(--pnw-radius);
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    z-index: 5;
   }
 </style>
 
 <div class="pnw-page">
 
-  <script id="dataBarang" type="application/json"><?= json_encode($list_barang, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?></script>
+  <script id="dataBarang" type="application/json">
+    <?= json_encode($list_barang, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>
+  </script>
 
   <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
       <h4><i class="bi bi-file-earmark-text me-2"></i><?= $is_edit ? 'Edit Penawaran' : 'Buat Penawaran Baru'; ?></h4>
-      <small><?= $is_edit ? 'Penawaran belum di-approve: hanya item yang bisa diubah.' : 'Isi data customer dan item barang yang ditawarkan.'; ?></small>
+      <small><?= $is_edit ? 'Penawaran belum di-approve: item, biaya pemasangan/pengiriman, dan pajak masih bisa diubah.' : 'Isi data customer dan item barang yang ditawarkan.'; ?></small>
     </div>
     <div class="text-end">
       <div class="fw-bold fs-5">No. Surat: <?= html_escape($no_surat); ?></div>
@@ -144,14 +284,14 @@
     <div class="card-body">
       <?php if ($is_edit): ?>
         <div class="alert alert-info py-2 small mb-3">
-          <i class="bi bi-lock me-1"></i>Tanggal, customer, catatan, dan pajak dikunci. Yang bisa diubah hanya <strong>item penawaran</strong> di bawah.
+          <i class="bi bi-lock me-1"></i>Tanggal, customer, dan catatan dikunci. Yang bisa diubah hanya <strong>item penawaran</strong>, <strong>biaya pemasangan/pengiriman</strong>, dan <strong>pajak (PPN/PPh)</strong>.
         </div>
       <?php endif; ?>
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label">No. Surat</label>
           <input type="text" name="no_surat" class="form-control" value="<?= html_escape($no_surat); ?>" readonly>
-          <div class="form-text">Dibuat otomatis oleh sistem.</div>
+          <div class="form-text"><?= $is_edit ? 'Dibuat otomatis oleh sistem.' : 'Perkiraan. Nomor final ditentukan saat disimpan, sesuai bulan pada tanggal penawaran.'; ?></div>
         </div>
         <div class="col-md-3">
           <label for="tanggal" class="form-label">Tanggal <span class="text-danger">*</span></label>
@@ -188,6 +328,41 @@
     </div>
   </div>
 
+  <!-- Biaya pemasangan & pengiriman -->
+  <div class="card-modern">
+    <div class="card-header"><i class="bi bi-truck me-2"></i>Biaya Pemasangan &amp; Pengiriman</div>
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_pasang" name="pakai_pasang" value="1" <?= $pasang_on ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
+            <label class="form-check-label" for="pakai_pasang">Sudah termasuk biaya pemasangan</label>
+          </div>
+          <div id="wrapPasang" class="<?= $pasang_on ? '' : 'd-none'; ?>">
+            <label for="biaya_pasang" class="form-label">Nominal biaya pemasangan (Rp)</label>
+            <input type="number" min="0" step="1" id="biaya_pasang" name="biaya_pasang" class="form-control" placeholder="0" value="<?= html_escape($pasang_val); ?>" <?= $pasang_on ? '' : 'disabled'; ?>>
+            <div class="form-text">Isi kalau ditagih terpisah. Kosong / 0 = sudah termasuk di harga item.</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_ongkir" name="pakai_ongkir" value="1" <?= $ongkir_on ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
+            <label class="form-check-label" for="pakai_ongkir">Sudah termasuk biaya pengiriman (ongkir)</label>
+          </div>
+          <div id="wrapOngkir" class="<?= $ongkir_on ? '' : 'd-none'; ?>">
+            <label for="biaya_ongkir" class="form-label">Nominal biaya pengiriman (Rp)</label>
+            <input type="number" min="0" step="1" id="biaya_ongkir" name="biaya_ongkir" class="form-control" placeholder="0" value="<?= html_escape($ongkir_val); ?>" <?= $ongkir_on ? '' : 'disabled'; ?>>
+            <div class="form-text">Isi kalau ditagih terpisah. Kosong / 0 = sudah termasuk di harga item.</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-text mt-3">
+        Di Syarat &amp; Ketentuan saat cetak: kalau dicentang tertulis <strong>sudah termasuk</strong>, kalau tidak dicentang tertulis <strong>belum termasuk</strong>.
+        Nominal yang diisi ikut menambah subtotal dan menjadi dasar perhitungan PPN/PPh.
+      </div>
+    </div>
+  </div>
+
   <!-- Ringkasan -->
   <div class="row g-3 mb-3">
     <div class="col-lg-6">
@@ -195,11 +370,11 @@
         <div class="card-header"><i class="bi bi-percent me-2"></i>Pajak</div>
         <div class="card-body">
           <div class="form-check form-switch mb-3">
-            <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= ($is_edit && (float) $pen->ppn_persen > 0) ? 'checked' : ''; ?> <?= $hdr_lock; ?>>
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= ($is_edit && (float) $pen->ppn_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
             <label class="form-check-label" for="pakai_ppn">Kenakan PPN <?= html_escape($tarif_ppn); ?>%</label>
           </div>
           <div class="form-check form-switch mb-0">
-            <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $hdr_lock; ?>>
+            <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
             <label class="form-check-label" for="pakai_pph">Kenakan PPh <?= html_escape($tarif_pph); ?>%</label>
           </div>
           <div class="form-text mt-2">Centang kalau customer/transaksi ini kena pajak. Kalau tidak dicentang, pajak tersebut tidak ditambahkan ke total.</div>
@@ -216,6 +391,12 @@
           </div>
           <div class="d-flex justify-content-between small mb-1">
             <span class="text-muted">Subtotal</span><span id="sumSubtotal">Rp 0</span>
+          </div>
+          <div class="d-flex justify-content-between small mb-1 d-none" id="rowSumPasang">
+            <span class="text-muted">Biaya Pemasangan</span><span id="sumPasang">Rp 0</span>
+          </div>
+          <div class="d-flex justify-content-between small mb-1 d-none" id="rowSumOngkir">
+            <span class="text-muted">Biaya Pengiriman</span><span id="sumOngkir">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
             <span class="text-muted">PPN <?= html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
@@ -256,7 +437,7 @@
         <div class="barang-picker">
           <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
           <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
-                 placeholder="Ketik nama/kode barang..." autocomplete="off" required>
+            placeholder="Ketik nama/kode barang..." autocomplete="off" required>
           <div class="barang-dropdown-list d-none"></div>
         </div>
         <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
@@ -269,7 +450,7 @@
       </div>
       <div class="col-md-4">
         <label class="form-label">Finishing</label>
-        <input type="text" name="finishing[]" class="form-control" placeholder="Mis. Powder Coating">
+        <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Powder Coating / 粉末涂料">
       </div>
 
       <div class="col-6 col-md-2">
@@ -319,265 +500,315 @@
 </template>
 
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  var wrap        = document.getElementById('wrapItem');
-  var tpl         = document.getElementById('templateItem');
-  var btnTambah   = document.getElementById('btnTambahItem');
-  var form        = document.getElementById('formPenawaran');
-  var chkPpn      = document.getElementById('pakai_ppn');
-  var chkPph      = document.getElementById('pakai_pph');
-  var TARIF_PPN   = <?= (float) $tarif_ppn; ?>;
-  var TARIF_PPH   = <?= (float) $tarif_pph; ?>;
+  document.addEventListener('DOMContentLoaded', function() {
+    var wrap = document.getElementById('wrapItem');
+    var tpl = document.getElementById('templateItem');
+    var btnTambah = document.getElementById('btnTambahItem');
+    var form = document.getElementById('formPenawaran');
+    var chkPpn = document.getElementById('pakai_ppn');
+    var chkPph = document.getElementById('pakai_pph');
+    var chkPasang = document.getElementById('pakai_pasang');
+    var chkOngkir = document.getElementById('pakai_ongkir');
+    var inpPasang = document.getElementById('biaya_pasang');
+    var inpOngkir = document.getElementById('biaya_ongkir');
+    var wrapPasang = document.getElementById('wrapPasang');
+    var wrapOngkir = document.getElementById('wrapOngkir');
+    var TARIF_PPN = <?= (float) $tarif_ppn; ?>;
+    var TARIF_PPH = <?= (float) $tarif_pph; ?>;
 
-  // Data master Barang untuk pencarian di sisi client (id, kode_barang,
-  // nama, warna, harga_satuan, satuan). Kalau datanya sudah sangat banyak
-  // di kemudian hari, ini sebaiknya diganti pencarian lewat AJAX ke server.
-  var ITEMS_EDIT = <?= json_encode($items_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
-  var DATA_BARANG = [];
-  try {
-    DATA_BARANG = JSON.parse(document.getElementById('dataBarang').textContent || '[]') || [];
-  } catch (e) {
-    DATA_BARANG = [];
-  }
-
-  function rupiah(n) {
-    return 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
-  }
-
-  function baris() {
-    return Array.prototype.slice.call(wrap.querySelectorAll('.item-card'));
-  }
-
-  // Isi 1 kartu item dari data yang sudah tersimpan (mode edit). Nilai
-  // warna/harga yang tersimpan dipakai apa adanya (tidak ditimpa master).
-  function isiItem(card, d) {
-    function set(sel, v) {
-      var el = card.querySelector(sel);
-      if (el) el.value = (v === null || v === undefined) ? '' : v;
+    // Data master Barang untuk pencarian di sisi client (id, kode_barang,
+    // nama, warna, harga_satuan, satuan). Kalau datanya sudah sangat banyak
+    // di kemudian hari, ini sebaiknya diganti pencarian lewat AJAX ke server.
+    var ITEMS_EDIT = <?= json_encode($items_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+    var DATA_BARANG = [];
+    try {
+      DATA_BARANG = JSON.parse(document.getElementById('dataBarang').textContent || '[]') || [];
+    } catch (e) {
+      DATA_BARANG = [];
     }
-    set('.it-jenis', d.jenis_item);
-    set('.it-id-barang', d.id_barang > 0 ? d.id_barang : '');
-    set('.it-warna', d.warna);
-    set('[name="finishing[]"]', d.finishing);
-    set('.it-komponen', d.komponen);
-    set('[name="komponen_kusen[]"]', d.komponen_kusen);
-    set('[name="komponen_daun[]"]', d.komponen_daun);
-    set('.it-lebar', d.lebar_mm);
-    set('.it-tinggi', d.tinggi_mm);
-    set('.it-qty', d.qty);
-    set('.it-harga', d.harga_unit);
-    set('[name="keterangan[]"]', d.keterangan);
 
-    if (d.id_barang > 0) {
-      var cari = card.querySelector('.it-barang-search');
-      cari.readOnly = true;
-      cari.classList.add('is-locked');
-      card.querySelector('.btn-ganti-barang').classList.remove('d-none');
+    function rupiah(n) {
+      return 'Rp ' + Math.round(n || 0).toLocaleString('id-ID');
     }
-  }
 
-  function tambahItem(data) {
-    var node = tpl.content.cloneNode(true);
-    wrap.appendChild(node);
-    if (data) isiItem(wrap.lastElementChild, data);
-    segarkan();
-  }
-
-  function formatHargaBarang(n) {
-    return Math.round(n || 0).toLocaleString('id-ID');
-  }
-
-  function cariBarang(kata) {
-    kata = (kata || '').trim().toLowerCase();
-    if (kata === '') return [];
-    return DATA_BARANG.filter(function (b) {
-      return (b.nama || '').toLowerCase().indexOf(kata) !== -1 ||
-             (b.kode_barang || '').toLowerCase().indexOf(kata) !== -1;
-    }).slice(0, 15);
-  }
-
-  function tutupSemuaDropdown() {
-    wrap.querySelectorAll('.barang-dropdown-list').forEach(function (el) {
-      el.classList.add('d-none');
-      el.innerHTML = '';
-    });
-  }
-
-  function tampilkanDropdown(card, hasil) {
-    var list = card.querySelector('.barang-dropdown-list');
-    if (!hasil.length) {
-      list.innerHTML = '<div class="barang-empty">Barang tidak ditemukan.</div>';
-      list.classList.remove('d-none');
-      return;
+    // Nominal biaya tambahan: 0 kalau switch mati, selain itu angka di input (min. 0).
+    function nominalBiaya(chk, inp) {
+      if (!chk.checked) return 0;
+      return Math.max(0, parseFloat(inp.value) || 0);
     }
-    list.innerHTML = hasil.map(function (b) {
-      return '' +
-        '<div class="barang-opt" data-id="' + b.id + '">' +
+
+    // Tampilkan/sembunyikan input nominal sesuai switch. Input yang
+    // disembunyikan juga di-disable supaya tidak ikut terkirim.
+    function toggleBiaya(chk, wrapEl, inp) {
+      wrapEl.classList.toggle('d-none', !chk.checked);
+      inp.disabled = !chk.checked;
+    }
+
+    function baris() {
+      return Array.prototype.slice.call(wrap.querySelectorAll('.item-card'));
+    }
+
+    // Isi 1 kartu item dari data yang sudah tersimpan (mode edit). Nilai
+    // warna/harga yang tersimpan dipakai apa adanya (tidak ditimpa master).
+    function isiItem(card, d) {
+      function set(sel, v) {
+        var el = card.querySelector(sel);
+        if (el) el.value = (v === null || v === undefined) ? '' : v;
+      }
+      set('.it-jenis', d.jenis_item);
+      set('.it-id-barang', d.id_barang > 0 ? d.id_barang : '');
+      set('.it-warna', d.warna);
+
+      set('.it-komponen', d.komponen);
+      set('[name="komponen_kusen[]"]', d.komponen_kusen);
+      set('[name="komponen_daun[]"]', d.komponen_daun);
+      set('.it-lebar', d.lebar_mm);
+      set('.it-tinggi', d.tinggi_mm);
+      set('.it-qty', d.qty);
+      set('.it-harga', d.harga_unit);
+      set('[name="keterangan[]"]', d.keterangan);
+      var finValue = (d && d.finishing && d.finishing.trim() !== '') ?
+        d.finishing :
+        'Powder Coating / 粉末涂料';
+      set('.it-finishing', finValue);
+
+      if (d.id_barang > 0) {
+        var cari = card.querySelector('.it-barang-search');
+        cari.readOnly = true;
+        cari.classList.add('is-locked');
+        card.querySelector('.btn-ganti-barang').classList.remove('d-none');
+      }
+    }
+
+    function tambahItem(data) {
+      var node = tpl.content.cloneNode(true);
+      wrap.appendChild(node);
+      if (data) isiItem(wrap.lastElementChild, data);
+      segarkan();
+    }
+
+    function formatHargaBarang(n) {
+      return Math.round(n || 0).toLocaleString('id-ID');
+    }
+
+    function cariBarang(kata) {
+      kata = (kata || '').trim().toLowerCase();
+      if (kata === '') return [];
+      return DATA_BARANG.filter(function(b) {
+        return (b.nama || '').toLowerCase().indexOf(kata) !== -1 ||
+          (b.kode_barang || '').toLowerCase().indexOf(kata) !== -1;
+      }).slice(0, 15);
+    }
+
+    function tutupSemuaDropdown() {
+      wrap.querySelectorAll('.barang-dropdown-list').forEach(function(el) {
+        el.classList.add('d-none');
+        el.innerHTML = '';
+      });
+    }
+
+    function tampilkanDropdown(card, hasil) {
+      var list = card.querySelector('.barang-dropdown-list');
+      if (!hasil.length) {
+        list.innerHTML = '<div class="barang-empty">Barang tidak ditemukan.</div>';
+        list.classList.remove('d-none');
+        return;
+      }
+      list.innerHTML = hasil.map(function(b) {
+        return '' +
+          '<div class="barang-opt" data-id="' + b.id + '">' +
           '<span class="bo-nama"></span>' +
           '<span class="bo-meta"></span>' +
-        '</div>';
-    }).join('');
-    // Isi teks lewat textContent (bukan string HTML) supaya aman dari XSS
-    var opts = list.querySelectorAll('.barang-opt');
-    opts.forEach(function (el, i) {
-      var b = hasil[i];
-      el.querySelector('.bo-nama').textContent = b.nama;
-      el.querySelector('.bo-meta').textContent =
-        (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) +
-        (b.warna ? ' • ' + b.warna : '');
-    });
-    list.classList.remove('d-none');
-  }
-
-  function pilihBarang(card, idBarang) {
-    var b = DATA_BARANG.find(function (x) { return String(x.id) === String(idBarang); });
-    if (!b) return;
-
-    var inputCari  = card.querySelector('.it-barang-search');
-    var inputId    = card.querySelector('.it-id-barang');
-    var inputWarna = card.querySelector('.it-warna');
-    var inputHarga = card.querySelector('.it-harga');
-    var inputKomponen = card.querySelector('.it-komponen');
-    var btnGanti   = card.querySelector('.btn-ganti-barang');
-
-    inputCari.value = b.nama;
-    inputCari.readOnly = true;
-    inputCari.classList.add('is-locked');
-    inputId.value = b.id;
-
-    // Warna & harga diambil dari master Barang, tapi tetap bisa diedit user.
-    inputWarna.value = b.warna || '';
-    inputHarga.value = parseFloat(b.harga_satuan) || 0;
-
-    // Komponen diambil dari master Barang & TIDAK bisa diubah (readonly).
-    inputKomponen.value = b.komponen || '';
-
-    btnGanti.classList.remove('d-none');
-    tutupSemuaDropdown();
-    segarkan();
-  }
-
-  function gantiBarang(card) {
-    var inputCari = card.querySelector('.it-barang-search');
-    var inputId   = card.querySelector('.it-id-barang');
-    var btnGanti  = card.querySelector('.btn-ganti-barang');
-
-    // Barang dilepas -> komponen (milik barang lama) ikut dikosongkan
-    card.querySelector('.it-komponen').value = '';
-
-    inputId.value = '';
-    inputCari.readOnly = false;
-    inputCari.classList.remove('is-locked');
-    inputCari.value = '';
-    btnGanti.classList.add('d-none');
-    inputCari.focus();
-  }
-
-  function hitungBaris(card) {
-    var lebar  = parseFloat(card.querySelector('.it-lebar').value) || 0;
-    var tinggi = parseFloat(card.querySelector('.it-tinggi').value) || 0;
-    var qty    = parseFloat(card.querySelector('.it-qty').value) || 0;
-    var harga  = parseFloat(card.querySelector('.it-harga').value) || 0;
-
-    var luas  = (lebar * tinggi) / 1000000;
-    var total = qty * harga;
-
-    card.querySelector('.it-luas').value = luas.toFixed(4);
-    card.querySelector('.item-subtotal').textContent = rupiah(total);
-
-    return total;
-  }
-
-  function segarkan() {
-    var rows = baris();
-    var subtotal = 0;
-
-    rows.forEach(function (card, i) {
-      card.querySelector('.item-no').textContent = i + 1;
-      var btnHapus = card.querySelector('.btn-remove-item');
-      btnHapus.disabled = (rows.length === 1);
-      subtotal += hitungBaris(card);
-    });
-
-    var ppn   = chkPpn.checked ? Math.round(subtotal * TARIF_PPN / 100) : 0;
-    var pph   = chkPph.checked ? Math.round(subtotal * TARIF_PPH / 100) : 0;
-    var grand = subtotal + ppn + pph;
-
-    document.getElementById('sumJumlahItem').textContent = rows.length;
-    document.getElementById('sumSubtotal').textContent   = rupiah(subtotal);
-    document.getElementById('sumPpn').textContent        = rupiah(ppn);
-    document.getElementById('sumPph').textContent        = rupiah(pph);
-    document.getElementById('sumGrandTotal').textContent = rupiah(grand);
-  }
-
-  btnTambah.addEventListener('click', function () { tambahItem(); });
-
-  chkPpn.addEventListener('change', segarkan);
-  chkPph.addEventListener('change', segarkan);
-
-  wrap.addEventListener('input', function (e) {
-    if (e.target.classList.contains('it-barang-search')) {
-      var card = e.target.closest('.item-card');
-      tampilkanDropdown(card, cariBarang(e.target.value));
-      return; // segarkan() dipanggil lewat pilihBarang() setelah barang dipilih
-    }
-    if (e.target.closest('.item-card')) segarkan();
-  });
-
-  wrap.addEventListener('focusin', function (e) {
-    if (e.target.classList.contains('it-barang-search') && !e.target.readOnly) {
-      var card = e.target.closest('.item-card');
-      tampilkanDropdown(card, cariBarang(e.target.value));
-    }
-  });
-
-  wrap.addEventListener('click', function (e) {
-    var opt = e.target.closest('.barang-opt');
-    if (opt) {
-      pilihBarang(opt.closest('.item-card'), opt.getAttribute('data-id'));
-      return;
+          '</div>';
+      }).join('');
+      // Isi teks lewat textContent (bukan string HTML) supaya aman dari XSS
+      var opts = list.querySelectorAll('.barang-opt');
+      opts.forEach(function(el, i) {
+        var b = hasil[i];
+        el.querySelector('.bo-nama').textContent = b.nama;
+        el.querySelector('.bo-meta').textContent =
+          (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) +
+          (b.warna ? ' • ' + b.warna : '');
+      });
+      list.classList.remove('d-none');
     }
 
-    var btnGanti = e.target.closest('.btn-ganti-barang');
-    if (btnGanti) {
-      gantiBarang(btnGanti.closest('.item-card'));
-      return;
-    }
+    function pilihBarang(card, idBarang) {
+      var b = DATA_BARANG.find(function(x) {
+        return String(x.id) === String(idBarang);
+      });
+      if (!b) return;
 
-    var btnHapus = e.target.closest('.btn-remove-item');
-    if (btnHapus && !btnHapus.disabled) {
-      btnHapus.closest('.item-card').remove();
-      segarkan();
-      return;
-    }
-  });
+      var inputCari = card.querySelector('.it-barang-search');
+      var inputId = card.querySelector('.it-id-barang');
+      var inputWarna = card.querySelector('.it-warna');
+      var inputHarga = card.querySelector('.it-harga');
+      var inputKomponen = card.querySelector('.it-komponen');
+      var btnGanti = card.querySelector('.btn-ganti-barang');
 
-  // Tutup dropdown pencarian barang kalau klik di luar area picker
-  document.addEventListener('click', function (e) {
-    if (!e.target.closest('.barang-picker')) {
+      inputCari.value = b.nama;
+      inputCari.readOnly = true;
+      inputCari.classList.add('is-locked');
+      inputId.value = b.id;
+
+      // Warna & harga diambil dari master Barang, tapi tetap bisa diedit user.
+      inputWarna.value = b.warna || '';
+      inputHarga.value = parseFloat(b.harga_satuan) || 0;
+
+      // Komponen diambil dari master Barang & TIDAK bisa diubah (readonly).
+      inputKomponen.value = b.komponen || '';
+
+      btnGanti.classList.remove('d-none');
       tutupSemuaDropdown();
+      segarkan();
     }
-  });
 
-  form.addEventListener('submit', function (e) {
-    var jenisTerisi = baris().some(function (card) {
-      return card.querySelector('.it-jenis').value.trim() !== '';
+    function gantiBarang(card) {
+      var inputCari = card.querySelector('.it-barang-search');
+      var inputId = card.querySelector('.it-id-barang');
+      var btnGanti = card.querySelector('.btn-ganti-barang');
+
+      // Barang dilepas -> komponen (milik barang lama) ikut dikosongkan
+      card.querySelector('.it-komponen').value = '';
+
+      inputId.value = '';
+      inputCari.readOnly = false;
+      inputCari.classList.remove('is-locked');
+      inputCari.value = '';
+      btnGanti.classList.add('d-none');
+      inputCari.focus();
+    }
+
+    function hitungBaris(card) {
+      var lebar = parseFloat(card.querySelector('.it-lebar').value) || 0;
+      var tinggi = parseFloat(card.querySelector('.it-tinggi').value) || 0;
+      var qty = parseFloat(card.querySelector('.it-qty').value) || 0;
+      var harga = parseFloat(card.querySelector('.it-harga').value) || 0;
+
+      var luas = (lebar * tinggi) / 1000000;
+      var total = qty * harga;
+
+      card.querySelector('.it-luas').value = luas.toFixed(4);
+      card.querySelector('.item-subtotal').textContent = rupiah(total);
+
+      return total;
+    }
+
+    function segarkan() {
+      var rows = baris();
+      var subtotal = 0;
+
+      rows.forEach(function(card, i) {
+        card.querySelector('.item-no').textContent = i + 1;
+        var btnHapus = card.querySelector('.btn-remove-item');
+        btnHapus.disabled = (rows.length === 1);
+        subtotal += hitungBaris(card);
+      });
+
+      // Biaya pemasangan & pengiriman ikut menambah dasar perhitungan pajak
+      var pasang = nominalBiaya(chkPasang, inpPasang);
+      var ongkir = nominalBiaya(chkOngkir, inpOngkir);
+      var dasar = subtotal + pasang + ongkir;
+
+      var ppn = chkPpn.checked ? Math.round(dasar * TARIF_PPN / 100) : 0;
+      var pph = chkPph.checked ? Math.round(dasar * TARIF_PPH / 100) : 0;
+      var grand = dasar + ppn + pph;
+
+      document.getElementById('rowSumPasang').classList.toggle('d-none', pasang <= 0);
+      document.getElementById('rowSumOngkir').classList.toggle('d-none', ongkir <= 0);
+      document.getElementById('sumPasang').textContent = rupiah(pasang);
+      document.getElementById('sumOngkir').textContent = rupiah(ongkir);
+
+      document.getElementById('sumJumlahItem').textContent = rows.length;
+      document.getElementById('sumSubtotal').textContent = rupiah(subtotal);
+      document.getElementById('sumPpn').textContent = rupiah(ppn);
+      document.getElementById('sumPph').textContent = rupiah(pph);
+      document.getElementById('sumGrandTotal').textContent = rupiah(grand);
+    }
+
+    btnTambah.addEventListener('click', function() {
+      tambahItem();
     });
-    if (!jenisTerisi) {
-      e.preventDefault();
-      alert('Minimal harus ada 1 item dengan Jenis Item diisi.');
-      return;
-    }
-    if (!confirm(<?= $is_edit ? "'Simpan perubahan penawaran ini?'" : "'Simpan penawaran ini?'"; ?>)) {
-      e.preventDefault();
+
+    chkPpn.addEventListener('change', segarkan);
+    chkPph.addEventListener('change', segarkan);
+
+    chkPasang.addEventListener('change', function() {
+      toggleBiaya(chkPasang, wrapPasang, inpPasang);
+      segarkan();
+    });
+    chkOngkir.addEventListener('change', function() {
+      toggleBiaya(chkOngkir, wrapOngkir, inpOngkir);
+      segarkan();
+    });
+    inpPasang.addEventListener('input', segarkan);
+    inpOngkir.addEventListener('input', segarkan);
+
+    wrap.addEventListener('input', function(e) {
+      if (e.target.classList.contains('it-barang-search')) {
+        var card = e.target.closest('.item-card');
+        tampilkanDropdown(card, cariBarang(e.target.value));
+        return; // segarkan() dipanggil lewat pilihBarang() setelah barang dipilih
+      }
+      if (e.target.closest('.item-card')) segarkan();
+    });
+
+    wrap.addEventListener('focusin', function(e) {
+      if (e.target.classList.contains('it-barang-search') && !e.target.readOnly) {
+        var card = e.target.closest('.item-card');
+        tampilkanDropdown(card, cariBarang(e.target.value));
+      }
+    });
+
+    wrap.addEventListener('click', function(e) {
+      var opt = e.target.closest('.barang-opt');
+      if (opt) {
+        pilihBarang(opt.closest('.item-card'), opt.getAttribute('data-id'));
+        return;
+      }
+
+      var btnGanti = e.target.closest('.btn-ganti-barang');
+      if (btnGanti) {
+        gantiBarang(btnGanti.closest('.item-card'));
+        return;
+      }
+
+      var btnHapus = e.target.closest('.btn-remove-item');
+      if (btnHapus && !btnHapus.disabled) {
+        btnHapus.closest('.item-card').remove();
+        segarkan();
+        return;
+      }
+    });
+
+    // Tutup dropdown pencarian barang kalau klik di luar area picker
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.barang-picker')) {
+        tutupSemuaDropdown();
+      }
+    });
+
+    form.addEventListener('submit', function(e) {
+      var jenisTerisi = baris().some(function(card) {
+        return card.querySelector('.it-jenis').value.trim() !== '';
+      });
+      if (!jenisTerisi) {
+        e.preventDefault();
+        alert('Minimal harus ada 1 item dengan Jenis Item diisi.');
+        return;
+      }
+      if (!confirm(<?= $is_edit ? "'Simpan perubahan penawaran ini?'" : "'Simpan penawaran ini?'"; ?>)) {
+        e.preventDefault();
+      }
+    });
+
+    // Mode edit: render item tersimpan. Mode tambah: mulai dengan 1 item kosong.
+    if (ITEMS_EDIT.length) {
+      ITEMS_EDIT.forEach(function(d) {
+        tambahItem(d);
+      });
+    } else {
+      tambahItem();
     }
   });
-
-  // Mode edit: render item tersimpan. Mode tambah: mulai dengan 1 item kosong.
-  if (ITEMS_EDIT.length) {
-    ITEMS_EDIT.forEach(function (d) { tambahItem(d); });
-  } else {
-    tambahItem();
-  }
-});
 </script>

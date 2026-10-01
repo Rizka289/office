@@ -92,9 +92,24 @@
           </button>
         <?= form_close(); ?>
       <?php endif; ?>
-      <a href="<?= site_url('penawaran/cetak/' . $header->id); ?>" target="_blank" class="btn btn-brand">
-        <i class="bi bi-printer me-1"></i> Cetak PDF
-      </a>
+      <div class="btn-group">
+        <button type="button" class="btn btn-brand dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-printer me-1"></i> Cetak PDF
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">Termin pembayaran (S&amp;K)</h6></li>
+          <li>
+            <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id . '?termin=50_50'); ?>">
+              50% saat memesan + 50% sebelum kirim
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id . '?termin=100'); ?>">
+              100% saat memesan
+            </a>
+          </li>
+        </ul>
+      </div>
       <a href="<?= site_url('penawaran'); ?>" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Kembali
       </a>
@@ -192,6 +207,18 @@
       <span>Subtotal</span>
       <span><?= $rp($subtotal); ?></span>
     </div>
+    <?php if ((float) ($header->biaya_pasang ?? 0) > 0): ?>
+      <div class="summary-row">
+        <span>Biaya Pemasangan</span>
+        <span><?= $rp($header->biaya_pasang); ?></span>
+      </div>
+    <?php endif; ?>
+    <?php if ((float) ($header->biaya_ongkir ?? 0) > 0): ?>
+      <div class="summary-row">
+        <span>Biaya Pengiriman</span>
+        <span><?= $rp($header->biaya_ongkir); ?></span>
+      </div>
+    <?php endif; ?>
     <div class="summary-row">
       <span>PPN <?= isset($header->ppn_persen) ? rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.') : '11'; ?>%</span>
       <span><?= $rp($ppn); ?></span>

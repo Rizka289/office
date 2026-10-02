@@ -12,7 +12,7 @@
         <div class="col-12 col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchNamaBarang" class="form-control" placeholder= " <?= translate('cari')?> ">
+                <input type="text" id="searchNamaBarang" class="form-control" placeholder=" <?= translate('cari') ?> ">
             </div>
         </div>
     </div>
@@ -121,6 +121,24 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('kategori_rumus') ?></label>
+                        <select name="kategori_rumus" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?> --</option>
+                            <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_sliding">Jendela Sliding</option>
+                            <option value="jendela_swing_b1">Jendela Swing B1</option>
+                            <option value="jendela_swing_b2">Jendela Swing B2</option>
+                            <option value="pintu_baja">Pintu Baja</option>
+                            <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_kayu">Pintu Kayu</option>
+                            <option value="pintu_alumunium">Pintu Alumunium</option>
+                            <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>
+                            <option value="rolling_door_baja">Rooling Door Baja</option>
+                            <option value="pintu_baja_double">Pintu Baja Double</option>
+                            <option value="alumunium_double">Pintu Alumunium Double</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('harga') ?></label>
                         <input type="text" name="harga_satuan" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" autocomplete="off" required>
                         <div class="form-text extra-small text-muted"><?= translate('p_bar_harga') ?></div>
@@ -225,6 +243,24 @@
                             <option value="kg">Kg</option>
                             <option value="liter">Liter</option>
                             <option value="roll">Roll</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('kategori_rumus') ?></label>
+                        <select name="kategori_rumus" id="edit_kategori_rumus" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?>--</option>
+                            <option value="unit_fix">Unit Fix</option>
+                              <option value="jendela_sliding">Jendela Sliding</option>
+                            <option value="jendela_swing_b1">Jendela Swing B1</option>
+                            <option value="jendela_swing_b2">Jendela Swing B2</option>
+                            <option value="pintu_baja">Pintu Baja</option>
+                            <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_kayu">Pintu Kayu</option>
+                            <option value="pintu_alumunium">Pintu Alumunium</option>
+                            <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>
+                            <option value="rolling_door_baja">Rooling Door Baja</option>
+                            <option value="pintu_baja_double">Pintu Baja Double</option>
+                            <option value="alumunium_double">Pintu Alumunium Double</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -336,7 +372,7 @@
             var $tbody = $('#tbodyNamaBarang');
             $tbody.empty();
 
-             if (!rows || rows.length === 0) {
+            if (!rows || rows.length === 0) {
                 var emptyMessage = "<?= translate('p_nama_barang'); ?>";
                 $tbody.append('<tr><td colspan="6" class="text-center text-muted">' + emptyMessage + '</td></tr>');
                 return;
@@ -476,6 +512,7 @@
                         $('#edit_id_kategori').val(response.data.id_kategori);
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
+                        $('#edit_kategori_rumus').val(response.data.kategori_rumus);
                         $('#edit_dimensi').val(response.data.dimensi);
                         $('#edit_komponen').val(response.data.komponen);
                         $('#edit_is_produced').val(response.data.is_produced);

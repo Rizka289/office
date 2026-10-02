@@ -473,18 +473,39 @@ if ($is_edit && !empty($items_edit)) {
         <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
         <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-2">
         <label class="form-label">Komponen</label>
         <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang" readonly tabindex="-1">
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label">Kusen (mm)</label>
         <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label">Daun (mm)</label>
         <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Tipe Motor</label>
+        <input type="text" name="tipe_motor[]" class="form-control" placeholder="Mis. Electra 600">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Input Power</label>
+        <input type="text" name="input_power[]" class="form-control" placeholder="Mis. 250W">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label">Voltage</label>
+        <input type="text" name="voltage[]" class="form-control" placeholder="Mis. Electra 600">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Books Penutup</label>
+        <input type="text" name="books_penutup[]" class="form-control" rows="1" placeholder="">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Kelengkapan</label>
+        <input type="text" name="kelengkapan[]" class="form-control" rows="1" placeholder="">
       </div>
       <div class="col-md-6 text-end">
         <label class="form-label d-block">Subtotal Item</label>
@@ -679,16 +700,46 @@ if ($is_edit && !empty($items_edit)) {
       inputCari.focus();
     }
 
+    // Kategori rumus diambil dari master Barang (sama dengan aturan di server: Penawaran::_luas_billing)
+    function kategoriBaris(card) {
+      var id = card.querySelector('.it-id-barang').value;
+      var b = DATA_BARANG.find(function(x) {
+        return String(x.id) === String(id);
+      });
+      return (b && b.kategori_rumus) ? b.kategori_rumus : 'unit_fix';
+    }
+
+    function luasBilling(kategori, luasRiil, lebarMm, tinggiMm) {
+      var luas = luasRiil;
+      if (kategori === 'jendela_sliding') {
+        luas = Math.max(luasRiil, 1.3);
+      } else if (kategori === 'jendela_swing_b1' || kategori === 'jendela_swing_b2') {
+        luas = Math.max(luasRiil, 1.4);
+        if (luas > 3 && luas < 5) luas += 1.3;
+      } else if (kategori === 'pintu_baja') {
+        luas = Math.max(luasRiil, 2);
+      } else if (kategori === 'rooling_door_tahan_api' || kategori === 'rooling_door_baja') {
+        // Lebar +200 mm, tinggi +600 mm, minimum 10 m²
+        luas = Math.max(Math.round(((lebarMm + 200) / 1000) * ((tinggiMm + 600) / 1000) * 10000) / 10000, 10);
+      }
+      return luas;
+    }
+
     function hitungBaris(card) {
       var lebar = parseFloat(card.querySelector('.it-lebar').value) || 0;
       var tinggi = parseFloat(card.querySelector('.it-tinggi').value) || 0;
       var qty = parseFloat(card.querySelector('.it-qty').value) || 0;
       var harga = parseFloat(card.querySelector('.it-harga').value) || 0;
 
-      var luas = (lebar * tinggi) / 1000000;
-      var total = qty * harga;
+      var kategori = kategoriBaris(card);
+      var luasRiil = Math.round((lebar / 1000) * (tinggi / 1000) * 10000) / 10000;
+      var luas = luasBilling(kategori, luasRiil, lebar, tinggi);
+      var total = (kategori === 'unit_fix') ? qty * harga : luas * qty * harga;
 
-      card.querySelector('.it-luas').value = luas.toFixed(4);
+      // Kolom Luas menampilkan luas yang ditagihkan; luas riil jadi tooltip
+      var inpLuas = card.querySelector('.it-luas');
+      inpLuas.value = luas.toFixed(4);
+      inpLuas.title = 'Luas riil: ' + luasRiil.toFixed(4) + ' m²';
       card.querySelector('.item-subtotal').textContent = rupiah(total);
 
       return total;

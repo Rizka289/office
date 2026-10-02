@@ -185,7 +185,7 @@
                   <?php endif; ?>
                 </td>
                 <td><?= (int) $it->lebar_mm; ?> x <?= (int) $it->tinggi_mm; ?></td>
-                <td class="text-center"><?= number_format((float) $it->luas_m2, 2); ?></td>
+                <td class="text-center"><?= number_format((float) ($it->luas_billing_m2 ?? $it->luas_m2), 2); ?></td>
                 <td class="text-center"><?= (int) $it->qty; ?></td>
                 <td class="text-end"><?= $rp($it->harga_unit); ?></td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>

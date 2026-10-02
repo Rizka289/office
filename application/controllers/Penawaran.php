@@ -19,9 +19,9 @@ class Penawaran extends MY_Controller
 
     public function index()
     {
-        $data['title']        = translate('penawaran');
-        $data['page_title']   = translate('penawaran'); // dipakai templates/header (judul topbar & <title>)
-        $data['active_menu']  = 'penawaran';             // supaya menu Penjualan terbuka & aktif di sidebar
+        $data['title']       = translate('penawaran');
+        $data['page_title']  = translate('penawaran');
+        $data['active_menu'] = 'penawaran';
 
         $filter = [
             'q'      => $this->input->get('q', TRUE),
@@ -35,17 +35,11 @@ class Penawaran extends MY_Controller
 
         $penawaran_list = $this->Penawaran_model->get_all_penawaran($filter);
 
-        // Tabel `penawaran` tidak punya kolom status, jadi statistik yang
-        // relevan untuk ditampilkan adalah jumlah dokumen & total nilai,
-        // bukan draft/selesai (kolom itu tidak ada di database).
         $total_nilai = 0;
         foreach ($penawaran_list as $row) {
-            $total_nilai += (float) $row->grand_total;
+            $total_nilai += (float)$row->grand_total;
         }
 
-        // PENTING: key ini HARUS 'penawaran_list' karena itu yang dipakai
-        // oleh view penawaran_index.php. Sebelumnya key-nya salah
-        // ('penerimaan_list') sehingga tabel selalu tampil kosong.
         $data['penawaran_list']  = $penawaran_list;
         $data['total_bulan_ini'] = count($penawaran_list);
         $data['total_nilai']     = $total_nilai;
@@ -55,21 +49,9 @@ class Penawaran extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // Catatan: method simpan() yang sebelumnya ada di sini (id_stok, qty,
-    // Penjualan_model, redirect ke 'penjualan') adalah kode modul Penjualan
-    // yang salah tempel di controller Penawaran ini. Method tersebut sudah
-    // dihapus karena tidak relevan dan akan fatal error jika dipanggil
-    // (Penjualan_model tidak pernah di-load di constructor Penawaran).
-    //
-    // Jika Anda memang butuh method untuk menyimpan penawaran baru
-    // (header + item ke tabel `penawaran` & `penawaran_detail`), itu perlu
-    // dibuat terpisah — beri tahu saya kalau mau saya buatkan sekalian.
-
-    // Halaman detail (di dalam aplikasi, ada sidebar/topbar) — untuk
-    // mengecek data penawaran sebelum dicetak/dikirim ke customer.
     public function detail($id)
     {
-        $id = (int) $id;
+        $id = (int)$id;
 
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
@@ -89,11 +71,9 @@ class Penawaran extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // Halaman cetak — berdiri sendiri (tanpa sidebar/topbar aplikasi),
-    // dibuka di tab baru lalu di-print ke PDF lewat browser (Ctrl+P).
     public function cetak($id)
     {
-        $id = (int) $id;
+        $id = (int)$id;
 
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
@@ -101,8 +81,6 @@ class Penawaran extends MY_Controller
             show_404();
         }
 
-        // Termin pembayaran untuk Syarat & Ketentuan (dipilih saat klik
-        // Cetak PDF). Hanya nilai di whitelist yang diterima; default 50_50.
         $termin = $this->input->get('termin', TRUE);
 
         $data['header'] = $penawaran['header'];
@@ -112,7 +90,6 @@ class Penawaran extends MY_Controller
         $this->load->view('penjualan/penawaran_cetak', $data);
     }
 
-    // Form tambah penawaran baru.
     public function tambah()
     {
         $data['title']       = translate('penawaran');
@@ -130,25 +107,30 @@ class Penawaran extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    // Kumpulkan item dari POST lalu hitung ulang semua nominal di server
-    // (jangan percaya angka dari browser). Dipakai oleh simpan() & update().
-    // Return: [$items, $subtotal]
+    /**
+     * Kumpulkan item dari POST lalu hitung ulang seluruh nominal dan kalkulasi
+     * berdasarkan aturan bisnis (5 Kategori Rumus) di server.
+     * Return: [$items,$subtotal]
+     */
     private function _kumpulkan_item()
     {
-        $id_barang      = $this->input->post('id_barang')      ?: [];
-        $jenis_item     = $this->input->post('jenis_item')     ?: [];
-        $warna          = $this->input->post('warna')          ?: [];
-        $finishing      = $this->input->post('finishing')      ?: [];
-        $komponen_kusen = $this->input->post('komponen_kusen') ?: [];
-        $komponen_daun  = $this->input->post('komponen_daun')  ?: [];
-        $lebar_mm       = $this->input->post('lebar_mm')       ?: [];
-        $tinggi_mm      = $this->input->post('tinggi_mm')      ?: [];
-        $qty            = $this->input->post('qty')            ?: [];
-        $harga_unit     = $this->input->post('harga_unit')     ?: [];
-        $keterangan     = $this->input->post('keterangan')     ?: [];
+        $id_barang      = $this->input->post('id_barang', TRUE)      ?: [];
+        $jenis_item     = $this->input->post('jenis_item', TRUE)     ?: [];
+        $warna          = $this->input->post('warna', TRUE)          ?: [];
+        $finishing      = $this->input->post('finishing', TRUE)      ?: [];
+        $komponen_kusen = $this->input->post('komponen_kusen', TRUE) ?: [];
+        $komponen_daun  = $this->input->post('komponen_daun', TRUE)  ?: [];
+        $lebar_mm       = $this->input->post('lebar_mm', TRUE)       ?: [];
+        $tinggi_mm      = $this->input->post('tinggi_mm', TRUE)      ?: [];
+        $qty            = $this->input->post('qty', TRUE)            ?: [];
+        $harga_unit     = $this->input->post('harga_unit', TRUE)     ?: [];
+        $keterangan     = $this->input->post('keterangan', TRUE)     ?: [];
+        $tipe_motor     = $this->input->post('tipe_motor', TRUE)     ?: [];
+        $input_power    = $this->input->post('input_power', TRUE)    ?: [];
+        $voltage        = $this->input->post('voltage', TRUE)        ?: [];
+        $books_penutup  = $this->input->post('books_penutup', TRUE)  ?: [];
+        $kelengkapan    = $this->input->post('kelengkapan', TRUE)    ?: [];
 
-        // Nama & komponen barang dipaksa sama dengan master (field di form
-        // hanya readonly, masih bisa diakali lewat DevTools).
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
         $items    = [];
@@ -163,19 +145,31 @@ class Penawaran extends MY_Controller
             $l   = max(0, (int) ($lebar_mm[$i] ?? 0));
             $t   = max(0, (int) ($tinggi_mm[$i] ?? 0));
             $q   = max(1, (int) ($qty[$i] ?? 1));
-            $h   = max(0, (float) ($harga_unit[$i] ?? 0));
             $idb = (int) ($id_barang[$i] ?? 0);
 
+            // 1. Ambil data master barang (termasuk harga per m2 & kategori rumus)
             if ($idb > 0 && isset($master_barang[$idb])) {
-                $jenis         = $master_barang[$idb]['nama'];
-                $komponen_item = trim((string) ($master_barang[$idb]['komponen'] ?? ''));
+                $jenis          = $master_barang[$idb]['nama'];
+                $komponen_item  = trim((string) ($master_barang[$idb]['komponen'] ?? ''));
+                $harga_m2       = (float) ($master_barang[$idb]['harga_satuan'] ?? $harga_unit[$i] ?? 0);
+                $kategori_rumus = $master_barang[$idb]['kategori_rumus'] ?? 'unit_fix';
             } else {
-                $idb           = 0; // item manual / id tidak valid
-                $komponen_item = '';
+                $idb            = 0;
+                $komponen_item  = '';
+                $harga_m2       = max(0, (float) ($harga_unit[$i] ?? 0));
+                $kategori_rumus = 'unit_fix';
             }
 
-            $luas  = round(($l * $t) / 1000000, 4); // mm² -> m²
-            $total = $q * $h;
+            // 2. Luas riil (mm -> m), dibulatkan 4 desimal supaya batas 1,3 / 1,4 / 3 / 5 tidak meleset karena floating point
+            $luas_riil = round(($l / 1000) * ($t / 1000), 4);
+
+            // 3. Luas penagihan sesuai kategori rumus
+            $luas_billing = $this->_luas_billing($kategori_rumus, $luas_riil);
+
+            // 4. Total item: unit_fix = qty x harga; kategori lain = luas penagihan x qty x harga/m2
+            $total = ($kategori_rumus === 'unit_fix')
+                ? $q * $harga_m2
+                : $luas_billing * $q * $harga_m2;
 
             $fin_val = trim($finishing[$i] ?? '');
             if ($fin_val === '') {
@@ -183,20 +177,26 @@ class Penawaran extends MY_Controller
             }
 
             $items[] = [
-                'id_barang'      => $idb > 0 ? $idb : null,
-                'jenis_item'     => $jenis,
-                'warna'          => trim($warna[$i] ?? ''),
-                'komponen'       => $komponen_item,
-                'finishing'      => $fin_val,
-                'komponen_kusen' => trim($komponen_kusen[$i] ?? ''),
-                'komponen_daun'  => trim($komponen_daun[$i] ?? ''),
-                'lebar_mm'       => $l,
-                'tinggi_mm'      => $t,
-                'luas_m2'        => $luas,
-                'qty'            => $q,
-                'harga_unit'     => $h,
-                'total_harga'    => $total,
-                'keterangan'     => trim($keterangan[$i] ?? ''),
+                'id_barang'       => $idb > 0 ? $idb : null,
+                'jenis_item'      => $jenis,
+                'warna'           => trim($warna[$i] ?? ''),
+                'komponen'        => $komponen_item,
+                'finishing'       => $fin_val,
+                'komponen_kusen'  => trim($komponen_kusen[$i] ?? ''),
+                'komponen_daun'   => trim($komponen_daun[$i] ?? ''),
+                'lebar_mm'        => $l,
+                'tinggi_mm'       => $t,
+                'luas_m2'         => round($luas_riil, 4),
+                'luas_billing_m2' => round($luas_billing, 4),
+                'qty'             => $q,
+                'harga_unit'      => $harga_m2,
+                'total_harga'     => round($total, 2),
+                'keterangan'      => trim($keterangan[$i] ?? ''),
+                'tipe_motor'      => trim($tipe_motor[$i] ?? ''),
+                'input_power'     => trim($input_power[$i] ?? ''),
+                'voltage'         => trim($voltage[$i] ?? ''),
+                'books_penutup'   => trim($books_penutup[$i] ?? ''),
+                'kelengkapan'     => trim($kelengkapan[$i] ?? ''),
             ];
 
             $subtotal += $total;
@@ -205,9 +205,48 @@ class Penawaran extends MY_Controller
         return [$items, $subtotal];
     }
 
-    // Hitung PPN, PPh & grand total dari subtotal (sesuai checkbox di form).
-    // Saat edit, checkbox pajak juga boleh diubah (selama belum approve),
-    // jadi persen dibaca dari POST sama seperti saat tambah.
+    /**
+     * Luas penagihan (m2) per kategori rumus. Rumus total tetap sama:
+     * luas_billing x qty x harga satuan.
+     *  - jendela_sliding : minimum 1,3
+     *  - jendela_swing_* : minimum 1,4; kalau 3 < luas < 5 ditambah 1,3
+     *  - pintu_baja      : minimum 2
+     */
+    private function _luas_billing($kategori, $luas_riil, $lebar_mm = 0, $tinggi_mm = 0)
+    {
+        switch ($kategori) {
+            case 'jendela_sliding':
+                return min($luas_riil, 1.3);
+
+            case 'jendela_swing_b1':
+                return min($luas_riil, 1.4);
+
+            case 'jendela_swing_b2':
+                $luas = min($luas_riil, 3.0);
+                if ($luas > 3.0 && $luas < 5.0) {
+                    $luas += 1.3;
+                }
+                return $luas;
+
+            case 'pintu_baja':
+            case 'pintu_kayu':
+            case 'pintu_alumunium':
+                return min($luas_riil, 2.0);
+
+            case 'pintu_baja_double':
+            case 'pintu_alumunium_double':
+                return min($luas_riil, 3.9);
+
+            case 'rolling_door_tahan_api':
+            case 'rolling_door_baja':
+                $luas = round((($lebar_mm + 200) / 1000) * (($tinggi_mm + 600) / 1000), 4);
+                return max($luas, 10.0);
+
+            default: // unit_fix
+                return $luas_riil;
+        }
+    }
+
     private function _hitung_total($subtotal, $ppn_persen = null, $pph_persen = null)
     {
         if ($ppn_persen === null) {
@@ -217,16 +256,12 @@ class Penawaran extends MY_Controller
             $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
         }
 
-        // Biaya pemasangan & pengiriman (ongkir): switch mati -> NULL (S&K cetak
-        // "belum termasuk"); switch hidup -> angka >= 0 (S&K cetak "sudah termasuk").
-        // Nominal diabaikan di server kalau switch-nya tidak dicentang.
         $biaya_pasang = $this->input->post('pakai_pasang')
             ? max(0, (float) $this->input->post('biaya_pasang')) : null;
         $biaya_ongkir = $this->input->post('pakai_ongkir')
             ? max(0, (float) $this->input->post('biaya_ongkir')) : null;
 
-        // Biaya tambahan ikut menjadi dasar perhitungan PPN/PPh
-        $dasar_pajak = $subtotal + (float) $biaya_pasang + (float) $biaya_ongkir;
+        $dasar_pajak = $subtotal + (float) $biaya_pasang + (float)$biaya_ongkir;
 
         $ppn_nominal = round($dasar_pajak * $ppn_persen / 100);
         $pph_nominal = round($dasar_pajak * $pph_persen / 100);
@@ -243,13 +278,10 @@ class Penawaran extends MY_Controller
         ];
     }
 
-    // Simpan penawaran baru: 1 baris ke `penawaran` (header) + N baris ke
-    // `penawaran_detail` (item), dalam satu transaksi database.
-    // Penawaran baru selalu berstatus 'draft' (belum approve).
     public function simpan()
     {
         $tanggal     = $this->input->post('tanggal', TRUE);
-        $id_customer = (int) $this->input->post('id_customer');
+        $id_customer = (int)$this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
 
         if (empty($tanggal) || $id_customer <= 0) {
@@ -265,7 +297,7 @@ class Penawaran extends MY_Controller
         }
 
         $header = array_merge([
-            'no_surat'    => $this->Penawaran_model->generate_no_penawaran($tanggal), // selalu dibuat ulang di server sesuai bulan/tahun tanggal penawaran
+            'no_surat'    => $this->Penawaran_model->generate_no_penawaran($tanggal),
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
@@ -284,10 +316,9 @@ class Penawaran extends MY_Controller
         }
     }
 
-    // Form edit penawaran. Hanya boleh kalau BELUM di-approve.
     public function edit($id)
     {
-        $id        = (int) $id;
+        $id        = (int)$id;
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
@@ -300,29 +331,26 @@ class Penawaran extends MY_Controller
             redirect('penawaran/detail/' . $id);
         }
 
-        $data['title']         = translate('penawaran');
-        $data['page_title']    = translate('penawaran');
-        $data['active_menu']   = 'penawaran';
-        $data['mode']          = 'edit';
+        $data['title']          = translate('penawaran');
+        $data['page_title']     = translate('penawaran');
+        $data['active_menu']    = 'penawaran';
+        $data['mode']           = 'edit';
         $data['penawaran_edit'] = $penawaran['header'];
-        $data['items_edit']    = $penawaran['items'];
-        $data['no_surat']      = $penawaran['header']->no_surat;
-        $data['list_customer'] = $this->Penawaran_model->get_all_customer();
-        $data['list_barang']   = $this->Penawaran_model->get_all_barang();
-        $data['tarif_ppn']     = self::TARIF_PPN;
-        $data['tarif_pph']     = self::TARIF_PPH;
+        $data['items_edit']     = $penawaran['items'];
+        $data['no_surat']       = $penawaran['header']->no_surat;
+        $data['list_customer']  = $this->Penawaran_model->get_all_customer();
+        $data['list_barang']    = $this->Penawaran_model->get_all_barang();
+        $data['tarif_ppn']      = self::TARIF_PPN;
+        $data['tarif_pph']      = self::TARIF_PPH;
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/add_penawaran', $data);
         $this->load->view('templates/footer', $data);
     }
 
-    // Simpan hasil edit. Hanya ITEM yang berubah (header dikunci). Ditolak di
-    // controller (cek cepat) dan di model (cek final dalam transaksi)
-    // kalau penawaran sudah di-approve.
     public function update($id)
     {
-        $id        = (int) $id;
+        $id        = (int)$id;
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
@@ -335,9 +363,10 @@ class Penawaran extends MY_Controller
             redirect('penawaran/detail/' . $id);
         }
 
-        // Header (tanggal, customer, catatan, no. surat) TIDAK ikut diubah
-        // saat edit. Yang boleh berubah: item dan pajak (PPN/PPh), selama
-        // penawaran belum di-approve.
+        $tanggal     = $this->input->post('tanggal', TRUE) ?: $penawaran['header']->tanggal;
+        $id_customer = (int) $this->input->post('id_customer') ?: $penawaran['header']->id_customer;
+        $catatan     = $this->input->post('catatan', TRUE);
+
         list($items, $subtotal) = $this->_kumpulkan_item();
 
         if (empty($items)) {
@@ -345,9 +374,12 @@ class Penawaran extends MY_Controller
             redirect('penawaran/edit/' . $id);
         }
 
-        // Yang berubah di header: subtotal, persen & nominal pajak, grand total
-        // (dihitung ulang dari item baru + checkbox PPN/PPh yang dikirim form).
-        $header = $this->_hitung_total($subtotal);
+        // Gabungkan perubahan header dasar (tanggal, customer, catatan) dan nominal total
+        $header = array_merge([
+            'tanggal'     => $tanggal,
+            'id_customer' => $id_customer,
+            'catatan'     => $catatan,
+        ], $this->_hitung_total($subtotal));
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
             $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil diperbarui.');
@@ -358,14 +390,13 @@ class Penawaran extends MY_Controller
         redirect('penawaran/detail/' . $id);
     }
 
-    // Approve penawaran (hanya lewat POST). Setelah approve, edit ditolak.
     public function approve($id)
     {
         if ($this->input->method(TRUE) !== 'POST') {
             show_404();
         }
 
-        $id = (int) $id;
+        $id = (int)$id;
 
         if ($this->Penawaran_model->approve_penawaran($id, $this->session->userdata('user_id') ?? 0)) {
             $this->session->set_flashdata('success', 'Penawaran berhasil di-approve. Data tidak bisa diedit lagi.');

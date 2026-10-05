@@ -28,7 +28,7 @@ class Penawaran_model extends CI_Model
             pen.status,
             cus.nama AS customer,
             (
-                SELECT COUNT(*)
+                SELECT COALESCE(SUM(pd.qty), 0)
                 FROM penawaran_detail pd
                 WHERE pd.id_penawaran = pen.id
             ) AS total_item
@@ -227,6 +227,42 @@ class Penawaran_model extends CI_Model
 
         if ($this->db->trans_status() === FALSE) {
             $this->last_error = 'Transaksi database gagal, perubahan tidak disimpan.';
+            return false;
+        }
+
+        return true;
+    }
+
+    // Hapus penawaran yang MASIH belum di-approve: item (penawaran_detail)
+    // lalu header (penawaran), dalam 1 transaksi. Status dicek ulang di
+    // dalam transaksi dengan FOR UPDATE, jadi kalau di saat yang sama
+    // penawaran ini di-approve, penghapusan akan ditolak.
+    public function hapus_penawaran($id)
+    {
+        $id = (int) $id;
+
+        $this->db->trans_start();
+
+        $row = $this->db->query('SELECT status FROM penawaran WHERE id = ? FOR UPDATE', [$id])->row();
+
+        if (!$row || $row->status === 'approved') {
+            $this->db->trans_complete();
+            $this->last_error = !$row
+                ? 'Data penawaran tidak ditemukan.'
+                : 'Penawaran sudah di-approve dan tidak bisa dihapus.';
+            return false;
+        }
+
+        $this->db->where('id_penawaran', $id);
+        $this->db->delete('penawaran_detail');
+
+        $this->db->where('id', $id);
+        $this->db->delete('penawaran');
+
+        $this->db->trans_complete();
+
+        if ($this->db->trans_status() === FALSE) {
+            $this->last_error = 'Transaksi database gagal, penawaran tidak dihapus.';
             return false;
         }
 

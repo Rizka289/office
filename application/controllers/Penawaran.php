@@ -8,6 +8,10 @@ class Penawaran extends MY_Controller
     // di tabel `penawaran`. Ubah tarif di sini saja.
     const TARIF_PPN = 11;    // PPN, ditambahkan ke total
     const TARIF_PPH = 2.5;   // PPh, ditambahkan ke total (sesuai data existing)
+    // Default spesifikasi motor rolling door; dipakai otomatis kalau field-nya dikosongkan user
+    const DEFAULT_TIPE_MOTOR_ROLLING  = 'Electra 600';
+    const DEFAULT_POWER_ROLLING       = '250 W';
+    const DEFAULT_VOLTAGE_ROLLING     = '220 V - 50 Hz';
 
     public function __construct()
     {
@@ -130,6 +134,7 @@ class Penawaran extends MY_Controller
         $voltage        = $this->input->post('voltage', TRUE)        ?: [];
         $books_penutup  = $this->input->post('books_penutup', TRUE)  ?: [];
         $kelengkapan    = $this->input->post('kelengkapan', TRUE)    ?: [];
+        $komponen       = $this->input->post('komponen', TRUE)       ?: [];
 
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
@@ -150,12 +155,15 @@ class Penawaran extends MY_Controller
             // 1. Ambil data master barang (termasuk harga per m2 & kategori rumus)
             if ($idb > 0 && isset($master_barang[$idb])) {
                 $jenis          = $master_barang[$idb]['nama'];
-                $komponen_item  = trim((string) ($master_barang[$idb]['komponen'] ?? ''));
+                // Komponen boleh diedit user di form; kalau field tidak ikut terkirim, pakai master.
+                $komponen_item  = array_key_exists($i, $komponen)
+                    ? trim((string) $komponen[$i])
+                    : trim((string) ($master_barang[$idb]['komponen'] ?? ''));
                 $harga_m2       = (float) ($master_barang[$idb]['harga_satuan'] ?? $harga_unit[$i] ?? 0);
                 $kategori_rumus = $master_barang[$idb]['kategori_rumus'] ?? 'unit_fix';
             } else {
                 $idb            = 0;
-                $komponen_item  = '';
+                $komponen_item  = trim((string) ($komponen[$i] ?? ''));
                 $harga_m2       = max(0, (float) ($harga_unit[$i] ?? 0));
                 $kategori_rumus = 'unit_fix';
             }
@@ -164,12 +172,22 @@ class Penawaran extends MY_Controller
             $luas_riil = round(($l / 1000) * ($t / 1000), 4);
 
             // 3. Luas penagihan sesuai kategori rumus
-            $luas_billing = $this->_luas_billing($kategori_rumus, $luas_riil);
+            $luas_billing = $this->_luas_billing($kategori_rumus, $luas_riil, $l, $t);
 
             // 4. Total item: unit_fix = qty x harga; kategori lain = luas penagihan x qty x harga/m2
             $total = ($kategori_rumus === 'unit_fix')
                 ? $q * $harga_m2
                 : $luas_billing * $q * $harga_m2;
+
+            // Rolling door: Tipe Motor, Input Power, Voltage yang tidak diisi user diisi default
+            $tipe_motor_val  = trim($tipe_motor[$i] ?? '');
+            $input_power_val = trim($input_power[$i] ?? '');
+            $voltage_val     = trim($voltage[$i] ?? '');
+            if ($this->_is_rolling_door($kategori_rumus)) {
+                if ($tipe_motor_val === '')  $tipe_motor_val  = self::DEFAULT_TIPE_MOTOR_ROLLING;
+                if ($input_power_val === '') $input_power_val = self::DEFAULT_POWER_ROLLING;
+                if ($voltage_val === '')     $voltage_val     = self::DEFAULT_VOLTAGE_ROLLING;
+            }
 
             $fin_val = trim($finishing[$i] ?? '');
             if ($fin_val === '') {
@@ -192,9 +210,9 @@ class Penawaran extends MY_Controller
                 'harga_unit'      => $harga_m2,
                 'total_harga'     => round($total, 2),
                 'keterangan'      => trim($keterangan[$i] ?? ''),
-                'tipe_motor'      => trim($tipe_motor[$i] ?? ''),
-                'input_power'     => trim($input_power[$i] ?? ''),
-                'voltage'         => trim($voltage[$i] ?? ''),
+                'tipe_motor'      => $tipe_motor_val,
+                'input_power'     => $input_power_val,
+                'voltage'         => $voltage_val,
                 'books_penutup'   => trim($books_penutup[$i] ?? ''),
                 'kelengkapan'     => trim($kelengkapan[$i] ?? ''),
             ];
@@ -212,37 +230,64 @@ class Penawaran extends MY_Controller
      *  - jendela_swing_* : minimum 1,4; kalau 3 < luas < 5 ditambah 1,3
      *  - pintu_baja      : minimum 2
      */
+    /**
+     * Luas penagihan (m2) per kategori rumus.
+     * Menggunakan max() agar jika luas_riil lebih kecil dari batas minimum,
+     * maka yang dipakai adalah batas minimum tersebut. Jika luas_riil lebih besar,
+     * maka memakai luas_riil yang sebenarnya.
+     */
+    /**
+     * Cek kategori rolling door, toleran terhadap variasi ejaan di master barang
+     * (rolling_ / rooling_ / roling_, dengan atau tanpa "door").
+     */
+    private function _is_rolling_door($kategori)
+    {
+        return (bool) preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) $kategori);
+    }
+
     private function _luas_billing($kategori, $luas_riil, $lebar_mm = 0, $tinggi_mm = 0)
     {
         switch ($kategori) {
             case 'jendela_sliding':
-                return min($luas_riil, 1.3);
+                return max($luas_riil, 1.3);
 
             case 'jendela_swing_b1':
-                return min($luas_riil, 1.4);
+                return max($luas_riil, 1.4);
 
             case 'jendela_swing_b2':
-                $luas = min($luas_riil, 3.0);
-                if ($luas > 3.0 && $luas < 5.0) {
-                    $luas += 1.3;
+                $luas = max($luas_riil, 1.4);
+                if ($luas_riil > 3.0 && $luas_riil < 5.0) {
+                    $luas = $luas_riil + 1.3;
                 }
                 return $luas;
 
             case 'pintu_baja':
             case 'pintu_kayu':
             case 'pintu_alumunium':
-                return min($luas_riil, 2.0);
+                return max($luas_riil, 2.0);
 
             case 'pintu_baja_double':
             case 'pintu_alumunium_double':
-                return min($luas_riil, 3.9);
+                return max($luas_riil, 3.9);
 
             case 'rolling_door_tahan_api':
             case 'rolling_door_baja':
-                $luas = round((($lebar_mm + 200) / 1000) * (($tinggi_mm + 600) / 1000), 4);
+            case 'rooling_door_tahan_api': // ejaan lain yang mungkin ada di master barang
+            case 'rooling_door_baja':
+                // Konversi langsung dari mm ke meter setelah ditambah margin
+                $lebar_m  = ($lebar_mm + 200) / 1000;
+                $tinggi_m = ($tinggi_mm + 600) / 1000;
+
+                // Hitung total luas
+                $luas = round($lebar_m * $tinggi_m, 4);
+
+                // Minimum penagihan 10.0 m2
                 return max($luas, 10.0);
 
             default: // unit_fix
+                if ($this->_is_rolling_door($kategori)) {
+                    return max(round((($lebar_mm + 200) / 1000) * (($tinggi_mm + 600) / 1000), 4), 10.0);
+                }
                 return $luas_riil;
         }
     }
@@ -387,6 +432,35 @@ class Penawaran extends MY_Controller
         }
 
         $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal memperbarui penawaran.');
+        redirect('penawaran/detail/' . $id);
+    }
+
+    public function delete($id)
+    {
+        // Hanya lewat POST (form + token CSRF), tidak boleh lewat link GET
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_404();
+        }
+
+        $id        = (int)$id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('penawaran');
+        }
+
+        if (($penawaran['header']->status ?? 'draft') === 'approved') {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa dihapus.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        if ($this->Penawaran_model->hapus_penawaran($id)) {
+            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil dihapus.');
+            redirect('penawaran');
+        }
+
+        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal menghapus penawaran.');
         redirect('penawaran/detail/' . $id);
     }
 

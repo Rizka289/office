@@ -217,6 +217,14 @@
                       class="btn btn-icon-sm btn-outline-warning" title="Edit">
                       <i class="bi bi-pencil-square"></i>
                     </a>
+                    <?= form_open('penawaran/delete/' . (int) $row->id, [
+                          'class'    => 'd-inline',
+                          'onsubmit' => "return confirm('Hapus penawaran " . html_escape($row->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+                        ]); ?>
+                      <button type="submit" class="btn btn-icon-sm btn-outline-danger" title="Hapus">
+                        <i class="bi bi-trash"></i>
+                      </button>
+                    <?= form_close(); ?>
                   <?php endif; ?>
                 </td>
               </tr>

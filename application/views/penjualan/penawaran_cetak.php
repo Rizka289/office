@@ -2,27 +2,60 @@
 
 <?php
 
+// Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
+// maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+$fmt_luas = function ($v) {
+  $s   = number_format((float) $v, 4, '.', '');
+  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
+  return number_format((float) $v, $dec, '.', '');
+};
+
+// Ukuran yang ditampilkan di cetak. Rolling door: lebar +200 mm & tinggi +600 mm
+// (sama dengan dasar perhitungan luas penagihan). Kategori lain tampil apa adanya.
+$ukuran_cetak = function ($row) {
+  $l = (int) $row->lebar_mm;
+  $t = (int) $row->tinggi_mm;
+  if (preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) ($row->rumus ?? ''))) {
+    $l += 200;
+    $t += 600;
+  }
+  return [$l, $t];
+};
+
 // Kelompokkan baris item per "jenis barang"
 $kelompok = [];
 
 foreach ($items as $it) {
+  // Barang master pun dipisah per kombinasi komponen/books penutup/kelengkapan,
+  // karena ketiganya sekarang bisa diedit per item.
   $kunci = !empty($it->id_barang)
-    ? 'b' . $it->id_barang
+    ? 'b' . $it->id_barang . '_' . md5(($it->komponen ?? '') . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? ''))
     : 't' . md5(
       ($it->jenis_item ?? '') . '|' . ($it->warna ?? '') . '|' . ($it->komponen ?? '') . '|' .
-        ($it->finishing ?? '') . '|' . ($it->komponen_kusen ?? '') . '|' .
-        ($it->komponen_daun ?? '')
+        ($it->finishing ?? '') . '|' . ($it->komponen_kusen ?? '') . '|' . ($it->tipe_motor ?? '')  .
+        '|' . ($it->komponen_daun ?? '') . '|' . ($it->input_power ?? '') . '|' . ($it->voltage ?? '')
+        . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? '')
     );
 
   if (!isset($kelompok[$kunci])) {
     $kelompok[$kunci] = [
       'jenis_item'     => $it->jenis_item,
-      'rumus'          => $it->rumus ?? '',
+      // Samakan ejaan kategori rolling door supaya cocok dengan kunci $spek_tampil
+      'rumus'          => preg_match('/^ro{1,2}l{1,2}ing_(door_)?baja$/', (string) ($it->rumus ?? ''))
+        ? 'rolling_door_baja'
+        : (preg_match('/^ro{1,2}l{1,2}ing_(door_)?tahan_api$/', (string) ($it->rumus ?? ''))
+          ? 'rolling_door_tahan_api'
+          : ($it->rumus ?? '')),
       'warna'          => $it->warna,
       'komponen'       => $it->komponen ?? '',
       'finishing'      => $it->finishing,
       'komponen_kusen' => $it->komponen_kusen,
       'komponen_daun'  => $it->komponen_daun,
+      'tipe_motor'     => $it->tipe_motor,
+      'input_power'    => $it->input_power,
+      'voltage'        => $it->voltage,
+      'books_penutup'  => $it->books_penutup,
+      'kelengkapan'    => $it->kelengkapan,
       'gambar'         => $it->gambar_barang ?? null,
       'keterangan'     => [],
       'baris'          => [],
@@ -44,14 +77,37 @@ $folder_gambar_barang = 'uploads/barang/';
 // Ejaan kunci HARUS sama persis dengan isi kolom barang.kategori_rumus.
 $spek_tampil = [
   // Rolling door: Tipe, Warna, Finishing, Dimensi lubang dinding, Komponen
-  'rolling_door_baja'      => ['nama', 'warna', 'finishing', 'dimensi', 'komponen'],
-  'rolling_door_tahan_api' => ['nama', 'warna', 'finishing', 'dimensi', 'komponen'],
+  'rolling_door_baja'      => [
+    'nama',
+    'warna',
+    'finishing',
+    'dimensi',
+    'komponen',
+    'tipe_motor',
+    'input_power',
+    'voltage',
+    'books_penutup',
+    'kelengkapan'
+  ],
+  'rolling_door_tahan_api' => [
+    'nama',
+    'warna',
+    'finishing',
+    'dimensi',
+    'komponen',
+    'tipe_motor',
+    'input_power',
+    'voltage',
+    'books_penutup',
+    'kelengkapan'
+  ],
 
   // Pintu kayu: Jenis, Warna, Komponen, Ketebalan plate aluminium (kusen | daun)
   'pintu_kayu'             => ['nama', 'warna', 'komponen', 'kusen_daun'],
 
   // Fix unit: Warna, Jenis
-  'unit_fix'               => ['warna', 'nama'],
+  'unit_fix'               => ['warna', 'nama','komponen','kusen_daun','finishing'],
+  
 
   'default'                => ['nama', 'warna', 'komponen', 'kusen_daun', 'finishing'],
 ];
@@ -540,7 +596,7 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
                       <?php elseif ($kolom === 'komponen' && !empty($grp['komponen'])): ?>
                         <tr>
                           <td class="spek-label">Komponen<span class="cn">成分</span></td>
-                          <td><?= html_escape($grp['komponen']); ?></td>
+                          <td><?= nl2br(html_escape($grp['komponen'])); ?></td>
                         </tr>
 
                       <?php elseif ($kolom === 'dimensi'): ?>
@@ -598,6 +654,31 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
                           <td class="spek-label">Finishing<span class="cn">精加工</span></td>
                           <td><?= html_escape($grp['finishing']); ?></td>
                         </tr>
+                      <?php elseif ($kolom === 'tipe_motor' && !empty($grp['tipe_motor'])): ?>
+                        <tr>
+                          <td class="spek-label">Tipe Motor</td>
+                          <td><?= html_escape($grp['tipe_motor']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'input_power' && !empty($grp['input_power'])): ?>
+                        <tr>
+                          <td class="spek-label">Input Power</td>
+                          <td><?= html_escape($grp['input_power']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'voltage' && !empty($grp['voltage'])): ?>
+                        <tr>
+                          <td class="spek-label">Voltage</td>
+                          <td><?= html_escape($grp['voltage']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'books_penutup' && !empty($grp['books_penutup'])): ?>
+                        <tr>
+                          <td class="spek-label">Books Penutup<span class="cn">卷帘门罩壳</span></td>
+                          <td><?= nl2br(html_escape($grp['books_penutup'])); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'kelengkapan' && !empty($grp['kelengkapan'])): ?>
+                        <tr>
+                          <td class="spek-label">Kelengkapan</td>
+                          <td><?= nl2br(html_escape($grp['kelengkapan'])); ?></td>
+                        </tr>
                       <?php endif; ?>
 
                     <?php endforeach; ?>
@@ -616,9 +697,10 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
                   </table>
                 </td>
               <?php endif; ?>
-              <td class="num"><?= (int) $it->lebar_mm; ?></td>
-              <td class="num"><?= (int) $it->tinggi_mm; ?></td>
-              <td class="num"><?= number_format((float) ($it->luas_billing_m2 ?? $it->luas_m2), 2); ?></td>
+              <?php list($uk_l, $uk_t) = $ukuran_cetak($it); ?>
+              <td class="num"><?= $uk_l; ?></td>
+              <td class="num"><?= $uk_t; ?></td>
+              <td class="num"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
               <td class="num"><?= (int) $it->qty; ?></td>
               <td class="money">Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
               <td class="money">Rp <?= number_format((float) $it->total_harga, 0, ',', '.'); ?></td>
@@ -635,11 +717,19 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
         <td class="tval">Subtotal: Rp <?= number_format((float) $header->subtotal, 0, ',', '.'); ?></td>
       </tr>
       <?php if ((float) ($header->biaya_pasang ?? 0) > 0): ?>
-        <tr>
-          <td class="tlabel">Biaya Pemasangan / 安装费</td>
-          <td class="tval">Rp <?= number_format((float) $header->biaya_pasang, 0, ',', '.'); ?></td>
-        </tr>
+        <?php if (in_array($grp['rumus'], ['rolling_door_tahan_api', 'rolling_door_baja'])): ?>
+          <tr>
+            <td class="tlabel">Biaya Instalasi / 安装费</td>
+            <td class="tval">Rp <?= number_format((float) $header->biaya_pasang, 0, ',', '.'); ?></td>
+          </tr>
+        <?php else: ?>
+          <tr>
+            <td class="tlabel">Biaya Pengiriman / 运费</td>
+            <td class="tval">Rp <?= number_format((float) $header->biaya_pasang, 0, ',', '.'); ?></td>
+          </tr>
+        <?php endif; ?>
       <?php endif; ?>
+   
       <?php if ((float) ($header->biaya_ongkir ?? 0) > 0): ?>
         <tr>
           <td class="tlabel">Biaya Pengiriman / 运费</td>

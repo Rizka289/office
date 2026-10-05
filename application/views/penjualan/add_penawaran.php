@@ -48,6 +48,11 @@ if ($is_edit && !empty($items_edit)) {
       'qty'            => (int) ($it['qty'] ?? 1),
       'harga_unit'     => (float) ($it['harga_unit'] ?? 0),
       'keterangan'     => $it['keterangan'] ?? '',
+      'tipe_motor'     => $it['tipe_motor'] ?? '',
+      'input_power'    => $it['input_power'] ?? '',
+      'voltage'        => $it['voltage'] ?? '',
+      'books_penutup'  => $it['books_penutup'] ?? '',
+      'kelengkapan'    => $it['kelengkapan'] ?? '',
     ];
   }
 }
@@ -152,10 +157,10 @@ if ($is_edit && !empty($items_edit)) {
     position: relative;
   }
 
-  .pnw-page .it-komponen[readonly] {
-    background: #eef6f1;
-    color: var(--pnw-brand-dark);
-    cursor: not-allowed;
+  .pnw-page .it-books-penutup,
+  .pnw-page .it-kelengkapan {
+    min-height: 130px;
+    resize: vertical;
   }
 
   .pnw-page .it-jenis.is-locked {
@@ -217,6 +222,64 @@ if ($is_edit && !empty($items_edit)) {
     font-size: .76rem;
   }
 
+  /* Pemilih customer: ketik untuk mencari, daftar bisa di-scroll */
+  .pnw-page .customer-picker {
+    position: relative;
+  }
+
+  .pnw-page .customer-picker .form-control {
+    padding-right: 34px;
+  }
+
+  .pnw-page .customer-picker .customer-caret {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a8a80;
+    font-size: .8rem;
+    pointer-events: none;
+  }
+
+  .pnw-page .customer-dropdown-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid #dfe6e2;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: 4px;
+  }
+
+  .pnw-page .customer-dropdown-list .customer-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    color: #26332c;
+    border-bottom: 1px solid #f2f4f3;
+  }
+
+  .pnw-page .customer-dropdown-list .customer-opt:last-child {
+    border-bottom: none;
+  }
+
+  .pnw-page .customer-dropdown-list .customer-opt:hover,
+  .pnw-page .customer-dropdown-list .customer-opt.active {
+    background: #eef6f1;
+  }
+
+  .pnw-page .customer-dropdown-list .customer-empty {
+    padding: 8px 12px;
+    font-size: .82rem;
+    color: #9aa39d;
+  }
+
   .pnw-page .summary-box {
     background: #f8faf9;
     border: 1px dashed #cfe0d6;
@@ -247,6 +310,12 @@ if ($is_edit && !empty($items_edit)) {
 </style>
 
 <div class="pnw-page">
+
+  <script id="dataCustomer" type="application/json">
+    <?= json_encode(array_map(function ($c) {
+          return ['id' => (int) $c['id'], 'nama' => (string) $c['nama']];
+        }, $list_customer), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>
+  </script>
 
   <script id="dataBarang" type="application/json">
     <?= json_encode($list_barang, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>
@@ -298,13 +367,24 @@ if ($is_edit && !empty($items_edit)) {
           <input type="date" id="tanggal" name="tanggal" class="form-control" value="<?= html_escape($tanggal_val); ?>" required <?= $hdr_lock; ?>>
         </div>
         <div class="col-md-6">
-          <label for="id_customer" class="form-label">Customer <span class="text-danger">*</span></label>
-          <select name="id_customer" id="id_customer" class="form-select" required <?= $hdr_lock; ?>>
-            <option value="">Pilih customer</option>
-            <?php foreach ($list_customer as $c): ?>
-              <option value="<?= html_escape($c['id']); ?>" <?= ($is_edit && (int) $pen->id_customer === (int) $c['id']) ? 'selected' : ''; ?>><?= html_escape($c['nama']); ?></option>
-            <?php endforeach; ?>
-          </select>
+          <label for="customer_search" class="form-label">Customer <span class="text-danger">*</span></label>
+          <?php
+            $cust_id_val   = $is_edit ? (int) $pen->id_customer : 0;
+            $cust_nama_val = '';
+            foreach ($list_customer as $c) {
+              if ((int) $c['id'] === $cust_id_val) {
+                $cust_nama_val = $c['nama'];
+                break;
+              }
+            }
+          ?>
+          <div class="customer-picker">
+            <input type="hidden" name="id_customer" id="id_customer" value="<?= $cust_id_val > 0 ? $cust_id_val : ''; ?>" <?= $hdr_lock; ?>>
+            <input type="text" id="customer_search" class="form-control" placeholder="Ketik nama customer atau pilih dari daftar..."
+              autocomplete="off" value="<?= html_escape($cust_nama_val); ?>" <?= $hdr_lock; ?>>
+            <i class="bi bi-chevron-down customer-caret"></i>
+            <div class="customer-dropdown-list d-none"></div>
+          </div>
         </div>
         <div class="col-12">
           <label for="catatan" class="form-label">Catatan (opsional)</label>
@@ -475,7 +555,7 @@ if ($is_edit && !empty($items_edit)) {
       </div>
       <div class="col-md-2">
         <label class="form-label">Komponen</label>
-        <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang" readonly tabindex="-1">
+        <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang, bisa diedit">
       </div>
 
       <div class="col-md-2">
@@ -488,26 +568,26 @@ if ($is_edit && !empty($items_edit)) {
       </div>
       <div class="col-md-2">
         <label class="form-label">Tipe Motor</label>
-        <input type="text" name="tipe_motor[]" class="form-control" placeholder="Mis. Electra 600">
+        <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="Mis. Electra 600">
       </div>
       <div class="col-md-2">
         <label class="form-label">Input Power</label>
-        <input type="text" name="input_power[]" class="form-control" placeholder="Mis. 250W">
+        <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="Mis. 250 W">
       </div>
 
       <div class="col-md-2">
         <label class="form-label">Voltage</label>
-        <input type="text" name="voltage[]" class="form-control" placeholder="Mis. Electra 600">
+        <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-6">
         <label class="form-label">Books Penutup</label>
-        <input type="text" name="books_penutup[]" class="form-control" rows="1" placeholder="">
+        <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup (boleh banyak baris)"></textarea>
       </div>
-      <div class="col-md-3">
+      <div class="col-md-6">
         <label class="form-label">Kelengkapan</label>
-        <input type="text" name="kelengkapan[]" class="form-control" rows="1" placeholder="">
+        <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan (boleh banyak baris)"></textarea>
       </div>
-      <div class="col-md-6 text-end">
+      <div class="col-12 text-end">
         <label class="form-label d-block">Subtotal Item</label>
         <span class="item-subtotal">Rp 0</span>
       </div>
@@ -588,6 +668,12 @@ if ($is_edit && !empty($items_edit)) {
       set('.it-qty', d.qty);
       set('.it-harga', d.harga_unit);
       set('[name="keterangan[]"]', d.keterangan);
+
+      set('[name="tipe_motor[]"]', d.tipe_motor);
+      set('[name="input_power[]"]', d.input_power);
+      set('[name="voltage[]"]', d.voltage);
+      set('[name="books_penutup[]"]', d.books_penutup);
+      set('[name="kelengkapan[]"]', d.kelengkapan);
       var finValue = (d && d.finishing && d.finishing.trim() !== '') ?
         d.finishing :
         'Powder Coating / 粉末涂料';
@@ -676,8 +762,19 @@ if ($is_edit && !empty($items_edit)) {
       inputWarna.value = b.warna || '';
       inputHarga.value = parseFloat(b.harga_satuan) || 0;
 
-      // Komponen diambil dari master Barang & TIDAK bisa diubah (readonly).
+      // Komponen diisi otomatis dari master Barang, tapi tetap bisa diedit user.
       inputKomponen.value = b.komponen || '';
+
+      // Rolling door: Tipe Motor boleh dikosongkan, server akan mengisi default.
+      var rd = isRollingDoor(b.kategori_rumus);
+      [
+        ['.it-tipe-motor', 'Electra 600', 'Mis. Electra 600'],
+        ['.it-input-power', '250 W', 'Mis. 250 W'],
+        ['.it-voltage', '220 V - 50 Hz', 'Mis. 220 V - 50 Hz']
+      ].forEach(function(f) {
+        var el = card.querySelector(f[0]);
+        if (el) el.placeholder = rd ? ('Kosongkan = otomatis ' + f[1]) : f[2];
+      });
 
       btnGanti.classList.remove('d-none');
       tutupSemuaDropdown();
@@ -709,6 +806,11 @@ if ($is_edit && !empty($items_edit)) {
       return (b && b.kategori_rumus) ? b.kategori_rumus : 'unit_fix';
     }
 
+    // Toleran terhadap variasi ejaan kategori (rolling_ / rooling_ / roling_)
+    function isRollingDoor(kategori) {
+      return /^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/.test(String(kategori || ''));
+    }
+
     function luasBilling(kategori, luasRiil, lebarMm, tinggiMm) {
       var luas = luasRiil;
       if (kategori === 'jendela_sliding') {
@@ -718,7 +820,7 @@ if ($is_edit && !empty($items_edit)) {
         if (luas > 3 && luas < 5) luas += 1.3;
       } else if (kategori === 'pintu_baja') {
         luas = Math.max(luasRiil, 2);
-      } else if (kategori === 'rooling_door_tahan_api' || kategori === 'rooling_door_baja') {
+      } else if (isRollingDoor(kategori)) {
         // Lebar +200 mm, tinggi +600 mm, minimum 10 m²
         luas = Math.max(Math.round(((lebarMm + 200) / 1000) * ((tinggiMm + 600) / 1000) * 10000) / 10000, 10);
       }
@@ -748,12 +850,14 @@ if ($is_edit && !empty($items_edit)) {
     function segarkan() {
       var rows = baris();
       var subtotal = 0;
+      var totalQty = 0;
 
       rows.forEach(function(card, i) {
         card.querySelector('.item-no').textContent = i + 1;
         var btnHapus = card.querySelector('.btn-remove-item');
         btnHapus.disabled = (rows.length === 1);
         subtotal += hitungBaris(card);
+        totalQty += Math.max(0, parseInt(card.querySelector('.it-qty').value, 10) || 0);
       });
 
       // Biaya pemasangan & pengiriman ikut menambah dasar perhitungan pajak
@@ -770,7 +874,8 @@ if ($is_edit && !empty($items_edit)) {
       document.getElementById('sumPasang').textContent = rupiah(pasang);
       document.getElementById('sumOngkir').textContent = rupiah(ongkir);
 
-      document.getElementById('sumJumlahItem').textContent = rows.length;
+      // Jumlah item = total qty seluruh baris (bukan banyaknya baris)
+      document.getElementById('sumJumlahItem').textContent = totalQty;
       document.getElementById('sumSubtotal').textContent = rupiah(subtotal);
       document.getElementById('sumPpn').textContent = rupiah(ppn);
       document.getElementById('sumPph').textContent = rupiah(pph);
@@ -832,6 +937,115 @@ if ($is_edit && !empty($items_edit)) {
       }
     });
 
+    // ===== Pemilih customer (ketik + scroll) =====
+    var DATA_CUSTOMER = [];
+    try {
+      DATA_CUSTOMER = JSON.parse(document.getElementById('dataCustomer').textContent || '[]') || [];
+    } catch (e) {
+      DATA_CUSTOMER = [];
+    }
+
+    var custInput = document.getElementById('customer_search');
+    var custId = document.getElementById('id_customer');
+    var custList = custInput ? custInput.parentNode.querySelector('.customer-dropdown-list') : null;
+    var custAktif = -1;
+
+    function cariCustomer(kata) {
+      kata = (kata || '').trim().toLowerCase();
+      if (kata === '') return DATA_CUSTOMER; // kosong = tampilkan semua (bisa di-scroll)
+      return DATA_CUSTOMER.filter(function(c) {
+        return c.nama.toLowerCase().indexOf(kata) !== -1;
+      });
+    }
+
+    function tutupDropdownCustomer() {
+      if (!custList) return;
+      custList.classList.add('d-none');
+      custList.innerHTML = '';
+      custAktif = -1;
+    }
+
+    function tampilkanCustomer(hasil) {
+      custList.innerHTML = '';
+      custAktif = -1;
+      if (!hasil.length) {
+        var kosong = document.createElement('div');
+        kosong.className = 'customer-empty';
+        kosong.textContent = 'Customer tidak ditemukan.';
+        custList.appendChild(kosong);
+      } else {
+        hasil.forEach(function(c) {
+          var el = document.createElement('div');
+          el.className = 'customer-opt';
+          el.setAttribute('data-id', c.id);
+          el.textContent = c.nama; // textContent: aman dari XSS
+          custList.appendChild(el);
+        });
+      }
+      custList.classList.remove('d-none');
+    }
+
+    function pilihCustomer(id) {
+      var c = DATA_CUSTOMER.find(function(x) {
+        return String(x.id) === String(id);
+      });
+      if (!c) return;
+      custId.value = c.id;
+      custInput.value = c.nama;
+      tutupDropdownCustomer();
+    }
+
+    function geserCustomer(arah) {
+      var opts = custList.querySelectorAll('.customer-opt');
+      if (!opts.length) return;
+      if (custAktif >= 0) opts[custAktif].classList.remove('active');
+      custAktif = (custAktif + arah + opts.length) % opts.length;
+      opts[custAktif].classList.add('active');
+      opts[custAktif].scrollIntoView({
+        block: 'nearest'
+      });
+    }
+
+    if (custInput && !custInput.disabled) {
+      custInput.addEventListener('focus', function() {
+        // Kalau sudah ada customer terpilih, tampilkan semua daftar supaya mudah ganti
+        tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value));
+      });
+
+      custInput.addEventListener('input', function() {
+        custId.value = ''; // teks diubah -> pilihan lama dilepas, harus pilih ulang dari daftar
+        tampilkanCustomer(cariCustomer(custInput.value));
+      });
+
+      custInput.addEventListener('keydown', function(e) {
+        var terbuka = !custList.classList.contains('d-none');
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          if (!terbuka) tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value));
+          geserCustomer(e.key === 'ArrowDown' ? 1 : -1);
+        } else if (e.key === 'Enter' && terbuka) {
+          e.preventDefault(); // jangan submit form saat memilih
+          var opts = custList.querySelectorAll('.customer-opt');
+          if (custAktif >= 0) {
+            pilihCustomer(opts[custAktif].getAttribute('data-id'));
+          } else if (opts.length === 1) {
+            pilihCustomer(opts[0].getAttribute('data-id'));
+          }
+        } else if (e.key === 'Escape') {
+          tutupDropdownCustomer();
+        }
+      });
+
+      custList.addEventListener('click', function(e) {
+        var opt = e.target.closest('.customer-opt');
+        if (opt) pilihCustomer(opt.getAttribute('data-id'));
+      });
+
+      document.addEventListener('click', function(e) {
+        if (!e.target.closest('.customer-picker')) tutupDropdownCustomer();
+      });
+    }
+
     // Tutup dropdown pencarian barang kalau klik di luar area picker
     document.addEventListener('click', function(e) {
       if (!e.target.closest('.barang-picker')) {
@@ -840,6 +1054,12 @@ if ($is_edit && !empty($items_edit)) {
     });
 
     form.addEventListener('submit', function(e) {
+      if (custInput && !custInput.disabled && !custId.value) {
+        e.preventDefault();
+        alert('Customer harus dipilih dari daftar.');
+        custInput.focus();
+        return;
+      }
       var jenisTerisi = baris().some(function(card) {
         return card.querySelector('.it-jenis').value.trim() !== '';
       });

@@ -30,6 +30,7 @@
   }
   .pnw-detail-page table tbody td { padding: .8rem 1rem; vertical-align: top; font-size: .88rem; border-color: #f1f3f2; }
   .pnw-detail-page .spek-line { display: block; font-size: .8rem; color: #6c757d; }
+  .pnw-detail-page .spek-multi { margin-top: 2px; }
   .pnw-detail-page .keterangan-box { font-size: .78rem; color: #8a938d; font-style: italic; margin-top: 4px; }
 
   .pnw-detail-page .summary-card { padding: 18px 20px; max-width: 360px; margin-left: auto; }
@@ -42,6 +43,13 @@
   $ppn      = isset($header->ppn_nominal) ? (float) $header->ppn_nominal : 0;
   $pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
   $grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
+  // Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
+  // maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+  $fmt_luas = function ($v) {
+    $s   = number_format((float) $v, 4, '.', '');
+    $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
+    return number_format((float) $v, $dec, '.', '');
+  };
   $rp = function ($v) { return 'Rp ' . number_format((float) $v, 0, ',', '.'); };
   $approved = (($header->status ?? 'draft') === 'approved');
 ?>
@@ -89,6 +97,14 @@
             ]); ?>
           <button type="submit" class="btn btn-success">
             <i class="bi bi-check2-circle me-1"></i> Approve
+          </button>
+        <?= form_close(); ?>
+        <?= form_open('penawaran/delete/' . (int) $header->id, [
+              'class'    => 'd-inline',
+              'onsubmit' => "return confirm('Hapus penawaran " . html_escape($header->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+            ]); ?>
+          <button type="submit" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i> Hapus
           </button>
         <?= form_close(); ?>
       <?php endif; ?>
@@ -172,6 +188,12 @@
                   <?php if (!empty($it->komponen)): ?>
                     <span class="spek-line">Komponen: <?= html_escape($it->komponen); ?></span>
                   <?php endif; ?>
+                  <?php if (!empty($it->books_penutup)): ?>
+                    <span class="spek-line spek-multi">Books Penutup: <?= nl2br(html_escape($it->books_penutup)); ?></span>
+                  <?php endif; ?>
+                  <?php if (!empty($it->kelengkapan)): ?>
+                    <span class="spek-line spek-multi">Kelengkapan: <?= nl2br(html_escape($it->kelengkapan)); ?></span>
+                  <?php endif; ?>
                   <?php if (!empty($it->finishing)): ?>
                     <span class="spek-line">Finishing: <?= html_escape($it->finishing); ?></span>
                   <?php endif; ?>
@@ -185,7 +207,7 @@
                   <?php endif; ?>
                 </td>
                 <td><?= (int) $it->lebar_mm; ?> x <?= (int) $it->tinggi_mm; ?></td>
-                <td class="text-center"><?= number_format((float) ($it->luas_billing_m2 ?? $it->luas_m2), 2); ?></td>
+                <td class="text-center"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
                 <td class="text-center"><?= (int) $it->qty; ?></td>
                 <td class="text-end"><?= $rp($it->harga_unit); ?></td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>

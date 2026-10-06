@@ -558,12 +558,45 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
           <?php
           $jumlah_baris  = count($grp['baris']);
 
+          // Kumpulkan aksesoris dari semua item dalam kelompok ini. Baris aksesoris
+          // ditampilkan setelah baris barang, jadi kolom gambar harus mencakup keduanya.
+          $aks_rows = [];
+          foreach ($grp['baris'] as $br_aks) {
+            // Books Penutup (rolling door): luas x qty x harga
+            $b_luas = (float) ($br_aks->luas_m2_books ?? 0);
+            $b_qty  = (int) ($br_aks->qty_books ?? 0);
+            $b_hrg  = (float) ($br_aks->harga_m2_books ?? 0);
+            if ($b_luas > 0 && $b_qty > 0) {
+              $aks_rows[] = (object) [
+                'nama'      => 'Books Penutup',
+                'lebar_mm'  => $br_aks->lebar_m2_books,
+                'tinggi_mm' => $br_aks->tinggi_m2_books,
+                'luas'      => $b_luas,
+                'qty'       => $b_qty,
+                'harga'     => $b_hrg,
+                'total'     => $b_luas * $b_qty * $b_hrg,
+              ];
+            }
+            foreach (($br_aks->aksesoris ?? []) as $ak_row) {
+              $aks_rows[] = (object) [
+                'nama'      => $ak_row->nama,
+                'lebar_mm'  => null,
+                'tinggi_mm' => null,
+                'luas'      => null,
+                'qty'       => (int) $ak_row->qty,
+                'harga'     => (float) $ak_row->harga,
+                'total'     => isset($ak_row->total_harga) ? (float) $ak_row->total_harga : (int) $ak_row->qty * (float) $ak_row->harga,
+              ];
+            }
+          }
+          $jumlah_baris_total = $jumlah_baris + count($aks_rows);
+
           $baris_pertama = TRUE;
           ?>
           <?php foreach ($grp['baris'] as $it): $jumlah_unit += (int) $it->qty; ?>
             <tr>
               <?php if ($baris_pertama): ?>
-                <td class="gambar-cell" rowspan="<?= $jumlah_baris; ?>">
+                <td class="gambar-cell" rowspan="<?= $jumlah_baris_total; ?>">
                   <?php if (!empty($grp['gambar'])): ?>
                     <img src="<?= base_url($folder_gambar_barang . $grp['gambar']); ?>"
                       alt="<?= html_escape($grp['jenis_item']); ?>"
@@ -703,9 +736,40 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
               <td class="num"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
               <td class="num"><?= (int) $it->qty; ?></td>
               <td class="money">Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
-              <td class="money">Rp <?= number_format((float) $it->total_harga, 0, ',', '.'); ?></td>
+              <?php
+              // total_harga di database sudah termasuk aksesoris; di baris barang
+              // tampilkan bagian barangnya saja (aksesoris punya baris sendiri di bawah).
+              $total_aks_it = 0;
+              foreach (($it->aksesoris ?? []) as $ak_it) {
+                $total_aks_it += isset($ak_it->total_harga) ? (float) $ak_it->total_harga : (int) $ak_it->qty * (float) $ak_it->harga;
+              }
+              // Books penutup juga sudah termasuk di total_harga; tampil di baris sendiri
+              $total_aks_it += (float) ($it->luas_m2_books ?? 0) * (int) ($it->qty_books ?? 0) * (float) ($it->harga_m2_books ?? 0);
+              $total_barang_it = max(0, (float) $it->total_harga - $total_aks_it);
+              ?>
+              <td class="money">Rp <?= number_format($total_barang_it, 0, ',', '.'); ?></td>
             </tr>
             <?php $baris_pertama = FALSE; ?>
+          <?php endforeach; ?>
+
+          <?php /* Baris aksesoris: nama -> Deskripsi, qty -> Qty, harga -> Harga / Unit */ ?>
+          <?php foreach ($aks_rows as $ak): ?>
+            <tr class="aksesoris-row">
+              <td class="deskripsi-cell">
+                <?php if ($ak->nama === 'Books Penutup'): ?>
+                  <strong>Books Penutup<span class="cn">卷帘门罩壳</span></strong>
+                <?php else: ?>
+                  <strong>Aksesoris<span class="cn">配件</span>:</strong>
+                  <?= html_escape($ak->nama); ?>
+                <?php endif; ?>
+              </td>
+              <td class="num"><?= $ak->lebar_mm !== null ? (int) round((float) $ak->lebar_mm) : ''; ?></td>
+              <td class="num"><?= $ak->tinggi_mm !== null ? (int) round((float) $ak->tinggi_mm) : ''; ?></td>
+              <td class="num"><?= $ak->luas !== null ? $fmt_luas($ak->luas) : ''; ?></td>
+              <td class="num"><?= (int) $ak->qty; ?></td>
+              <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format((float) $ak->total, 0, ',', '.'); ?></td>
+            </tr>
           <?php endforeach; ?>
         <?php endforeach; ?>
       </tbody>

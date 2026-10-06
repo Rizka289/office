@@ -191,6 +191,13 @@
                   <?php if (!empty($it->books_penutup)): ?>
                     <span class="spek-line spek-multi">Books Penutup: <?= nl2br(html_escape($it->books_penutup)); ?></span>
                   <?php endif; ?>
+                  <?php if ((float) ($it->luas_m2_books ?? 0) > 0 && (int) ($it->qty_books ?? 0) > 0): ?>
+                    <span class="spek-line">
+                      Ukuran Books: <?= (int) round((float) $it->lebar_m2_books); ?> &times; <?= (int) round((float) $it->tinggi_m2_books); ?> mm
+                      = <?= $fmt_luas($it->luas_m2_books); ?> m² &times; <?= (int) $it->qty_books; ?> &times; <?= $rp($it->harga_m2_books); ?>
+                      = <?= $rp((float) $it->luas_m2_books * (int) $it->qty_books * (float) $it->harga_m2_books); ?>
+                    </span>
+                  <?php endif; ?>
                   <?php if (!empty($it->kelengkapan)): ?>
                     <span class="spek-line spek-multi">Kelengkapan: <?= nl2br(html_escape($it->kelengkapan)); ?></span>
                   <?php endif; ?>
@@ -201,6 +208,14 @@
                     <span class="spek-line">
                       Plate Kusen/Daun: <?= html_escape($it->komponen_kusen ?: '-'); ?> / <?= html_escape($it->komponen_daun ?: '-'); ?> mm
                     </span>
+                  <?php endif; ?>
+                  <?php if (!empty($it->aksesoris)): ?>
+                    <span class="spek-line spek-multi">Aksesoris:</span>
+                    <?php foreach ($it->aksesoris as $ak): ?>
+                      <span class="spek-line">
+                        &bull; <?= html_escape($ak->nama); ?> (<?= (int) $ak->qty; ?> &times; <?= $rp($ak->harga); ?> = <?= $rp(isset($ak->total_harga) ? $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?>)
+                      </span>
+                    <?php endforeach; ?>
                   <?php endif; ?>
                   <?php if (!empty($it->keterangan)): ?>
                     <div class="keterangan-box"><?= nl2br(html_escape($it->keterangan)); ?></div>

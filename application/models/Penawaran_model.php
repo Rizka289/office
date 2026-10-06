@@ -92,6 +92,11 @@ class Penawaran_model extends CI_Model
         $this->db->where('pd.id_penawaran', $id);
         $this->db->order_by('pd.id', 'ASC');
         $items = $this->db->get()->result();
+        foreach ($items as &$it) {
+            $it->aksesoris = $this->db->get_where('penawaran_detail_aksesoris', [
+                'id_penawaran_detail' => $it->id
+            ])->result();
+        }
 
         return [
             'header' => $header,
@@ -167,6 +172,51 @@ class Penawaran_model extends CI_Model
         return $map;
     }
 
+    // Hapus semua aksesoris milik detail-detail dari 1 penawaran.
+    private function _hapus_aksesoris_by_penawaran($id_penawaran)
+    {
+        $this->db->query(
+            'DELETE a FROM penawaran_detail_aksesoris a
+             JOIN penawaran_detail d ON d.id = a.id_penawaran_detail
+             WHERE d.id_penawaran = ?',
+            [(int) $id_penawaran]
+        );
+    }
+
+    // Insert item ke penawaran_detail beserta aksesorisnya ke
+    // penawaran_detail_aksesoris (dipakai oleh simpan & update).
+    private function _insert_items($id_penawaran, $items)
+    {
+        // Hanya kolom yang benar-benar ada di tabel aksesoris yang diinsert,
+        // supaya insert tidak error kalau ada key yang kolomnya belum dibuat.
+        $kolom_aks = $this->db->list_fields('penawaran_detail_aksesoris');
+        $kolom_det = $this->db->list_fields('penawaran_detail');
+
+        foreach ($items as $item) {
+            $aksesoris_list = $item['aksesoris'] ?? [];
+            unset($item['aksesoris']);
+
+            $item['id_penawaran'] = $id_penawaran;
+
+            // Key yang kolomnya belum ada di penawaran_detail dilewati (dicatat di log),
+            // supaya insert tidak error kalau ada kolom yang belum dibuat.
+            $det_tidak_ada = array_diff(array_keys($item), $kolom_det);
+            if (!empty($det_tidak_ada)) {
+                log_message('error', 'penawaran_detail: kolom tidak ada -> ' . implode(', ', $det_tidak_ada));
+            }
+            $item = array_intersect_key($item, array_flip($kolom_det));
+
+            $this->db->insert('penawaran_detail', $item);
+            $id_detail = $this->db->insert_id();
+
+            foreach ($aksesoris_list as $aks) {
+                $aks['id_penawaran_detail'] = $id_detail;
+                $aks = array_intersect_key($aks, array_flip($kolom_aks));
+                $this->db->insert('penawaran_detail_aksesoris', $aks);
+            }
+        }
+    }
+
     // Simpan 1 penawaran baru: insert header ke `penawaran`, lalu semua
     // item ke `penawaran_detail`, dibungkus 1 transaksi supaya konsisten
     // (kalau salah satu gagal, semuanya dibatalkan).
@@ -177,10 +227,7 @@ class Penawaran_model extends CI_Model
         $this->db->insert('penawaran', $header);
         $id_penawaran = $this->db->insert_id();
 
-        foreach ($items as $item) {
-            $item['id_penawaran'] = $id_penawaran;
-            $this->db->insert('penawaran_detail', $item);
-        }
+        $this->_insert_items($id_penawaran, $items);
 
         $this->db->trans_complete();
 
@@ -191,7 +238,6 @@ class Penawaran_model extends CI_Model
 
         return $id_penawaran;
     }
-
     // Update penawaran yang MASIH belum di-approve: header di-update, item
     // lama dihapus lalu diinsert ulang dari form (semua dalam 1 transaksi).
     // Status dicek ulang di dalam transaksi dengan FOR UPDATE, jadi kalau
@@ -215,13 +261,12 @@ class Penawaran_model extends CI_Model
         $this->db->where('id', $id);
         $this->db->update('penawaran', $header);
 
+        // Aksesoris dihapus dulu (anak dari penawaran_detail), baru detail-nya
+        $this->_hapus_aksesoris_by_penawaran($id);
         $this->db->where('id_penawaran', $id);
         $this->db->delete('penawaran_detail');
 
-        foreach ($items as $item) {
-            $item['id_penawaran'] = $id;
-            $this->db->insert('penawaran_detail', $item);
-        }
+        $this->_insert_items($id, $items);
 
         $this->db->trans_complete();
 
@@ -253,6 +298,7 @@ class Penawaran_model extends CI_Model
             return false;
         }
 
+        $this->_hapus_aksesoris_by_penawaran($id);
         $this->db->where('id_penawaran', $id);
         $this->db->delete('penawaran_detail');
 

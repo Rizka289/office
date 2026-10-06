@@ -135,6 +135,13 @@ class Penawaran extends MY_Controller
         $books_penutup  = $this->input->post('books_penutup', TRUE)  ?: [];
         $kelengkapan    = $this->input->post('kelengkapan', TRUE)    ?: [];
         $komponen       = $this->input->post('komponen', TRUE)       ?: [];
+        $aks_nama  = $this->input->post('aks_nama', TRUE)  ?: [];
+        $aks_qty   = $this->input->post('aks_qty', TRUE)   ?: [];
+        $aks_harga = $this->input->post('aks_harga', TRUE) ?: [];
+        $lebar_m2 = $this->input->post('lebar_m2_books', TRUE) ?: [];
+        $tinggi_m2 = $this->input->post('tinggi_m2_books', TRUE) ?: [];
+        $qty_m2 = $this->input->post('qty_books', TRUE) ?: [];
+        $harga_books = $this->input->post('harga_m2_books', TRUE) ?: [];
 
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
@@ -179,6 +186,45 @@ class Penawaran extends MY_Controller
                 ? $q * $harga_m2
                 : $luas_billing * $q * $harga_m2;
 
+            // Aksesoris tambahan item ke-$i (form: aks_nama[$i][], aks_qty[$i][], aks_harga[$i][]).
+            // Nama kolom tabel penawaran_detail_aksesoris: id_penawaran_detail, nama, qty, harga.
+            $aks_list  = [];
+            $total_aks = 0;
+            $aks_nama_item = $aks_nama[$i] ?? [];
+            if (is_array($aks_nama_item)) {
+                foreach ($aks_nama_item as $k => $nm) {
+                    $nm = trim((string) $nm);
+                    if ($nm === '') {
+                        continue; // baris aksesoris kosong dilewati
+                    }
+                    $aq = max(1, (int) ($aks_qty[$i][$k] ?? 1));
+                    $ah = max(0, (float) ($aks_harga[$i][$k] ?? 0));
+
+                    $aks_list[] = [
+                        'nama'        => $nm,
+                        'qty'         => $aq,
+                        'harga'       => $ah,
+                        'total_harga' => round($aq * $ah, 2), // total per aksesoris (qty x harga)
+                    ];
+                    $total_aks += $aq * $ah;
+                }
+            }
+            // Total item = harga barang + aksesoris (sama dengan hitungan di JS form)
+            $total += $total_aks;
+
+            // Books Penutup (khusus rolling door baja / tahan api):
+            // luas = lebar x tinggi (mm -> m2), total = luas x qty x harga. Semua diinput manual.
+            $books_l = 0; $books_t = 0; $books_luas = 0; $books_q = 0; $books_h = 0; $books_total = 0;
+            if ($this->_is_rolling_door($kategori_rumus)) {
+                $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
+                $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));
+                $books_luas  = round(($books_l / 1000) * ($books_t / 1000), 4);
+                $books_q     = max(0, (int) ($qty_m2[$i] ?? 0));
+                $books_h     = max(0, (float) ($harga_books[$i] ?? 0));
+                $books_total = round($books_luas * $books_q * $books_h, 2);
+            }
+            $total += $books_total; // total item = barang + aksesoris + books penutup
+
             // Rolling door: Tipe Motor, Input Power, Voltage yang tidak diisi user diisi default
             $tipe_motor_val  = trim($tipe_motor[$i] ?? '');
             $input_power_val = trim($input_power[$i] ?? '');
@@ -214,7 +260,13 @@ class Penawaran extends MY_Controller
                 'input_power'     => $input_power_val,
                 'voltage'         => $voltage_val,
                 'books_penutup'   => trim($books_penutup[$i] ?? ''),
+                'lebar_m2_books'  => $books_l,
+                'tinggi_m2_books' => $books_t,
+                'luas_m2_books'   => $books_luas,
+                'qty_books'       => $books_q,
+                'harga_m2_books'  => $books_h,
                 'kelengkapan'     => trim($kelengkapan[$i] ?? ''),
+                'aksesoris'       => $aks_list, // diinsert terpisah oleh model ke penawaran_detail_aksesoris
             ];
 
             $subtotal += $total;
@@ -328,6 +380,7 @@ class Penawaran extends MY_Controller
         $tanggal     = $this->input->post('tanggal', TRUE);
         $id_customer = (int)$this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
+        
 
         if (empty($tanggal) || $id_customer <= 0) {
             $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');

@@ -31,7 +31,7 @@
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('Dimensi') ?></th>
                     <th><?= translate('harga') ?></th>
-                    <th><?= translate('min_stok') ?></th>
+                    <th><?= translate('deskripsi') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
@@ -163,6 +163,10 @@
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_bar_min') ?>" autocomplete="off" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
+                        <input type="text" name="keterangan" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" autocomplete="off" required>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
@@ -288,6 +292,10 @@
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" id="edit_stok" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
+                        <input type="text" name="keterangan" id="edit_keterangan"  class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" required>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
@@ -399,7 +407,7 @@
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
                     '<td>Rp ' + formatHarga(brg.harga_satuan) + '</td>' +
-                    '<td>' + escapeHtml(brg.stok_minimum) + '</td>' +
+                    '<td>' + escapeHtml(brg.keterangan) + '</td>' +
                     '<td class="text-center">' +
                     '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + brg.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
                     '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + brg.id + '" data-nama="' + escapeHtml(brg.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
@@ -518,6 +526,7 @@
                         $('#edit_is_produced').val(response.data.is_produced);
                         $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
+                        $('#edit_keterangan').val(response.data.keterangan);
 
                         $('#edit_preview_gambar').attr('src', response.data.gambar_url);
 

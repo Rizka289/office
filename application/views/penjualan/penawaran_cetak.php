@@ -113,6 +113,131 @@ $spek_tampil = [
 ];
 // Kategori yang label "nama"-nya "Tipe" (selain itu "Jenis").
 $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
+
+// Render tabel spesifikasi untuk daftar baris tertentu ($kolom_list).
+// Dipakai dua kali bila ada Books Penutup: bagian atas (sampai Dimensi lubang
+// dinding) dan bagian bawah (Komponen dst.), dipisah oleh baris Ukuran Books Penutup.
+$render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
+?>
+<table class="spek-table">
+                    <?php foreach ($kolom_list as $kolom): ?>
+
+                      <?php if ($kolom === 'nama'): ?>
+                        <tr>
+                          <td class="spek-label"><?= $label_nama; ?><span class="cn">/ 类型</span></td>
+                          <td class="spek-nama"><?= html_escape($grp['jenis_item']); ?></td>
+                        </tr>
+
+                      <?php elseif ($kolom === 'warna' && !empty($grp['warna'])): ?>
+                        <tr>
+                          <td class="spek-label">Warna<span class="cn">/ 颜色</span></td>
+                          <td><?= html_escape($grp['warna']); ?></td>
+                        </tr>
+
+                      <?php elseif ($kolom === 'komponen' && !empty($grp['komponen'])): ?>
+                        <tr>
+                          <td class="spek-label">Komponen<span class="cn">/ 成分</span></td>
+                          <td><?= nl2br(html_escape($grp['komponen'])); ?></td>
+                        </tr>
+
+                      <?php elseif ($kolom === 'dimensi'): ?>
+                        <tr>
+                          <td class="spek-label" style="vertical-align: middle; width: 35%;">
+                            Dimensi lubang dinding<br>
+                            <span class="cn">/ 墙体开孔尺寸</span>
+                          </td>
+                          <td colspan="2">
+                            <table class="komponen-table" style="width: 100%;">
+                              <thead>
+                                <tr>
+                                  <th>Lebar (mm) <br><span class="cn">宽度 (mm)</span></th>
+                                  <th>Tinggi (mm) <br><span class="cn">高度 (mm)</span></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <?php foreach ($grp['baris'] as $br): ?>
+                                  <tr>
+                                    <td><?= (int) $br->lebar_mm; ?></td>
+                                    <td><?= (int) $br->tinggi_mm; ?></td>
+                                  </tr>
+                                <?php endforeach; ?>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+
+                      <?php elseif ($kolom === 'kusen_daun' && (!empty($grp['komponen_kusen']) || !empty($grp['komponen_daun']))): ?>
+                        <tr>
+                          <td class="spek-label" style="vertical-align: middle; width: 35%;">
+                            Ketebalan Plate<br> Aluminium <br>
+                            <span class="cn">/ 铝板厚度</span>
+                          </td>
+                          <td colspan="2">
+                            <table class="komponen-table" style="width: 100%;">
+                              <thead>
+                                <tr>
+                                  <th>Kusen (mm) <br><span class="cn">门框 (mm)</span></th>
+                                  <th>Daun (mm) <br><span class="cn">叶子 (mm)</span></th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td><?= html_escape($grp['komponen_kusen'] ?: '-'); ?></td>
+                                  <td><?= html_escape($grp['komponen_daun'] ?: '-'); ?></td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+
+                      <?php elseif ($kolom === 'finishing' && !empty($grp['finishing'])): ?>
+                        <tr>
+                          <td class="spek-label">Finishing<span class="cn">/ 精加工</span></td>
+                          <td><?= html_escape($grp['finishing']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'tipe_motor' && !empty($grp['tipe_motor'])): ?>
+                        <tr>
+                          <td class="spek-label">Tipe Motor</td>
+                          <td><?= html_escape($grp['tipe_motor']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'input_power' && !empty($grp['input_power'])): ?>
+                        <tr>
+                          <td class="spek-label">Input Power</td>
+                          <td><?= html_escape($grp['input_power']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'voltage' && !empty($grp['voltage'])): ?>
+                        <tr>
+                          <td class="spek-label">Voltage</td>
+                          <td><?= html_escape($grp['voltage']); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'books_penutup' && !empty($grp['books_penutup'])): ?>
+                        <tr>
+                          <td class="spek-label">Books Penutup<span class="cn">/ 卷帘门罩壳</span></td>
+                          <td><?= nl2br(html_escape($grp['books_penutup'])); ?></td>
+                        </tr>
+                      <?php elseif ($kolom === 'kelengkapan' && !empty($grp['kelengkapan'])): ?>
+                        <tr>
+                          <td class="spek-label">Kelengkapan</td>
+                          <td><?= nl2br(html_escape($grp['kelengkapan'])); ?></td>
+                        </tr>
+                      <?php endif; ?>
+
+                    <?php endforeach; ?>
+
+                    <?php if ($tampil_ket && !empty($grp['keterangan'])): ?>
+                      <tr>
+                        <td class="spek-label" style="vertical-align: top; width: 35%;">
+                          Keterangan <br>
+                          <span class="cn">/ 信息</span>
+                        </td>
+                        <td class="keterangan-block" style="vertical-align: top;">
+                          <?= nl2br(html_escape(implode("\n", $grp['keterangan']))); ?>
+                        </td>
+                      </tr>
+                    <?php endif; ?>
+                  </table>
+<?php
+};
 ?>
 
 <!DOCTYPE html>
@@ -560,14 +685,15 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
 
           // Kumpulkan aksesoris dari semua item dalam kelompok ini. Baris aksesoris
           // ditampilkan setelah baris barang, jadi kolom gambar harus mencakup keduanya.
-          $aks_rows = [];
+          $books_rows = [];
+          $aks_rows   = [];
           foreach ($grp['baris'] as $br_aks) {
             // Books Penutup (rolling door): luas x qty x harga
             $b_luas = (float) ($br_aks->luas_m2_books ?? 0);
             $b_qty  = (int) ($br_aks->qty_books ?? 0);
             $b_hrg  = (float) ($br_aks->harga_m2_books ?? 0);
             if ($b_luas > 0 && $b_qty > 0) {
-              $aks_rows[] = (object) [
+              $books_rows[] = (object) [
                 'nama'      => 'Books Penutup',
                 'lebar_mm'  => $br_aks->lebar_m2_books,
                 'tinggi_mm' => $br_aks->tinggi_m2_books,
@@ -589,7 +715,18 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
               ];
             }
           }
-          $jumlah_baris_total = $jumlah_baris + count($aks_rows);
+          // Susunan baris: baris barang -> baris Ukuran Books Penutup (tepat di bawah
+          // Dimensi lubang dinding) -> sisa spesifikasi (Komponen dst.) -> aksesoris paling bawah.
+          $baris_spek_grp = $spek_tampil[$grp['rumus']] ?? $spek_tampil['default'];
+          $ada_bawah  = !empty($books_rows) && in_array('dimensi', $baris_spek_grp, TRUE);
+          $spek_atas  = $baris_spek_grp;
+          $spek_bawah = [];
+          if ($ada_bawah) {
+            $pos_dim    = array_search('dimensi', $baris_spek_grp, TRUE);
+            $spek_atas  = array_slice($baris_spek_grp, 0, $pos_dim + 1);
+            $spek_bawah = array_slice($baris_spek_grp, $pos_dim + 1);
+          }
+          $jumlah_baris_total = $jumlah_baris + count($books_rows) + ($ada_bawah ? 1 : 0) + count($aks_rows);
 
           $baris_pertama = TRUE;
           ?>
@@ -611,123 +748,7 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
                   $baris_spek = $spek_tampil[$rumus_grp] ?? $spek_tampil['default'];
                   $label_nama = in_array($rumus_grp, $rumus_label_tipe, TRUE) ? 'Tipe' : 'Jenis';
                   ?>
-                  <table class="spek-table">
-                    <?php foreach ($baris_spek as $kolom): ?>
-
-                      <?php if ($kolom === 'nama'): ?>
-                        <tr>
-                          <td class="spek-label"><?= $label_nama; ?><span class="cn">类型</span></td>
-                          <td class="spek-nama"><?= html_escape($grp['jenis_item']); ?></td>
-                        </tr>
-
-                      <?php elseif ($kolom === 'warna' && !empty($grp['warna'])): ?>
-                        <tr>
-                          <td class="spek-label">Warna<span class="cn">颜色</span></td>
-                          <td><?= html_escape($grp['warna']); ?></td>
-                        </tr>
-
-                      <?php elseif ($kolom === 'komponen' && !empty($grp['komponen'])): ?>
-                        <tr>
-                          <td class="spek-label">Komponen<span class="cn">成分</span></td>
-                          <td><?= nl2br(html_escape($grp['komponen'])); ?></td>
-                        </tr>
-
-                      <?php elseif ($kolom === 'dimensi'): ?>
-                        <tr>
-                          <td class="spek-label" style="vertical-align: middle; width: 35%;">
-                            Dimensi lubang dinding<br>
-                            <span class="cn">墙体开孔尺寸</span>
-                          </td>
-                          <td colspan="2">
-                            <table class="komponen-table" style="width: 100%;">
-                              <thead>
-                                <tr>
-                                  <th>Lebar (mm) <br><span class="cn">宽度 (mm)</span></th>
-                                  <th>Tinggi (mm) <br><span class="cn">高度 (mm)</span></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <?php foreach ($grp['baris'] as $br): ?>
-                                  <tr>
-                                    <td><?= (int) $br->lebar_mm; ?></td>
-                                    <td><?= (int) $br->tinggi_mm; ?></td>
-                                  </tr>
-                                <?php endforeach; ?>
-                              </tbody>
-                            </table>
-                          </td>
-                        </tr>
-
-                      <?php elseif ($kolom === 'kusen_daun' && (!empty($grp['komponen_kusen']) || !empty($grp['komponen_daun']))): ?>
-                        <tr>
-                          <td class="spek-label" style="vertical-align: middle; width: 35%;">
-                            Ketebalan Plate<br> Aluminium <br>
-                            <span class="cn">铝板厚度</span>
-                          </td>
-                          <td colspan="2">
-                            <table class="komponen-table" style="width: 100%;">
-                              <thead>
-                                <tr>
-                                  <th>Kusen (mm) <br><span class="cn">门框 (mm)</span></th>
-                                  <th>Daun (mm) <br><span class="cn">叶子 (mm)</span></th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                <tr>
-                                  <td><?= html_escape($grp['komponen_kusen'] ?: '-'); ?></td>
-                                  <td><?= html_escape($grp['komponen_daun'] ?: '-'); ?></td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </td>
-                        </tr>
-
-                      <?php elseif ($kolom === 'finishing' && !empty($grp['finishing'])): ?>
-                        <tr>
-                          <td class="spek-label">Finishing<span class="cn">精加工</span></td>
-                          <td><?= html_escape($grp['finishing']); ?></td>
-                        </tr>
-                      <?php elseif ($kolom === 'tipe_motor' && !empty($grp['tipe_motor'])): ?>
-                        <tr>
-                          <td class="spek-label">Tipe Motor</td>
-                          <td><?= html_escape($grp['tipe_motor']); ?></td>
-                        </tr>
-                      <?php elseif ($kolom === 'input_power' && !empty($grp['input_power'])): ?>
-                        <tr>
-                          <td class="spek-label">Input Power</td>
-                          <td><?= html_escape($grp['input_power']); ?></td>
-                        </tr>
-                      <?php elseif ($kolom === 'voltage' && !empty($grp['voltage'])): ?>
-                        <tr>
-                          <td class="spek-label">Voltage</td>
-                          <td><?= html_escape($grp['voltage']); ?></td>
-                        </tr>
-                      <?php elseif ($kolom === 'books_penutup' && !empty($grp['books_penutup'])): ?>
-                        <tr>
-                          <td class="spek-label">Books Penutup<span class="cn">卷帘门罩壳</span></td>
-                          <td><?= nl2br(html_escape($grp['books_penutup'])); ?></td>
-                        </tr>
-                      <?php elseif ($kolom === 'kelengkapan' && !empty($grp['kelengkapan'])): ?>
-                        <tr>
-                          <td class="spek-label">Kelengkapan</td>
-                          <td><?= nl2br(html_escape($grp['kelengkapan'])); ?></td>
-                        </tr>
-                      <?php endif; ?>
-
-                    <?php endforeach; ?>
-
-                    <?php if (!empty($grp['keterangan'])): ?>
-                      <tr>
-                        <td class="spek-label" style="vertical-align: top; width: 35%;">
-                          Keterangan <br>
-                          <span class="cn">信息</span>
-                        </td>
-                        <td class="keterangan-block" style="vertical-align: top;">
-                          <?= nl2br(html_escape(implode("\n", $grp['keterangan']))); ?>
-                        </td>
-                      </tr>
-                    <?php endif; ?>
-                  </table>
+                  <?php $render_spek($spek_atas, $grp, $label_nama, !$ada_bawah); ?>
                 </td>
               <?php endif; ?>
               <?php list($uk_l, $uk_t) = $ukuran_cetak($it); ?>
@@ -752,20 +773,69 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
             <?php $baris_pertama = FALSE; ?>
           <?php endforeach; ?>
 
-          <?php /* Baris aksesoris: nama -> Deskripsi, qty -> Qty, harga -> Harga / Unit */ ?>
+          <?php /* Baris Ukuran Books Penutup: label + lebar/tinggi di deskripsi, luas/qty/harga di kolom angka */ ?>
+          <?php foreach ($books_rows as $bk): ?>
+            <tr class="books-row">
+              <td class="deskripsi-cell">
+                <table class="spek-table">
+                  <tr>
+                    <td class="spek-label" style="vertical-align: middle; width: 35%; white-space: normal;">
+                      Ukuran Books Penutup<br><span class="cn">/ 卷帘门罩壳尺寸</span>
+                    </td>
+                    <td>
+                      <table class="komponen-table" style="width: 100%;">
+                        <thead>
+                          <tr>
+                            <th>Lebar (mm) <br><span class="cn">宽度 (mm)</span></th>
+                            <th>Tinggi (mm) <br><span class="cn">高度 (mm)</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td><?= $bk->lebar_mm !== null ? (int) round((float) $bk->lebar_mm) : ''; ?></td>
+                            <td><?= $bk->tinggi_mm !== null ? (int) round((float) $bk->tinggi_mm) : ''; ?></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+              <td class="num"><?= $bk->lebar_mm !== null ? (int) round((float) $bk->lebar_mm) : ''; ?></td>
+              <td class="num"><?= $bk->tinggi_mm !== null ? (int) round((float) $bk->tinggi_mm) : ''; ?></td>
+              <td class="num"><?= $fmt_luas($bk->luas); ?></td>
+              <td class="num"><?= (int) $bk->qty; ?></td>
+              <td class="money">Rp <?= number_format((float) $bk->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format((float) $bk->total, 0, ',', '.'); ?></td>
+            </tr>
+          <?php endforeach; ?>
+
+          <?php /* Sisa spesifikasi (Komponen dst. + Keterangan) setelah baris Books Penutup */ ?>
+          <?php if ($ada_bawah): ?>
+            <tr>
+              <td class="deskripsi-cell">
+                <?php $render_spek($spek_bawah, $grp, $label_nama, TRUE); ?>
+              </td>
+              <?php /* Sel kosong dipisah per kolom (bukan colspan) supaya garis kolom tetap menyambung sampai bawah */ ?>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="money"></td>
+              <td class="money"></td>
+            </tr>
+          <?php endif; ?>
+
+          <?php /* Baris aksesoris (paling bawah): nama -> Deskripsi, qty -> Qty, harga -> Harga / Unit */ ?>
           <?php foreach ($aks_rows as $ak): ?>
             <tr class="aksesoris-row">
               <td class="deskripsi-cell">
-                <?php if ($ak->nama === 'Books Penutup'): ?>
-                  <strong>Books Penutup<span class="cn">卷帘门罩壳</span></strong>
-                <?php else: ?>
-                  <strong>Aksesoris<span class="cn">配件</span>:</strong>
-                  <?= html_escape($ak->nama); ?>
-                <?php endif; ?>
+                <strong>Aksesoris<span class="cn">/ 配件</span>:</strong>
+                <?= html_escape($ak->nama); ?>
               </td>
-              <td class="num"><?= $ak->lebar_mm !== null ? (int) round((float) $ak->lebar_mm) : ''; ?></td>
-              <td class="num"><?= $ak->tinggi_mm !== null ? (int) round((float) $ak->tinggi_mm) : ''; ?></td>
-              <td class="num"><?= $ak->luas !== null ? $fmt_luas($ak->luas) : ''; ?></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"></td>
               <td class="num"><?= (int) $ak->qty; ?></td>
               <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
               <td class="money">Rp <?= number_format((float) $ak->total, 0, ',', '.'); ?></td>

@@ -12,6 +12,10 @@ class Penawaran extends MY_Controller
     const DEFAULT_TIPE_MOTOR_ROLLING  = 'Electra 600';
     const DEFAULT_POWER_ROLLING       = '250 W';
     const DEFAULT_VOLTAGE_ROLLING     = '220 V - 50 Hz';
+    const DEFAULT_KELENGKAPAN_ROLLING = "3 Bh Remote hand / 3 Bh Remote hand / 3个手持遥控器\n1 Bh Remote dinding / 1个壁挂遥控器\nRantai Emergency / 紧急链条";
+    const DEFAULT_BOOKS_PENUTUP_ROLLING = "Hollow 30 x 30 x 1.0 mm / 角钢 30 x 30 x 1.0 毫米\nPlat besi galvanis 0.5 mm / 镀锌铁板 0.5 毫米";
+
+
 
     public function __construct()
     {
@@ -214,7 +218,12 @@ class Penawaran extends MY_Controller
 
             // Books Penutup (khusus rolling door baja / tahan api):
             // luas = lebar x tinggi (mm -> m2), total = luas x qty x harga. Semua diinput manual.
-            $books_l = 0; $books_t = 0; $books_luas = 0; $books_q = 0; $books_h = 0; $books_total = 0;
+            $books_l = 0;
+            $books_t = 0;
+            $books_luas = 0;
+            $books_q = 0;
+            $books_h = 0;
+            $books_total = 0;
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
                 $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));
@@ -229,10 +238,15 @@ class Penawaran extends MY_Controller
             $tipe_motor_val  = trim($tipe_motor[$i] ?? '');
             $input_power_val = trim($input_power[$i] ?? '');
             $voltage_val     = trim($voltage[$i] ?? '');
+            $books_penutup_val     = trim($books_penutup[$i] ?? '');
+            $kelengkapan_val     = trim($kelengkapan[$i] ?? '');
+
             if ($this->_is_rolling_door($kategori_rumus)) {
                 if ($tipe_motor_val === '')  $tipe_motor_val  = self::DEFAULT_TIPE_MOTOR_ROLLING;
                 if ($input_power_val === '') $input_power_val = self::DEFAULT_POWER_ROLLING;
                 if ($voltage_val === '')     $voltage_val     = self::DEFAULT_VOLTAGE_ROLLING;
+                if ($books_penutup_val === '')     $books_penutup_val     = self::DEFAULT_BOOKS_PENUTUP_ROLLING;
+                if ($kelengkapan_val === '')     $kelengkapan_val     = self::DEFAULT_KELENGKAPAN_ROLLING;
             }
 
             $fin_val = trim($finishing[$i] ?? '');
@@ -259,13 +273,13 @@ class Penawaran extends MY_Controller
                 'tipe_motor'      => $tipe_motor_val,
                 'input_power'     => $input_power_val,
                 'voltage'         => $voltage_val,
-                'books_penutup'   => trim($books_penutup[$i] ?? ''),
+                'books_penutup'   => $books_penutup_val,
                 'lebar_m2_books'  => $books_l,
                 'tinggi_m2_books' => $books_t,
                 'luas_m2_books'   => $books_luas,
                 'qty_books'       => $books_q,
                 'harga_m2_books'  => $books_h,
-                'kelengkapan'     => trim($kelengkapan[$i] ?? ''),
+                'kelengkapan'     =>  $kelengkapan_val,
                 'aksesoris'       => $aks_list, // diinsert terpisah oleh model ke penawaran_detail_aksesoris
             ];
 
@@ -380,7 +394,7 @@ class Penawaran extends MY_Controller
         $tanggal     = $this->input->post('tanggal', TRUE);
         $id_customer = (int)$this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
-        
+
 
         if (empty($tanggal) || $id_customer <= 0) {
             $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');

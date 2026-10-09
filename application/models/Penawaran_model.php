@@ -85,7 +85,8 @@ class Penawaran_model extends CI_Model
             b.kode_barang,
             b.nama   AS nama_barang,
             b.gambar AS gambar_barang,
-            b.kategori_rumus AS rumus
+            b.kategori_rumus AS rumus,
+            b.keterangan As keterangan
         ');
         $this->db->from('penawaran_detail pd');
         $this->db->join('barang b', 'b.id = pd.id_barang', 'left');
@@ -145,7 +146,7 @@ class Penawaran_model extends CI_Model
     // boleh diedit user sebelum disimpan (kecuali nama barangnya sendiri).
     public function get_all_barang()
     {
-        $this->db->select('id, kode_barang, nama, warna, komponen, harga_satuan, satuan, kategori_rumus');
+        $this->db->select('id, kode_barang, nama, warna, komponen, harga_satuan, satuan, kategori_rumus,keterangan');
         $this->db->order_by('nama', 'ASC');
         return $this->db->get('barang')->result_array();
     }

@@ -5,6 +5,7 @@ $tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
 $tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
 $list_customer = isset($list_customer) ? (array) $list_customer : [];
 $list_barang   = isset($list_barang) ? (array) $list_barang : [];
+// var_dump($list_barang);die;
 $ada_customer  = !empty($list_customer);
 $tanggal_maks  = date('Y-m-d');
 
@@ -801,7 +802,7 @@ if ($is_edit && !empty($items_edit)) {
       opts.forEach(function(el, i) {
         var b = hasil[i];
         el.querySelector('.bo-nama').textContent = b.nama;
-        el.querySelector('.bo-meta').textContent = (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) + (b.warna ? ' • ' + b.warna : '');
+        el.querySelector('.bo-meta').textContent = (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) + (b.warna ? ' • ' + b.warna : '') + (b.keterangan ? ' • ' + b.keterangan : '') ;
       });
       list.classList.remove('d-none');
     }
@@ -817,6 +818,7 @@ if ($is_edit && !empty($items_edit)) {
       card.querySelector('.it-warna').value = b.warna || '';
       card.querySelector('.it-harga').value = parseFloat(b.harga_satuan) || 0;
       card.querySelector('.it-komponen').value = b.komponen || '';
+      card.querySelector('.it-keterangan').value = b.keterangan || '';
 
       inputCari.value = b.nama;
       inputCari.readOnly = true;

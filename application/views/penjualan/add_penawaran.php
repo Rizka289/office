@@ -5,22 +5,17 @@ $tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
 $tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
 $list_customer = isset($list_customer) ? (array) $list_customer : [];
 $list_barang   = isset($list_barang) ? (array) $list_barang : [];
-// var_dump($list_barang);die;
 $ada_customer  = !empty($list_customer);
 $tanggal_maks  = date('Y-m-d');
 
-// Mode form: 'tambah' (default) atau 'edit' (dikirim dari Penawaran::edit)
 $is_edit     = (isset($mode) && $mode === 'edit' && !empty($penawaran_edit));
 $pen         = $is_edit ? $penawaran_edit : null;
 $tanggal_val = $is_edit ? substr((string) $pen->tanggal, 0, 10) : $tanggal_maks;
 $form_action = $is_edit ? 'penawaran/update/' . (int) $pen->id : 'penawaran/simpan';
-// Saat edit, header (tanggal, customer, catatan) dikunci: hanya item yang boleh diubah
 $hdr_lock    = ($ada_customer && !$is_edit) ? '' : 'disabled';
-// Pajak (PPN/PPh) TIDAK ikut dikunci saat edit
 $pajak_lock  = $ada_customer ? '' : 'disabled';
 $url_batal   = $is_edit ? site_url('penawaran/detail/' . (int) $pen->id) : site_url('penawaran');
 
-// Biaya pemasangan & pengiriman:
 $biaya_pasang_db = $is_edit ? ($pen->biaya_pasang ?? null) : null;
 $biaya_ongkir_db = $is_edit ? ($pen->biaya_ongkir ?? null) : null;
 $pasang_on  = ($biaya_pasang_db !== null);
@@ -28,34 +23,35 @@ $ongkir_on  = ($biaya_ongkir_db !== null);
 $pasang_val = $pasang_on ? (string) round((float) $biaya_pasang_db) : '';
 $ongkir_val = $ongkir_on ? (string) round((float) $biaya_ongkir_db) : '';
 
-// Item yang sudah tersimpan (mode edit)
 $items_js = [];
 if ($is_edit && !empty($items_edit)) {
   foreach ($items_edit as $it) {
     $it = (array) $it;
     $items_js[] = [
-      'id_barang'      => (int) ($it['id_barang'] ?? 0),
-      'jenis_item'     => $it['jenis_item'] ?? '',
-      'warna'          => $it['warna'] ?? '',
-      'komponen'       => $it['komponen'] ?? '',
-      'finishing'      => $it['finishing'] ?? '',
-      'komponen_kusen' => $it['komponen_kusen'] ?? '',
-      'komponen_daun'  => $it['komponen_daun'] ?? '',
-      'lebar_mm'       => (int) ($it['lebar_mm'] ?? 0),
-      'tinggi_mm'      => (int) ($it['tinggi_mm'] ?? 0),
-      'qty'            => (int) ($it['qty'] ?? 1),
-      'harga_unit'     => (float) ($it['harga_unit'] ?? 0),
-      'keterangan'     => $it['keterangan'] ?? '',
-      'tipe_motor'     => $it['tipe_motor'] ?? '',
-      'input_power'    => $it['input_power'] ?? '',
-      'voltage'        => $it['voltage'] ?? '',
-      'books_penutup'  => $it['books_penutup'] ?? '',
-      'lebar_m2_books'  => $it['lebar_m2_books'] ?? '',
-      'tinggi_m2_books' => $it['tinggi_m2_books'] ?? '',
-      'qty_books'       => $it['qty_books'] ?? '',
-      'harga_m2_books'  => $it['harga_m2_books'] ?? '',
-      'kelengkapan'    => $it['kelengkapan'] ?? '',
-      'aksesoris'      => $it['aksesoris'] ?? [],
+      'id_barang'          => (int) ($it['id_barang'] ?? 0),
+      'jenis_item'         => $it['jenis_item'] ?? '',
+      'warna'              => $it['warna'] ?? '',
+      'komponen'           => $it['komponen'] ?? '',
+      'finishing'          => $it['finishing'] ?? '',
+      'komponen_kusen'     => $it['komponen_kusen'] ?? '',
+      'komponen_daun'      => $it['komponen_daun'] ?? '',
+      'lebar_mm'           => (int) ($it['lebar_mm'] ?? 0),
+      'tinggi_mm'          => (int) ($it['tinggi_mm'] ?? 0),
+      'qty'                => (int) ($it['qty'] ?? 1),
+      'harga_unit'         => (float) ($it['harga_unit'] ?? 0),
+      'keterangan'         => $it['keterangan'] ?? '',
+      'tipe_motor'         => $it['tipe_motor'] ?? '',
+      'input_power'        => $it['input_power'] ?? '',
+      'voltage'            => $it['voltage'] ?? '',
+      'books_penutup'      => $it['books_penutup'] ?? '',
+      'lebar_m2_books'     => $it['lebar_m2_books'] ?? '',
+      'tinggi_m2_books'    => $it['tinggi_m2_books'] ?? '',
+      'qty_books'          => $it['qty_books'] ?? '',
+      'qty_instalasi'          => $it['qty_instalasi'] ?? '',
+      'harga_m2_books'     => $it['harga_m2_books'] ?? '',
+      'harga_m2_instalasi' => $it['harga_m2_instalasi'] ?? '',
+      'kelengkapan'        => $it['kelengkapan'] ?? '',
+      'aksesoris'          => $it['aksesoris'] ?? [],
     ];
   }
 }
@@ -67,7 +63,6 @@ if ($is_edit && !empty($items_edit)) {
     --pnw-brand-dark: #234f38;
     --pnw-radius: 14px;
   }
-
   .pnw-page .page-header {
     background: linear-gradient(135deg, var(--pnw-brand), var(--pnw-brand-dark));
     color: #fff;
@@ -76,16 +71,8 @@ if ($is_edit && !empty($items_edit)) {
     margin-bottom: 22px;
     box-shadow: 0 6px 18px rgba(35, 79, 56, .25);
   }
-
-  .pnw-page .page-header h4 {
-    margin: 0;
-    font-weight: 600;
-  }
-
-  .pnw-page .page-header small {
-    opacity: .85;
-  }
-
+  .pnw-page .page-header h4 { margin: 0; font-weight: 600; }
+  .pnw-page .page-header small { opacity: .85; }
   .pnw-page .card-modern {
     background: #fff;
     border: none;
@@ -93,7 +80,6 @@ if ($is_edit && !empty($items_edit)) {
     box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
     margin-bottom: 20px;
   }
-
   .pnw-page .card-modern .card-header {
     background: #fff;
     border-bottom: 1px solid #eef1ef;
@@ -102,28 +88,13 @@ if ($is_edit && !empty($items_edit)) {
     color: var(--pnw-brand-dark);
     padding: 14px 20px;
   }
-
-  .pnw-page .card-modern .card-body {
-    padding: 20px;
-  }
-
-  .pnw-page .form-label {
-    font-weight: 500;
-    font-size: .84rem;
-    color: #4a4a4a;
-  }
-
-  .pnw-page .form-control[readonly] {
-    background: #f3f6f4;
-    color: #5a5a5a;
-  }
-
-  .pnw-page .form-control:focus,
-  .pnw-page .form-select:focus {
+  .pnw-page .card-modern .card-body { padding: 20px; }
+  .pnw-page .form-label { font-weight: 500; font-size: .84rem; color: #4a4a4a; }
+  .pnw-page .form-control[readonly] { background: #f3f6f4; color: #5a5a5a; }
+  .pnw-page .form-control:focus, .pnw-page .form-select:focus {
     border-color: var(--pnw-brand);
     box-shadow: 0 0 0 .2rem rgba(47, 111, 79, .15);
   }
-
   .pnw-page .item-card {
     border: 1px solid #eef1ef;
     border-radius: 12px;
@@ -132,182 +103,39 @@ if ($is_edit && !empty($items_edit)) {
     position: relative;
     background: #fbfdfc;
   }
-
-  .pnw-page .item-card .item-title {
-    font-weight: 700;
-    color: var(--pnw-brand-dark);
-    font-size: .88rem;
-  }
-
-  .pnw-page .item-card .item-subtotal {
-    font-weight: 700;
-    color: var(--pnw-brand-dark);
-  }
-
-  .pnw-page .btn-remove-item {
-    color: #b3261e;
-  }
-
-  .pnw-page .btn-remove-item:hover {
-    color: #7a1a15;
-  }
-
-  .pnw-page .btn-remove-item:disabled {
-    color: #c9c9c9;
-  }
-
-  .pnw-page .barang-picker {
-    position: relative;
-  }
-
-  .pnw-page .it-books-penutup,
-  .pnw-page .it-kelengkapan {
-    min-height: 130px;
-    resize: vertical;
-  }
-
-  .pnw-page .it-jenis.is-locked {
-    background: #eef6f1;
-    color: var(--pnw-brand-dark);
-    font-weight: 600;
-    cursor: not-allowed;
-  }
-
+  .pnw-page .item-card .item-title { font-weight: 700; color: var(--pnw-brand-dark); font-size: .88rem; }
+  .pnw-page .item-card .item-subtotal { font-weight: 700; color: var(--pnw-brand-dark); }
+  .pnw-page .btn-remove-item { color: #b3261e; }
+  .pnw-page .btn-remove-item:hover { color: #7a1a15; }
+  .pnw-page .btn-remove-item:disabled { color: #c9c9c9; }
+  .pnw-page .barang-picker { position: relative; }
+  .pnw-page .it-books-penutup, .pnw-page .it-kelengkapan { min-height: 130px; resize: vertical; }
+  .pnw-page .it-jenis.is-locked { background: #eef6f1; color: var(--pnw-brand-dark); font-weight: 600; cursor: not-allowed; }
   .pnw-page .barang-dropdown-list {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 20;
-    background: #fff;
-    border: 1px solid #dfe6e2;
-    border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
-    max-height: 220px;
-    overflow-y: auto;
-    margin-top: 4px;
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
+    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12); max-height: 220px; overflow-y: auto; margin-top: 4px;
   }
-
-  .pnw-page .barang-dropdown-list .barang-opt {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: .85rem;
-    border-bottom: 1px solid #f2f4f3;
-  }
-
-  .pnw-page .barang-dropdown-list .barang-opt:last-child {
-    border-bottom: none;
-  }
-
-  .pnw-page .barang-dropdown-list .barang-opt:hover,
-  .pnw-page .barang-dropdown-list .barang-opt.active {
-    background: #eef6f1;
-  }
-
-  .pnw-page .barang-dropdown-list .barang-opt .bo-nama {
-    font-weight: 600;
-    color: #26332c;
-    display: block;
-  }
-
-  .pnw-page .barang-dropdown-list .barang-opt .bo-meta {
-    color: #7a8a80;
-    font-size: .76rem;
-  }
-
-  .pnw-page .barang-dropdown-list .barang-empty {
-    padding: 8px 12px;
-    font-size: .82rem;
-    color: #9aa39d;
-  }
-
-  .pnw-page .btn-ganti-barang {
-    font-size: .76rem;
-  }
-
-  .pnw-page .customer-picker {
-    position: relative;
-  }
-
-  .pnw-page .customer-picker .form-control {
-    padding-right: 34px;
-  }
-
-  .pnw-page .customer-picker .customer-caret {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #7a8a80;
-    font-size: .8rem;
-    pointer-events: none;
-  }
-
+  .pnw-page .barang-dropdown-list .barang-opt { padding: 8px 12px; cursor: pointer; font-size: .85rem; border-bottom: 1px solid #f2f4f3; }
+  .pnw-page .barang-dropdown-list .barang-opt:hover { background: #eef6f1; }
+  .pnw-page .barang-dropdown-list .barang-opt .bo-nama { font-weight: 600; color: #26332c; display: block; }
+  .pnw-page .barang-dropdown-list .barang-opt .bo-meta { color: #7a8a80; font-size: .76rem; }
+  .pnw-page .customer-picker { position: relative; }
+  .pnw-page .customer-picker .form-control { padding-right: 34px; }
+  .pnw-page .customer-picker .customer-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7a8a80; font-size: .8rem; pointer-events: none; }
   .pnw-page .customer-dropdown-list {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 30;
-    background: #fff;
-    border: 1px solid #dfe6e2;
-    border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
-    max-height: 240px;
-    overflow-y: auto;
-    margin-top: 4px;
+    position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
+    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12); max-height: 240px; overflow-y: auto; margin-top: 4px;
   }
-
-  .pnw-page .customer-dropdown-list .customer-opt {
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: .88rem;
-    font-weight: 600;
-    color: #26332c;
-    border-bottom: 1px solid #f2f4f3;
-  }
-
-  .pnw-page .customer-dropdown-list .customer-opt:last-child {
-    border-bottom: none;
-  }
-
-  .pnw-page .customer-dropdown-list .customer-opt:hover,
-  .pnw-page .customer-dropdown-list .customer-opt.active {
-    background: #eef6f1;
-  }
-
-  .pnw-page .customer-dropdown-list .customer-empty {
-    padding: 8px 12px;
-    font-size: .82rem;
-    color: #9aa39d;
-  }
-
-  .pnw-page .summary-box {
-    background: #f8faf9;
-    border: 1px dashed #cfe0d6;
-    border-radius: 10px;
-    padding: 16px 18px;
-  }
-
-  .pnw-page .total-box {
-    background: #f8faf9;
-    border-left: 4px solid var(--pnw-brand);
-    border-radius: 10px;
-    padding: 16px 18px;
-  }
-
+  .pnw-page .customer-dropdown-list .customer-opt { padding: 8px 12px; cursor: pointer; font-size: .88rem; font-weight: 600; color: #26332c; border-bottom: 1px solid #f2f4f3; }
+  .pnw-page .customer-dropdown-list .customer-opt:hover { background: #eef6f1; }
+  .pnw-page .summary-box { background: #f8faf9; border: 1px dashed #cfe0d6; border-radius: 10px; padding: 16px 18px; }
+  .pnw-page .total-box { background: #f8faf9; border-left: 4px solid var(--pnw-brand); border-radius: 10px; padding: 16px 18px; }
   .pnw-page .footer-actions {
-    position: sticky;
-    bottom: 0;
-    background: #fff;
-    padding: 14px 20px;
-    border-radius: var(--pnw-radius);
-    box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
-    z-index: 5;
+    position: sticky; bottom: 0; background: #fff; padding: 14px 20px;
+    border-radius: var(--pnw-radius); box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
+    display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; z-index: 5;
   }
 </style>
 
@@ -341,27 +169,15 @@ if ($is_edit && !empty($items_edit)) {
     </div>
   <?php endif; ?>
 
-  <?php if (!$ada_customer): ?>
-    <div class="alert alert-warning">
-      Belum ada data customer. Tambahkan customer terlebih dahulu sebelum membuat penawaran.
-    </div>
-  <?php endif; ?>
-
   <?= form_open($form_action, ['id' => 'formPenawaran', 'autocomplete' => 'off']); ?>
 
   <div class="card-modern">
     <div class="card-header"><i class="bi bi-info-circle me-2"></i>Informasi Penawaran</div>
     <div class="card-body">
-      <?php if ($is_edit): ?>
-        <div class="alert alert-info py-2 small mb-3">
-          <i class="bi bi-lock me-1"></i>Tanggal, customer, dan catatan dikunci. Yang bisa diubah hanya <strong>item penawaran</strong>, <strong>biaya pemasangan/pengiriman</strong>, dan <strong>pajak (PPN/PPh)</strong>.
-        </div>
-      <?php endif; ?>
       <div class="row g-3">
         <div class="col-md-3">
           <label class="form-label">No. Surat</label>
           <input type="text" name="no_surat" class="form-control" value="<?= html_escape($no_surat); ?>" readonly>
-          <div class="form-text"><?= $is_edit ? 'Dibuat otomatis oleh sistem.' : 'Perkiraan. Nomor final ditentukan saat disimpan, sesuai bulan pada tanggal penawaran.'; ?></div>
         </div>
         <div class="col-md-3">
           <label for="tanggal" class="form-label">Tanggal <span class="text-danger">*</span></label>
@@ -409,18 +225,17 @@ if ($is_edit && !empty($items_edit)) {
   </div>
 
   <div class="card-modern">
-    <div class="card-header"><i class="bi bi-truck me-2"></i>Biaya Pemasangan &amp; Pengiriman</div>
+    <div class="card-header"><i class="bi bi-truck me-2"></i>Biaya Pemasangan &amp; Pengiriman Global</div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-6">
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pasang" name="pakai_pasang" value="1" <?= $pasang_on ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_pasang">Sudah termasuk biaya pemasangan</label>
+            <label class="form-check-label" for="pakai_pasang">Sudah termasuk biaya pemasangan umum</label>
           </div>
           <div id="wrapPasang" class="<?= $pasang_on ? '' : 'd-none'; ?>">
             <label for="biaya_pasang" class="form-label">Nominal biaya pemasangan (Rp)</label>
             <input type="number" min="0" step="1" id="biaya_pasang" name="biaya_pasang" class="form-control" placeholder="0" value="<?= html_escape($pasang_val); ?>" <?= $pasang_on ? '' : 'disabled'; ?>>
-            <div class="form-text">Isi kalau ditagih terpisah. Kosong / 0 = sudah termasuk di harga item.</div>
           </div>
         </div>
         <div class="col-md-6">
@@ -431,13 +246,8 @@ if ($is_edit && !empty($items_edit)) {
           <div id="wrapOngkir" class="<?= $ongkir_on ? '' : 'd-none'; ?>">
             <label for="biaya_ongkir" class="form-label">Nominal biaya pengiriman (Rp)</label>
             <input type="number" min="0" step="1" id="biaya_ongkir" name="biaya_ongkir" class="form-control" placeholder="0" value="<?= html_escape($ongkir_val); ?>" <?= $ongkir_on ? '' : 'disabled'; ?>>
-            <div class="form-text">Isi kalau ditagih terpisah. Kosong / 0 = sudah termasuk di harga item.</div>
           </div>
         </div>
-      </div>
-      <div class="form-text mt-3">
-        Di Syarat &amp; Ketentuan saat cetak: kalau dicentang tertulis <strong>sudah termasuk</strong>, kalau tidak dicentang tertulis <strong>belum termasuk</strong>.
-        Nominal yang diisi ikut menambah subtotal dan menjadi dasar perhitungan PPN/PPh.
       </div>
     </div>
   </div>
@@ -455,7 +265,6 @@ if ($is_edit && !empty($items_edit)) {
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
             <label class="form-check-label" for="pakai_pph">Kenakan PPh <?= html_escape($tarif_pph); ?>%</label>
           </div>
-          <div class="form-text mt-2">Centang kalau customer/transaksi ini kena pajak. Kalau tidak dicentang, pajak tersebut tidak ditambahkan ke total.</div>
         </div>
       </div>
     </div>
@@ -469,12 +278,6 @@ if ($is_edit && !empty($items_edit)) {
           </div>
           <div class="d-flex justify-content-between small mb-1">
             <span class="text-muted">Subtotal</span><span id="sumSubtotal">Rp 0</span>
-          </div>
-          <div class="d-flex justify-content-between small mb-1 d-none" id="rowSumPasang">
-            <span class="text-muted">Biaya Pemasangan</span><span id="sumPasang">Rp 0</span>
-          </div>
-          <div class="d-flex justify-content-between small mb-1 d-none" id="rowSumOngkir">
-            <span class="text-muted">Biaya Pengiriman</span><span id="sumOngkir">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
             <span class="text-muted">PPN <?= html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
@@ -586,10 +389,8 @@ if ($is_edit && !empty($items_edit)) {
         <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
       </div>
 
-      <!-- Books Penutup (khusus rolling door): Luas = Lebar x Tinggi, Total = Luas x Qty x Harga -->
-      <div class="col-12 books-blok d-none">
-        <div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div>
-      </div>
+      <!-- Books Penutup (khusus rolling door) -->
+      <div class="col-12 books-blok d-none"><div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div></div>
       <div class="col-md-3 books-blok d-none">
         <label class="form-label">Lebar (mm)</label>
         <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
@@ -600,7 +401,7 @@ if ($is_edit && !empty($items_edit)) {
       </div>
       <div class="col-md-3 books-blok d-none">
         <label class="form-label">Luas (m²)</label>
-        <input type="text" class="form-control it-books-luas" value="0.0000" readonly tabindex="-1" title="Luas = lebar x tinggi">
+        <input type="text" class="form-control it-books-luas" value="0.0000" readonly tabindex="-1">
       </div>
       <div class="col-md-3 books-blok d-none">
         <label class="form-label">Qty</label>
@@ -615,7 +416,22 @@ if ($is_edit && !empty($items_edit)) {
         <input type="text" class="form-control it-books-total" value="Rp 0" readonly tabindex="-1">
       </div>
 
-      <!-- Fitur Aksesoris Tambahan -->
+      <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
+      <div class="col-12 instalasi-blok d-none"><div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div></div>
+      <div class="col-md-4 instalasi-blok d-none">
+        <label class="form-label">Qty Instalasi</label>
+        <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
+      </div>
+      <div class="col-md-4 instalasi-blok d-none">
+        <label class="form-label">Tarif Pasang (Rp / m²)</label>
+        <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="Mis. 50000">
+      </div>
+      <div class="col-md-4 instalasi-blok d-none">
+        <label class="form-label">Total Biaya Instalasi</label>
+        <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
+      </div>
+
+      <!-- Aksesoris Tambahan -->
       <div class="col-12 mt-2 wrap-aksesoris-container">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i>Aksesoris Tambahan</label>
@@ -684,13 +500,13 @@ if ($is_edit && !empty($items_edit)) {
       return `
       <div class="row g-2 align-items-center mb-1 baris-aksesoris">
         <div class="col-md-5">
-          <input type="text" name="aks_nama[${itemIndex}][]" class="form-control form-control-sm aks-nama" placeholder="Nama Aksesoris (mis. Engsel Stainless)">
+          <input type="text" name="aks_nama[${itemIndex}][]" class="form-control form-control-sm aks-nama" placeholder="Nama Aksesoris">
         </div>
         <div class="col-md-2">
           <input type="number" name="aks_qty[${itemIndex}][]" min="1" value="1" class="form-control form-control-sm aks-qty" placeholder="Qty">
         </div>
         <div class="col-md-4">
-          <input type="number" name="aks_harga[${itemIndex}][]" min="0" step="1" value="0" class="form-control form-control-sm aks-harga" placeholder="Harga Satuan (Rp)">
+          <input type="number" name="aks_harga[${itemIndex}][]" min="0" step="1" value="0" class="form-control form-control-sm aks-harga" placeholder="Harga">
         </div>
         <div class="col-md-1 text-end">
           <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-aksesoris"><i class="bi bi-x-circle"></i></button>
@@ -718,10 +534,12 @@ if ($is_edit && !empty($items_edit)) {
       set('[name="input_power[]"]', d.input_power);
       set('[name="voltage[]"]', d.voltage);
       set('[name="books_penutup[]"]', d.books_penutup);
-      set('.it-books-lebar', (parseInt(d.lebar_m2_books, 10) || '') );
-      set('.it-books-tinggi', (parseInt(d.tinggi_m2_books, 10) || '') );
-      set('.it-books-qty', (parseInt(d.qty_books, 10) || '') );
-      set('.it-books-harga', (parseFloat(d.harga_m2_books) || '') );
+      set('.it-books-lebar', (parseInt(d.lebar_m2_books, 10) || ''));
+      set('.it-books-tinggi', (parseInt(d.tinggi_m2_books, 10) || ''));
+      set('.it-books-qty', (parseInt(d.qty_books, 10) || ''));
+      set('.it-books-harga', (parseFloat(d.harga_m2_books) || ''));
+      set('.it-instalasi-qty', (parseFloat(d.qty_instalasi) || ''));
+      set('.it-instalasi-harga', (parseFloat(d.harga_m2_instalasi) || ''));
       set('[name="kelengkapan[]"]', d.kelengkapan);
 
       var finValue = (d && d.finishing && d.finishing.trim() !== '') ? d.finishing : 'Powder Coating / 粉末涂料';
@@ -734,7 +552,6 @@ if ($is_edit && !empty($items_edit)) {
         card.querySelector('.btn-ganti-barang').classList.remove('d-none');
       }
 
-      // Populate Aksesoris Tambahan jika mode Edit
       if (d.aksesoris && Array.isArray(d.aksesoris)) {
         var listAks = card.querySelector('.list-aksesoris');
         d.aksesoris.forEach(function(ak) {
@@ -802,7 +619,7 @@ if ($is_edit && !empty($items_edit)) {
       opts.forEach(function(el, i) {
         var b = hasil[i];
         el.querySelector('.bo-nama').textContent = b.nama;
-        el.querySelector('.bo-meta').textContent = (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) + (b.warna ? ' • ' + b.warna : '') + (b.keterangan ? ' • ' + b.keterangan : '') ;
+        el.querySelector('.bo-meta').textContent = (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) + (b.warna ? ' • ' + b.warna : '');
       });
       list.classList.remove('d-none');
     }
@@ -815,17 +632,26 @@ if ($is_edit && !empty($items_edit)) {
 
       var inputCari = card.querySelector('.it-barang-search');
       var inputId = card.querySelector('.it-id-barang');
-      card.querySelector('.it-warna').value = b.warna || '';
-      card.querySelector('.it-harga').value = parseFloat(b.harga_satuan) || 0;
-      card.querySelector('.it-komponen').value = b.komponen || '';
-      card.querySelector('.it-keterangan').value = b.keterangan || '';
+      
+      var elWarna = card.querySelector('.it-warna');
+      if (elWarna) elWarna.value = b.warna || '';
+      var elHarga = card.querySelector('.it-harga');
+      if (elHarga) elHarga.value = parseFloat(b.harga_satuan) || 0;
+      var elKomponen = card.querySelector('.it-komponen');
+      if (elKomponen) elKomponen.value = b.komponen || '';
+      var elKet = card.querySelector('.it-keterangan');
+      if (elKet) elKet.value = b.keterangan || '';
 
-      inputCari.value = b.nama;
-      inputCari.readOnly = true;
-      inputCari.classList.add('is-locked');
-      inputId.value = b.id;
+      if (inputCari) {
+        inputCari.value = b.nama;
+        inputCari.readOnly = true;
+        inputCari.classList.add('is-locked');
+      }
+      if (inputId) inputId.value = b.id;
 
-      card.querySelector('.btn-ganti-barang').classList.remove('d-none');
+      var btnGanti = card.querySelector('.btn-ganti-barang');
+      if (btnGanti) btnGanti.classList.remove('d-none');
+
       tutupSemuaDropdown();
       segarkan();
     }
@@ -879,8 +705,7 @@ if ($is_edit && !empty($items_edit)) {
       var luas = luasBilling(kategori, luasRiil, lebar, tinggi);
 
       var inpLuas = card.querySelector('.it-luas');
-      inpLuas.value = luas.toFixed(4);
-      inpLuas.title = 'Luas riil: ' + luasRiil.toFixed(4) + ' m²';
+      if (inpLuas) inpLuas.value = luas.toFixed(4);
 
       var totalAksesoris = 0;
       card.querySelectorAll('.baris-aksesoris').forEach(function(row) {
@@ -889,8 +714,9 @@ if ($is_edit && !empty($items_edit)) {
         totalAksesoris += (qAks * hAks);
       });
 
-      // Books Penutup (khusus rolling door): luas = lebar x tinggi, total = luas x qty x harga
       var rolling = isRollingDoor(kategori);
+      
+      // Toggle Books Penutup
       card.querySelectorAll('.books-blok').forEach(function(el) {
         el.classList.toggle('d-none', !rolling);
       });
@@ -902,11 +728,27 @@ if ($is_edit && !empty($items_edit)) {
         var bHarga  = parseFloat(card.querySelector('.it-books-harga').value) || 0;
         var bLuas   = Math.round((bLebar / 1000) * (bTinggi / 1000) * 10000) / 10000;
         totalBooks  = bLuas * bQty * bHarga;
-        card.querySelector('.it-books-luas').value  = bLuas.toFixed(4);
-        card.querySelector('.it-books-total').value = rupiah(totalBooks);
+        var elBLuas = card.querySelector('.it-books-luas');
+        if (elBLuas) elBLuas.value = bLuas.toFixed(4);
+        var elBTotal = card.querySelector('.it-books-total');
+        if (elBTotal) elBTotal.value = rupiah(totalBooks);
       }
 
-      var total = ((kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga)) + totalAksesoris + totalBooks;
+      // Toggle Biaya Instalasi Rolling Door
+      card.querySelectorAll('.instalasi-blok').forEach(function(el) {
+        el.classList.toggle('d-none', !rolling);
+      });
+      var totalInstalasi = 0;
+      if (rolling) {
+        var hInstalasi = parseFloat(card.querySelector('.it-instalasi-harga').value) || 0;
+        var qInstalasi = parseFloat(card.querySelector('.it-instalasi-qty').value) || 0;
+        // Rumus: Luas Billing x Qty x Harga Pasang per m²
+        totalInstalasi = luas * qInstalasi * hInstalasi;
+        var elInstTotal = card.querySelector('.it-instalasi-total');
+        if (elInstTotal) elInstTotal.value = rupiah(totalInstalasi);
+      }
+
+      var total = ((kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga)) + totalAksesoris + totalBooks + totalInstalasi;
       card.querySelector('.item-subtotal').textContent = rupiah(total);
 
       return total;
@@ -932,11 +774,6 @@ if ($is_edit && !empty($items_edit)) {
       var pph = chkPph.checked ? Math.round(dasar * TARIF_PPH / 100) : 0;
       var grand = dasar + ppn + pph;
 
-      document.getElementById('rowSumPasang').classList.toggle('d-none', pasang <= 0);
-      document.getElementById('rowSumOngkir').classList.toggle('d-none', ongkir <= 0);
-      document.getElementById('sumPasang').textContent = rupiah(pasang);
-      document.getElementById('sumOngkir').textContent = rupiah(ongkir);
-
       document.getElementById('sumJumlahItem').textContent = totalQty;
       document.getElementById('sumSubtotal').textContent = rupiah(subtotal);
       document.getElementById('sumPpn').textContent = rupiah(ppn);
@@ -944,20 +781,11 @@ if ($is_edit && !empty($items_edit)) {
       document.getElementById('sumGrandTotal').textContent = rupiah(grand);
     }
 
-    btnTambah.addEventListener('click', function() {
-      tambahItem();
-    });
+    btnTambah.addEventListener('click', function() { tambahItem(); });
     chkPpn.addEventListener('change', segarkan);
     chkPph.addEventListener('change', segarkan);
-
-    chkPasang.addEventListener('change', function() {
-      toggleBiaya(chkPasang, wrapPasang, inpPasang);
-      segarkan();
-    });
-    chkOngkir.addEventListener('change', function() {
-      toggleBiaya(chkOngkir, wrapOngkir, inpOngkir);
-      segarkan();
-    });
+    chkPasang.addEventListener('change', function() { toggleBiaya(chkPasang, wrapPasang, inpPasang); segarkan(); });
+    chkOngkir.addEventListener('change', function() { toggleBiaya(chkOngkir, wrapOngkir, inpOngkir); segarkan(); });
     inpPasang.addEventListener('input', segarkan);
     inpOngkir.addEventListener('input', segarkan);
 
@@ -977,75 +805,49 @@ if ($is_edit && !empty($items_edit)) {
 
     wrap.addEventListener('click', function(e) {
       var card = e.target.closest('.item-card');
-
-      // Tambah Aksesoris
       if (e.target.closest('.btn-tambah-aksesoris')) {
         var idx = baris().indexOf(card);
-        var listAks = card.querySelector('.list-aksesoris');
-        listAks.insertAdjacentHTML('beforeend', templateBarisAksoris(idx));
+        card.querySelector('.list-aksesoris').insertAdjacentHTML('beforeend', templateBarisAksoris(idx));
         segarkan();
         return;
       }
-
-      // Hapus Aksesoris
       if (e.target.closest('.btn-hapus-aksesoris')) {
         e.target.closest('.baris-aksesoris').remove();
         segarkan();
         return;
       }
-
       var opt = e.target.closest('.barang-opt');
-      if (opt) {
-        pilihBarang(card, opt.getAttribute('data-id'));
-        return;
-      }
-
+      if (opt) { pilihBarang(card, opt.getAttribute('data-id')); return; }
       var btnGanti = e.target.closest('.btn-ganti-barang');
-      if (btnGanti) {
-        gantiBarang(card);
-        return;
-      }
-
+      if (btnGanti) { gantiBarang(card); return; }
       var btnHapus = e.target.closest('.btn-remove-item');
-      if (btnHapus && !btnHapus.disabled) {
-        card.remove();
-        reindexAksesoris();
-        segarkan();
-        return;
-      }
+      if (btnHapus && !btnHapus.disabled) { card.remove(); reindexAksesoris(); segarkan(); return; }
     });
 
     // Customer Auto-complete
     var DATA_CUSTOMER = [];
     try {
       DATA_CUSTOMER = JSON.parse(document.getElementById('dataCustomer').textContent || '[]') || [];
-    } catch (e) {
-      DATA_CUSTOMER = [];
-    }
+    } catch (e) { DATA_CUSTOMER = []; }
 
     var custInput = document.getElementById('customer_search');
     var custId = document.getElementById('id_customer');
     var custList = custInput ? custInput.parentNode.querySelector('.customer-dropdown-list') : null;
-    var custAktif = -1;
 
     function cariCustomer(kata) {
       kata = (kata || '').trim().toLowerCase();
       if (kata === '') return DATA_CUSTOMER;
-      return DATA_CUSTOMER.filter(function(c) {
-        return c.nama.toLowerCase().indexOf(kata) !== -1;
-      });
+      return DATA_CUSTOMER.filter(function(c) { return c.nama.toLowerCase().indexOf(kata) !== -1; });
     }
 
     function tutupDropdownCustomer() {
       if (!custList) return;
       custList.classList.add('d-none');
       custList.innerHTML = '';
-      custAktif = -1;
     }
 
     function tampilkanCustomer(hasil) {
       custList.innerHTML = '';
-      custAktif = -1;
       if (!hasil.length) {
         var kosong = document.createElement('div');
         kosong.className = 'customer-empty';
@@ -1064,9 +866,7 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     function pilihCustomer(id) {
-      var c = DATA_CUSTOMER.find(function(x) {
-        return String(x.id) === String(id);
-      });
+      var c = DATA_CUSTOMER.find(function(x) { return String(x.id) === String(id); });
       if (!c) return;
       custId.value = c.id;
       custInput.value = c.nama;
@@ -1074,13 +874,8 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     if (custInput && !custInput.disabled) {
-      custInput.addEventListener('focus', function() {
-        tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value));
-      });
-      custInput.addEventListener('input', function() {
-        custId.value = '';
-        tampilkanCustomer(cariCustomer(custInput.value));
-      });
+      custInput.addEventListener('focus', function() { tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value)); });
+      custInput.addEventListener('input', function() { custId.value = ''; tampilkanCustomer(cariCustomer(custInput.value)); });
       custList.addEventListener('click', function(e) {
         var opt = e.target.closest('.customer-opt');
         if (opt) pilihCustomer(opt.getAttribute('data-id'));
@@ -1112,9 +907,7 @@ if ($is_edit && !empty($items_edit)) {
     });
 
     if (ITEMS_EDIT.length) {
-      ITEMS_EDIT.forEach(function(d) {
-        tambahItem(d);
-      });
+      ITEMS_EDIT.forEach(function(d) { tambahItem(d); });
     } else {
       tambahItem();
     }

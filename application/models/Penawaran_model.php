@@ -27,14 +27,11 @@ class Penawaran_model extends CI_Model
             pen.grand_total,
             pen.status,
             cus.nama AS customer,
-            (
-                SELECT COALESCE(SUM(pd.qty), 0)
-                FROM penawaran_detail pd
-                WHERE pd.id_penawaran = pen.id
-            ) AS total_item
+            COALESCE(SUM(pd.qty), 0) AS total_item
         ');
         $this->db->from('penawaran pen');
         $this->db->join('customer cus', 'cus.id = pen.id_customer', 'left');
+        $this->db->join('penawaran_detail pd', 'pd.id_penawaran = pen.id', 'left');
 
         if (!empty($filter['q'])) {
             $this->db->group_start();
@@ -50,6 +47,9 @@ class Penawaran_model extends CI_Model
         if (!empty($filter['sampai'])) {
             $this->db->where('DATE(pen.tanggal) <=', $filter['sampai']);
         }
+
+        // Kelompokkan berdasarkan ID penawaran agar fungsi SUM berjalan akurat
+        $this->db->group_by('pen.id');
 
         $this->db->order_by('pen.tanggal', 'DESC');
         $this->db->order_by('pen.id', 'DESC');

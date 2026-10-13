@@ -133,7 +133,7 @@
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
           <div class="kpi-value">Rp <?= isset($total_nilai) ? number_format($total_nilai, 0, ',', '.') : 0; ?></div>
-          <div class="kpi-label"><?= translate('total_nilai') ?></div>
+          <div class="kpi-label"><?= translate('nilai_penawaran') ?></div>
         </div>
       </div>
     </div>

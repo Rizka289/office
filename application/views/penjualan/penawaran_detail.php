@@ -198,6 +198,13 @@
                       = <?= $rp((float) $it->luas_m2_books * (int) $it->qty_books * (float) $it->harga_m2_books); ?>
                     </span>
                   <?php endif; ?>
+                  <?php if ((float) ($it->qty_instalasi ?? 0) > 0 || (float) ($it->harga_m2_instalasi ?? 0) > 0): ?>
+                    <?php $i_luas = (float) ($it->luas_billing_m2 ?? $it->luas_m2 ?? 0); ?>
+                    <span class="spek-line">
+                      Biaya Instalasi: <?= $fmt_luas($i_luas); ?> m² &times; <?= (int) $it->qty_instalasi; ?> &times; <?= $rp($it->harga_m2_instalasi); ?>
+                      = <?= $rp($i_luas * (float) $it->qty_instalasi * (float) $it->harga_m2_instalasi); ?>
+                    </span>
+                  <?php endif; ?>
                   <?php if (!empty($it->kelengkapan)): ?>
                     <span class="spek-line spek-multi">Kelengkapan: <?= nl2br(html_escape($it->kelengkapan)); ?></span>
                   <?php endif; ?>

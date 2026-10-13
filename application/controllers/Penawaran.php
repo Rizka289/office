@@ -3,24 +3,18 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class Penawaran extends MY_Controller
 {
-    // Tarif pajak (persen) — dipakai untuk tampilan (view) dan perhitungan
-    // di server. Nilainya sama dengan default kolom ppn_persen/pph_persen
-    // di tabel `penawaran`. Ubah tarif di sini saja.
-    const TARIF_PPN = 11;    // PPN, ditambahkan ke total
-    const TARIF_PPH = 2.5;   // PPh, ditambahkan ke total (sesuai data existing)
-    // Default spesifikasi motor rolling door; dipakai otomatis kalau field-nya dikosongkan user
+    const TARIF_PPN = 11;
+    const TARIF_PPH = 2.5;
     const DEFAULT_TIPE_MOTOR_ROLLING  = 'Electra 600';
     const DEFAULT_POWER_ROLLING       = '250 W';
     const DEFAULT_VOLTAGE_ROLLING     = '220 V - 50 Hz';
     const DEFAULT_KELENGKAPAN_ROLLING = "3 Bh Remote hand / 3 Bh Remote hand / 3个手持遥控器\n1 Bh Remote dinding / 1个壁挂遥控器\nRantai Emergency / 紧急链条";
     const DEFAULT_BOOKS_PENUTUP_ROLLING = "Hollow 30 x 30 x 1.0 mm / 角钢 30 x 30 x 1.0 毫米\nPlat besi galvanis 0.5 mm / 镀锌铁板 0.5 毫米";
 
-
-
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole('super_admin'); // hanya super admin yang boleh akses seluruh method di sini
+        $this->requireRole('super_admin');
         $this->load->model('Penawaran_model');
         $this->load->helper('url');
     }
@@ -60,7 +54,6 @@ class Penawaran extends MY_Controller
     public function detail($id)
     {
         $id = (int)$id;
-
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
@@ -82,7 +75,6 @@ class Penawaran extends MY_Controller
     public function cetak($id)
     {
         $id = (int)$id;
-
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
@@ -115,11 +107,6 @@ class Penawaran extends MY_Controller
         $this->load->view('templates/footer', $data);
     }
 
-    /**
-     * Kumpulkan item dari POST lalu hitung ulang seluruh nominal dan kalkulasi
-     * berdasarkan aturan bisnis (5 Kategori Rumus) di server.
-     * Return: [$items,$subtotal]
-     */
     private function _kumpulkan_item()
     {
         $id_barang      = $this->input->post('id_barang', TRUE)      ?: [];
@@ -139,13 +126,15 @@ class Penawaran extends MY_Controller
         $books_penutup  = $this->input->post('books_penutup', TRUE)  ?: [];
         $kelengkapan    = $this->input->post('kelengkapan', TRUE)    ?: [];
         $komponen       = $this->input->post('komponen', TRUE)       ?: [];
-        $aks_nama  = $this->input->post('aks_nama', TRUE)  ?: [];
-        $aks_qty   = $this->input->post('aks_qty', TRUE)   ?: [];
-        $aks_harga = $this->input->post('aks_harga', TRUE) ?: [];
-        $lebar_m2 = $this->input->post('lebar_m2_books', TRUE) ?: [];
-        $tinggi_m2 = $this->input->post('tinggi_m2_books', TRUE) ?: [];
-        $qty_m2 = $this->input->post('qty_books', TRUE) ?: [];
-        $harga_books = $this->input->post('harga_m2_books', TRUE) ?: [];
+        $aks_nama       = $this->input->post('aks_nama', TRUE)       ?: [];
+        $aks_qty        = $this->input->post('aks_qty', TRUE)        ?: [];
+        $aks_harga      = $this->input->post('aks_harga', TRUE)      ?: [];
+        $lebar_m2       = $this->input->post('lebar_m2_books', TRUE) ?: [];
+        $tinggi_m2      = $this->input->post('tinggi_m2_books', TRUE)?: [];
+        $qty_m2         = $this->input->post('qty_books', TRUE)      ?: [];
+        $harga_books    = $this->input->post('harga_m2_books', TRUE) ?: [];
+        $qty_instalasi = $this->input->post('qty_instalasi', TRUE) ?: [];
+        $harga_instalasi = $this->input->post('harga_m2_instalasi', TRUE) ?: [];
 
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
@@ -155,7 +144,7 @@ class Penawaran extends MY_Controller
         foreach ($jenis_item as $i => $jenis) {
             $jenis = trim($jenis);
             if ($jenis === '') {
-                continue; // baris kosong dilewati
+                continue;
             }
 
             $l   = max(0, (int) ($lebar_mm[$i] ?? 0));
@@ -163,10 +152,8 @@ class Penawaran extends MY_Controller
             $q   = max(1, (int) ($qty[$i] ?? 1));
             $idb = (int) ($id_barang[$i] ?? 0);
 
-            // 1. Ambil data master barang (termasuk harga per m2 & kategori rumus)
             if ($idb > 0 && isset($master_barang[$idb])) {
                 $jenis          = $master_barang[$idb]['nama'];
-                // Komponen boleh diedit user di form; kalau field tidak ikut terkirim, pakai master.
                 $komponen_item  = array_key_exists($i, $komponen)
                     ? trim((string) $komponen[$i])
                     : trim((string) ($master_barang[$idb]['komponen'] ?? ''));
@@ -179,28 +166,21 @@ class Penawaran extends MY_Controller
                 $kategori_rumus = 'unit_fix';
             }
 
-            // 2. Luas riil (mm -> m), dibulatkan 4 desimal supaya batas 1,3 / 1,4 / 3 / 5 tidak meleset karena floating point
             $luas_riil = round(($l / 1000) * ($t / 1000), 4);
-
-            // 3. Luas penagihan sesuai kategori rumus
             $luas_billing = $this->_luas_billing($kategori_rumus, $luas_riil, $l, $t);
 
-            // 4. Total item: unit_fix = qty x harga; kategori lain = luas penagihan x qty x harga/m2
             $total = ($kategori_rumus === 'unit_fix')
                 ? $q * $harga_m2
                 : $luas_billing * $q * $harga_m2;
 
-            // Aksesoris tambahan item ke-$i (form: aks_nama[$i][], aks_qty[$i][], aks_harga[$i][]).
-            // Nama kolom tabel penawaran_detail_aksesoris: id_penawaran_detail, nama, qty, harga.
+            // Aksesoris
             $aks_list  = [];
             $total_aks = 0;
             $aks_nama_item = $aks_nama[$i] ?? [];
             if (is_array($aks_nama_item)) {
                 foreach ($aks_nama_item as $k => $nm) {
                     $nm = trim((string) $nm);
-                    if ($nm === '') {
-                        continue; // baris aksesoris kosong dilewati
-                    }
+                    if ($nm === '') continue;
                     $aq = max(1, (int) ($aks_qty[$i][$k] ?? 1));
                     $ah = max(0, (float) ($aks_harga[$i][$k] ?? 0));
 
@@ -208,22 +188,15 @@ class Penawaran extends MY_Controller
                         'nama'        => $nm,
                         'qty'         => $aq,
                         'harga'       => $ah,
-                        'total_harga' => round($aq * $ah, 2), // total per aksesoris (qty x harga)
+                        'total_harga' => round($aq * $ah, 2),
                     ];
                     $total_aks += $aq * $ah;
                 }
             }
-            // Total item = harga barang + aksesoris (sama dengan hitungan di JS form)
             $total += $total_aks;
 
-            // Books Penutup (khusus rolling door baja / tahan api):
-            // luas = lebar x tinggi (mm -> m2), total = luas x qty x harga. Semua diinput manual.
-            $books_l = 0;
-            $books_t = 0;
-            $books_luas = 0;
-            $books_q = 0;
-            $books_h = 0;
-            $books_total = 0;
+            // Books Penutup
+            $books_l = 0; $books_t = 0; $books_luas = 0; $books_q = 0; $books_h = 0; $books_total = 0;
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
                 $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));
@@ -232,9 +205,19 @@ class Penawaran extends MY_Controller
                 $books_h     = max(0, (float) ($harga_books[$i] ?? 0));
                 $books_total = round($books_luas * $books_q * $books_h, 2);
             }
-            $total += $books_total; // total item = barang + aksesoris + books penutup
+            $total += $books_total;
 
-            // Rolling door: Tipe Motor, Input Power, Voltage yang tidak diisi user diisi default
+            // Biaya Instalasi Rolling Door (Luas Billing x Qty x Harga Pasang per m²)
+            $instalasi_h = 0;
+            $instalasi_qty = 0;
+            $instalasi_total = 0;
+            if ($this->_is_rolling_door($kategori_rumus)) {
+                $instalasi_h     = max(0, (float) ($harga_instalasi[$i] ?? 0));
+                $instalasi_qty     = max(0, (float) ($qty_instalasi[$i] ?? 0));
+                $instalasi_total = round($luas_billing * $instalasi_qty * $instalasi_h, 2);
+            }
+            $total += $instalasi_total;
+
             $tipe_motor_val  = trim($tipe_motor[$i] ?? '');
             $input_power_val = trim($input_power[$i] ?? '');
             $voltage_val     = trim($voltage[$i] ?? '');
@@ -279,8 +262,10 @@ class Penawaran extends MY_Controller
                 'luas_m2_books'   => $books_luas,
                 'qty_books'       => $books_q,
                 'harga_m2_books'  => $books_h,
-                'kelengkapan'     =>  $kelengkapan_val,
-                'aksesoris'       => $aks_list, // diinsert terpisah oleh model ke penawaran_detail_aksesoris
+                'harga_m2_instalasi' => $instalasi_h, // Disimpan jika kolom ada di DB, atau lewati jika tidak pakai kolom tersendiri
+                'qty_instalasi' => $instalasi_qty, // Disimpan jika kolom ada di DB, atau lewati jika tidak pakai kolom tersendiri
+                'kelengkapan'     => $kelengkapan_val,
+                'aksesoris'       => $aks_list,
             ];
 
             $subtotal += $total;
@@ -289,23 +274,6 @@ class Penawaran extends MY_Controller
         return [$items, $subtotal];
     }
 
-    /**
-     * Luas penagihan (m2) per kategori rumus. Rumus total tetap sama:
-     * luas_billing x qty x harga satuan.
-     *  - jendela_sliding : minimum 1,3
-     *  - jendela_swing_* : minimum 1,4; kalau 3 < luas < 5 ditambah 1,3
-     *  - pintu_baja      : minimum 2
-     */
-    /**
-     * Luas penagihan (m2) per kategori rumus.
-     * Menggunakan max() agar jika luas_riil lebih kecil dari batas minimum,
-     * maka yang dipakai adalah batas minimum tersebut. Jika luas_riil lebih besar,
-     * maka memakai luas_riil yang sebenarnya.
-     */
-    /**
-     * Cek kategori rolling door, toleran terhadap variasi ejaan di master barang
-     * (rolling_ / rooling_ / roling_, dengan atau tanpa "door").
-     */
     private function _is_rolling_door($kategori)
     {
         return (bool) preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) $kategori);
@@ -316,41 +284,30 @@ class Penawaran extends MY_Controller
         switch ($kategori) {
             case 'jendela_sliding':
                 return max($luas_riil, 1.3);
-
             case 'jendela_swing_b1':
                 return max($luas_riil, 1.4);
-
             case 'jendela_swing_b2':
                 $luas = max($luas_riil, 1.4);
                 if ($luas_riil > 3.0 && $luas_riil < 5.0) {
                     $luas = $luas_riil + 1.3;
                 }
                 return $luas;
-
             case 'pintu_baja':
             case 'pintu_kayu':
             case 'pintu_alumunium':
                 return max($luas_riil, 2.0);
-
             case 'pintu_baja_double':
             case 'pintu_alumunium_double':
                 return max($luas_riil, 3.9);
-
             case 'rolling_door_tahan_api':
             case 'rolling_door_baja':
-            case 'rooling_door_tahan_api': // ejaan lain yang mungkin ada di master barang
+            case 'rooling_door_tahan_api':
             case 'rooling_door_baja':
-                // Konversi langsung dari mm ke meter setelah ditambah margin
                 $lebar_m  = ($lebar_mm + 200) / 1000;
                 $tinggi_m = ($tinggi_mm + 600) / 1000;
-
-                // Hitung total luas
                 $luas = round($lebar_m * $tinggi_m, 4);
-
-                // Minimum penagihan 10.0 m2
                 return max($luas, 10.0);
-
-            default: // unit_fix
+            default:
                 if ($this->_is_rolling_door($kategori)) {
                     return max(round((($lebar_mm + 200) / 1000) * (($tinggi_mm + 600) / 1000), 4), 10.0);
                 }
@@ -394,7 +351,6 @@ class Penawaran extends MY_Controller
         $tanggal     = $this->input->post('tanggal', TRUE);
         $id_customer = (int)$this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
-
 
         if (empty($tanggal) || $id_customer <= 0) {
             $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
@@ -486,7 +442,6 @@ class Penawaran extends MY_Controller
             redirect('penawaran/edit/' . $id);
         }
 
-        // Gabungkan perubahan header dasar (tanggal, customer, catatan) dan nominal total
         $header = array_merge([
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
@@ -504,7 +459,6 @@ class Penawaran extends MY_Controller
 
     public function delete($id)
     {
-        // Hanya lewat POST (form + token CSRF), tidak boleh lewat link GET
         if ($this->input->method(TRUE) !== 'POST') {
             show_404();
         }

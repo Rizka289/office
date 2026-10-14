@@ -33,14 +33,14 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label">Pilih penawaran (sudah di-approve) <span class="text-danger">*</span></label>
-            <select name="id_penawaran" id="id_penawaran" class="form-select" required>
-              <option value="">-- Pilih penawaran --</option>
+            <input type="text" id="cari_penawaran" class="form-control" list="dl_penawaran"
+                   placeholder="Ketik no. surat / nama customer, lalu pilih dari daftar" autocomplete="off" required>
+            <input type="hidden" name="id_penawaran" id="id_penawaran" value="">
+            <datalist id="dl_penawaran">
               <?php foreach ($penawaran_list as $p): ?>
-                <option value="<?= (int) $p->id ?>">
-                  <?= html_escape($p->no_surat . ' - ' . $p->nama_customer) ?>
-                </option>
+                <option value="<?= html_escape($p->no_surat . ' - ' . $p->nama_customer) ?>" data-id="<?= (int) $p->id ?>"></option>
               <?php endforeach; ?>
-            </select>
+            </datalist>
             <?php if (empty($penawaran_list)): ?>
               <div class="form-text text-warning">Belum ada penawaran yang di-approve dan belum jadi SO.</div>
             <?php endif; ?>
@@ -169,11 +169,29 @@
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function num(n, d) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits: d}).format(Number(n) || 0); }
 
-  var sel = document.getElementById('id_penawaran');
+  // alamat ikut customer penawaran, kecuali user sudah mengetik sendiri
+  var alamatDiubah = false;
+  document.getElementById('alamat_kirim').addEventListener('input', function () { alamatDiubah = true; });
+
+  var sel  = document.getElementById('id_penawaran');   // hidden, berisi id
+  var cari = document.getElementById('cari_penawaran');  // kotak ketik
+  var peta = {}, lastId = '';
+  document.querySelectorAll('#dl_penawaran option').forEach(function (o) {
+    peta[o.value] = o.getAttribute('data-id');
+  });
+  cari.addEventListener('input', function () {
+    var id = peta[this.value] || '';
+    if (id === lastId) { return; }
+    lastId = id;
+    sel.value = id;
+    loadPenawaran(id);
+  });
+  document.getElementById('form_so').addEventListener('submit', function (e) {
+    if (!sel.value) { e.preventDefault(); alert('Pilih penawaran dari daftar yang muncul.'); cari.focus(); }
+  });
   var btn = document.getElementById('btn_simpan');
 
-  sel.addEventListener('change', function () {
-    var id = this.value;
+  function loadPenawaran(id) {
     btn.disabled = true;
     if (!id) { reset(); return; }
     fetch(urlGet + id).then(function (r) { return r.json(); }).then(function (d) {
@@ -182,7 +200,7 @@
       document.getElementById('v_customer').value = h.nama_customer || '';
       document.getElementById('v_tgl_penawaran').value = h.tanggal || '';
       var alamat = document.getElementById('alamat_kirim');
-      if (!alamat.value) { alamat.value = h.alamat_customer || ''; }
+      if (!alamatDiubah) { alamat.value = h.alamat_customer || ''; }
 
       var rows = '';
       d.items.forEach(function (it, i) {
@@ -210,7 +228,7 @@
       updateDp();
       btn.disabled = !d.items.length;
     }).catch(function () { alert('Gagal mengambil data penawaran.'); reset(); });
-  });
+  }
 
   function reset() {
     ['v_customer', 'v_tgl_penawaran'].forEach(function (i) { document.getElementById(i).value = ''; });

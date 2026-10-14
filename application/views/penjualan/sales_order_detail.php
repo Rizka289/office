@@ -32,6 +32,13 @@ if ($h->termin === '100' || $dp_persen <= 0) {
 $total_qty = 0; $total_kirim = 0;
 foreach ($items as $it) { $total_qty += (float) $it->qty; $total_kirim += (float) $it->qty_terkirim; }
 $persen_kirim = $total_qty > 0 ? min(100, round($total_kirim / $total_qty * 100)) : 0;
+
+// Pembayaran
+$bayar_list  = isset($so['pembayaran']) ? $so['pembayaran'] : array();
+$total_bayar = isset($so['total_dibayar']) ? (float) $so['total_dibayar'] : 0;
+$kurang_dp   = max(0, $dp_nilai - $total_bayar);
+$sisa_tagih  = max(0, (float) $h->grand_total - $total_bayar);
+$bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_tagih > 0;
 ?>
 <style>
   .sod { --brand: #2f7a57; --brand-dark: #1f5a3f; --brand-soft: #eaf4f0; --line: #e9edeb; }
@@ -85,6 +92,9 @@ $persen_kirim = $total_qty > 0 ? min(100, round($total_kirim / $total_qty * 100)
 
 <div class="sod container-fluid py-3">
 
+  <?php if ($this->session->flashdata('error')): ?>
+    <div class="alert alert-danger"><?= html_escape($this->session->flashdata('error')) ?></div>
+  <?php endif; ?>
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible fade show">
       <i class="bi bi-check-circle me-1"></i><?= html_escape($this->session->flashdata('success')) ?>
@@ -104,6 +114,16 @@ $persen_kirim = $total_qty > 0 ? min(100, round($total_kirim / $total_qty * 100)
       <div class="d-flex align-items-center gap-2 no-print">
         <span class="badge bg-<?= $st[0] ?> fs-6 fw-normal px-3 py-2"><?= $st[1] ?></span>
         <a href="<?= site_url('sales_order') ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+        <?php if ($h->status === 'draft'): ?>
+          <?= form_open('sales_order/konfirmasi/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Konfirmasi SO ini? Setelah dikonfirmasi SO siap diproses.')")) ?>
+            <button type="submit" class="btn btn-warning btn-sm" <?= $kurang_dp > 0 ? 'disabled title="DP belum cukup, catat pembayaran dulu"' : '' ?>><i class="bi bi-check2-circle me-1"></i>Konfirmasi SO</button>
+          <?= form_close() ?>
+        <?php endif; ?>
+        <?php if (in_array($h->status, array('draft', 'confirmed'), true) && $total_kirim <= 0): ?>
+          <?= form_open('sales_order/batal/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Batalkan SO ini?')")) ?>
+            <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-x-circle me-1"></i>Batalkan</button>
+          <?= form_close() ?>
+        <?php endif; ?>
         <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i>Cetak halaman</button>
       </div>
     </div>
@@ -332,8 +352,87 @@ $persen_kirim = $total_qty > 0 ? min(100, round($total_kirim / $total_qty * 100)
                 <div><span class="dot" style="background:#2f7a57"></span>DP<br><strong><?= $rp($dp_nilai) ?></strong></div>
                 <div class="text-end"><span class="dot" style="background:#9fc9b4"></span>Pelunasan<br><strong><?= $rp($sisa) ?></strong></div>
               </div>
-            <?php else: ?>
-              <div class="small text-muted">Dibayar penuh sebesar <?= $rp($h->grand_total) ?>.</div>
+            <?php endif; ?>
+
+            <div class="block">
+              <div class="sum-row"><span>Total dibayar</span><strong><?= $rp($total_bayar) ?></strong></div>
+              <div class="sum-row"><span>Sisa tagihan</span><span><?= $rp($sisa_tagih) ?></span></div>
+              <?php if ($h->status === 'draft'): ?>
+                <?php if ($kurang_dp > 0): ?>
+                  <div class="note mt-2"><i class="bi bi-exclamation-circle me-1"></i>DP belum cukup, kurang <strong><?= $rp($kurang_dp) ?></strong>. SO belum bisa dikonfirmasi.</div>
+                <?php else: ?>
+                  <div class="note mt-2"><i class="bi bi-check-circle me-1"></i>DP terpenuhi. SO siap dikonfirmasi.</div>
+                <?php endif; ?>
+              <?php endif; ?>
+            </div>
+
+            <?php if (!empty($bayar_list)): ?>
+              <div class="block">
+                <div class="block-title">Riwayat pembayaran</div>
+                <table class="mini-table">
+                  <?php foreach ($bayar_list as $b): ?>
+                    <tr>
+                      <td>
+                        <?= date('d M Y', strtotime($b->tanggal)) ?>
+                        <div class="text-muted small"><?= html_escape(strtoupper($b->jenis)) ?><?= $isi($b->metode) ? ' · ' . html_escape($b->metode) : '' ?><?= $isi($b->no_referensi) ? ' · ' . html_escape($b->no_referensi) : '' ?></div>
+                      </td>
+                      <td class="r fw-semibold"><?= $rp($b->nominal) ?></td>
+                      <td class="r no-print">
+                        <?php if (in_array($h->status, array('draft', 'confirmed'), true)): ?>
+                          <?= form_open('sales_order/hapus_bayar/' . (int) $b->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Hapus pembayaran ini?')")) ?>
+                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                          <?= form_close() ?>
+                        <?php endif; ?>
+                      </td>
+                    </tr>
+                  <?php endforeach; ?>
+                </table>
+              </div>
+            <?php endif; ?>
+
+            <?php if ($bisa_bayar): ?>
+              <div class="block no-print">
+                <button class="btn btn-sm btn-success w-100" type="button" data-bs-toggle="collapse" data-bs-target="#form_bayar">
+                  <i class="bi bi-plus-lg me-1"></i>Catat pembayaran
+                </button>
+                <div class="collapse mt-3" id="form_bayar">
+                  <?= form_open('sales_order/bayar/' . (int) $h->id) ?>
+                    <div class="row g-2">
+                      <div class="col-6">
+                        <label class="form-label small mb-1">Tanggal</label>
+                        <input type="date" name="tanggal" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label small mb-1">Jenis</label>
+                        <select name="jenis" class="form-select form-select-sm">
+                          <option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option>
+                          <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>>Pelunasan</option>
+                          <option value="lainnya">Lainnya</option>
+                        </select>
+                      </div>
+                      <div class="col-12">
+                        <label class="form-label small mb-1">Nominal (Rp)</label>
+                        <input type="number" name="nominal" class="form-control form-control-sm" min="1" step="0.01"
+                               value="<?= $kurang_dp > 0 ? (float) $kurang_dp : (float) $sisa_tagih ?>" required>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label small mb-1">Metode</label>
+                        <input type="text" name="metode" class="form-control form-control-sm" maxlength="50" placeholder="Transfer / Tunai">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label small mb-1">No. referensi</label>
+                        <input type="text" name="no_referensi" class="form-control form-control-sm" maxlength="100">
+                      </div>
+                      <div class="col-12">
+                        <input type="text" name="catatan" class="form-control form-control-sm" maxlength="255" placeholder="Catatan (opsional)">
+                      </div>
+                      <div class="col-12 d-grid">
+                        <button type="submit" class="btn btn-sm btn-success">Simpan pembayaran</button>
+                      </div>
+                    </div>
+                  <?= form_close() ?>
+                </div>
+              </div>
             <?php endif; ?>
           </div>
         </div>

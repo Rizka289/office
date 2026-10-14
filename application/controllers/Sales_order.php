@@ -23,10 +23,14 @@ class Sales_order extends MY_Controller
         );
 
         $data['sales_order_list'] = $this->Sales_order_model->get_all_sales_order($filter);
-        $data['total_bulan_ini']  = count($data['sales_order_list']);
+        $data['total_so']         = 0;
 
         $total_nilai = 0;
         foreach ($data['sales_order_list'] as $so) {
+            if ($so->status === 'batal') {
+                continue; // SO batal tidak dihitung
+            }
+            $data['total_so']++;
             $total_nilai += (float) $so->grand_total;
         }
         $data['total_nilai']   = $total_nilai;
@@ -50,6 +54,8 @@ class Sales_order extends MY_Controller
         $data['title']       = 'Detail ' . $so['header']->no_so;
         $data['page_title']  = 'Detail Sales Order';
         $data['active_menu'] = 'sales_order';
+        $so['pembayaran']    = $this->Sales_order_model->get_pembayaran($id);
+        $so['total_dibayar'] = $this->Sales_order_model->total_dibayar($id);
         $data['so']          = $so;
 
         $this->load->view('templates/header', $data);
@@ -72,6 +78,9 @@ class Sales_order extends MY_Controller
     public function get_penawaran($id = 0)
     {
         $res = $this->Sales_order_model->get_penawaran_lengkap($id);
+        if ($res && $res['header']->status !== 'approved') {
+            $res = null;
+        }
         $this->output->set_content_type('application/json')
             ->set_output(json_encode($res ? $res : array('error' => 'Penawaran tidak ditemukan')));
     }
@@ -128,7 +137,7 @@ class Sales_order extends MY_Controller
         list($ok, $pesan) = $this->Sales_order_model->simpan_dari_penawaran(
             $id_penawaran,
             $input,
-            $this->session->userdata('id_user')
+            $this->_id_user()
         );
 
         if ($ok) {
@@ -138,5 +147,87 @@ class Sales_order extends MY_Controller
             $this->session->set_flashdata('error', $pesan);
             redirect('sales_order/tambah');
         }
+    }
+
+    // Draft -> Dikonfirmasi (hanya jika DP sudah tercatat)
+    public function konfirmasi($id = 0)
+    {
+        $this->_wajib_post();
+        if (!$this->Sales_order_model->get_so_lengkap($id)) {
+            show_404();
+        }
+        list($ok, $pesan) = $this->Sales_order_model->konfirmasi($id);
+        $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
+        redirect('sales_order/detail/' . (int) $id);
+    }
+
+    // Batal: hanya jika belum ada barang yang terkirim
+    public function batal($id = 0)
+    {
+        $this->_wajib_post();
+        $so = $this->Sales_order_model->get_so_lengkap($id);
+        if (!$so) {
+            show_404();
+        }
+        list($ok, $pesan) = $this->Sales_order_model->batalkan($id);
+        $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
+        redirect('sales_order/detail/' . (int) $id);
+    }
+
+    private function _wajib_post()
+    {
+        if ($this->input->method() !== 'post') {
+            show_404();
+        }
+    }
+
+    // Catat pembayaran (DP / pelunasan) dari halaman detail
+    public function bayar($id = 0)
+    {
+        $this->_wajib_post();
+        if (!$this->Sales_order_model->get_so_lengkap($id)) {
+            show_404();
+        }
+        $tanggal = $this->input->post('tanggal');
+        $jenis   = $this->input->post('jenis');
+        $nominal = (float) $this->input->post('nominal');
+
+        if (!$tanggal || !strtotime($tanggal) || !in_array($jenis, array('dp', 'pelunasan', 'lainnya'), true) || $nominal <= 0) {
+            $this->session->set_flashdata('error', 'Tanggal, jenis, dan nominal pembayaran wajib diisi dengan benar.');
+            redirect('sales_order/detail/' . (int) $id);
+            return;
+        }
+
+        list($ok, $pesan) = $this->Sales_order_model->simpan_pembayaran($id, array(
+            'tanggal'      => date('Y-m-d', strtotime($tanggal)),
+            'jenis'        => $jenis,
+            'nominal'      => $nominal,
+            'metode'       => trim($this->input->post('metode', true)),
+            'no_referensi' => trim($this->input->post('no_referensi', true)),
+            'catatan'      => trim($this->input->post('catatan', true)),
+        ), $this->_id_user());
+
+        $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
+        redirect('sales_order/detail/' . (int) $id);
+    }
+
+    public function hapus_bayar($id_bayar = 0)
+    {
+        $this->_wajib_post();
+        list($ok, $pesan, $id_so) = $this->Sales_order_model->hapus_pembayaran($id_bayar);
+        $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
+        redirect($id_so ? 'sales_order/detail/' . $id_so : 'sales_order');
+    }
+
+    // Sesuaikan dengan key session login di aplikasi Anda
+    private function _id_user()
+    {
+        foreach (array('id_user', 'user_id', 'id') as $k) {
+            $v = $this->session->userdata($k);
+            if ($v) {
+                return (int) $v;
+            }
+        }
+        return null;
     }
 }

@@ -2,14 +2,16 @@
 
 class Sales_order_model extends CI_Model
 {
-    public function generate_no($tanggal)
+    // $kunci = true hanya dipakai saat simpan (di dalam transaksi) supaya
+    // dua orang yang simpan bersamaan tidak mendapat nomor yang sama.
+    public function generate_no($tanggal, $kunci = false)
     {
         $tahun = (int) date('Y', strtotime($tanggal));
         $bulan = date('m', strtotime($tanggal));
 
-        $row = $this->db->select_max('no_urut', 'maks')
-            ->where('tahun', $tahun)
-            ->get('sales_order')->row();
+        $sql = 'SELECT COALESCE(MAX(no_urut), 0) AS maks FROM sales_order WHERE tahun = ?'
+             . ($kunci ? ' FOR UPDATE' : '');
+        $row = $this->db->query($sql, array($tahun))->row();
 
         $urut = ((int) $row->maks) + 1;
         return array(
@@ -26,7 +28,7 @@ class Sales_order_model extends CI_Model
             ->from('penawaran p')
             ->join('customer c', 'c.id = p.id_customer', 'left')
             ->where('p.status', 'approved')
-            ->where('p.id NOT IN (SELECT id_penawaran FROM sales_order)', null, false)
+            ->where("p.id NOT IN (SELECT id_penawaran FROM sales_order WHERE status <> 'batal')", null, false)
             ->order_by('p.tanggal', 'DESC')
             ->get()->result();
     }
@@ -123,12 +125,12 @@ class Sales_order_model extends CI_Model
             $this->db->trans_rollback();
             return array(false, 'Penawaran belum di-approve atau tidak ditemukan.');
         }
-        if ($this->db->where('id_penawaran', $p->id)->count_all_results('sales_order') > 0) {
+        if ($this->db->where('id_penawaran', $p->id)->where('status !=', 'batal')->count_all_results('sales_order') > 0) {
             $this->db->trans_rollback();
             return array(false, 'Penawaran ini sudah dibuatkan Sales Order.');
         }
 
-        $no = $this->generate_no($input['tanggal']);
+        $no = $this->generate_no($input['tanggal'], true);
 
         // ---- Tabel 1: header ----
         $this->db->insert('sales_order', array(
@@ -188,5 +190,119 @@ class Sales_order_model extends CI_Model
         }
         $this->db->trans_commit();
         return array(true, $no['no_so']);
+    }
+
+    // Ubah status dengan syarat status lama (atomik, aman dari klik ganda)
+    public function ubah_status($id, $dari, $ke)
+    {
+        $this->db->where('id', (int) $id)->where_in('status', $dari)->update('sales_order', array('status' => $ke));
+        return $this->db->affected_rows() > 0;
+    }
+
+    public function batalkan($id)
+    {
+        $kirim = $this->db->select_sum('qty_terkirim', 'total')->where('id_so', (int) $id)
+            ->get('sales_order_detail')->row();
+        if ((float) $kirim->total > 0) {
+            return array(false, 'SO tidak bisa dibatalkan karena sudah ada barang yang terkirim.');
+        }
+        if (!$this->ubah_status($id, array('draft', 'confirmed'), 'batal')) {
+            return array(false, 'SO dengan status ini tidak bisa dibatalkan.');
+        }
+        return array(true, 'Sales Order dibatalkan. Penawarannya bisa dibuatkan SO baru.');
+    }
+
+    // ================= PEMBAYARAN (DP / pelunasan) =================
+
+    public function get_pembayaran($id_so)
+    {
+        return $this->db->where('id_so', (int) $id_so)
+            ->order_by('tanggal', 'ASC')->order_by('id', 'ASC')
+            ->get('sales_order_pembayaran')->result();
+    }
+
+    public function total_dibayar($id_so)
+    {
+        $r = $this->db->select_sum('nominal', 'total')->where('id_so', (int) $id_so)
+            ->get('sales_order_pembayaran')->row();
+        return (float) $r->total;
+    }
+
+    // $d: tanggal, jenis, nominal, metode, no_referensi, catatan
+    public function simpan_pembayaran($id_so, $d, $id_user)
+    {
+        $this->db->trans_begin();
+        $so = $this->db->query('SELECT id, status, grand_total FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id_so))->row();
+        if (!$so || in_array($so->status, array('batal', 'selesai'), true)) {
+            $this->db->trans_rollback();
+            return array(false, 'SO tidak ditemukan atau sudah batal / selesai.');
+        }
+        $sisa = (float) $so->grand_total - $this->total_dibayar($id_so);
+        if ($d['nominal'] > $sisa + 0.005) {
+            $this->db->trans_rollback();
+            return array(false, 'Nominal melebihi sisa tagihan (Rp ' . number_format($sisa, 0, ',', '.') . ').');
+        }
+        $this->db->insert('sales_order_pembayaran', array(
+            'id_so'        => (int) $id_so,
+            'tanggal'      => $d['tanggal'],
+            'jenis'        => $d['jenis'],
+            'nominal'      => $d['nominal'],
+            'metode'       => $d['metode'],
+            'no_referensi' => $d['no_referensi'],
+            'catatan'      => $d['catatan'],
+            'id_user'      => $id_user,
+        ));
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return array(false, 'Gagal menyimpan pembayaran.');
+        }
+        $this->db->trans_commit();
+        return array(true, 'Pembayaran Rp ' . number_format($d['nominal'], 0, ',', '.') . ' dicatat.');
+    }
+
+    // Return: array(ok, pesan, id_so)
+    public function hapus_pembayaran($id_bayar)
+    {
+        $b = $this->db->where('id', (int) $id_bayar)->get('sales_order_pembayaran')->row();
+        if (!$b) {
+            return array(false, 'Data pembayaran tidak ditemukan.', 0);
+        }
+        $this->db->trans_begin();
+        $so = $this->db->query('SELECT id, status, grand_total, dp_persen FROM sales_order WHERE id = ? FOR UPDATE', array((int) $b->id_so))->row();
+        if (in_array($so->status, array('produksi', 'terkirim', 'selesai', 'batal'), true)) {
+            $this->db->trans_rollback();
+            return array(false, 'Pembayaran tidak bisa dihapus karena SO sudah berstatus ' . $so->status . '.', (int) $so->id);
+        }
+        if ($so->status === 'confirmed') {
+            $dp_nilai = round((float) $so->grand_total * (float) $so->dp_persen / 100);
+            if ($this->total_dibayar($so->id) - (float) $b->nominal + 0.005 < $dp_nilai) {
+                $this->db->trans_rollback();
+                return array(false, 'Tidak bisa dihapus: DP SO yang sudah dikonfirmasi akan jadi kurang.', (int) $so->id);
+            }
+        }
+        $this->db->where('id', (int) $id_bayar)->delete('sales_order_pembayaran');
+        $this->db->trans_commit();
+        return array(true, 'Pembayaran dihapus.', (int) $so->id);
+    }
+
+    // Draft -> Dikonfirmasi, hanya jika DP sudah tercatat sesuai termin
+    public function konfirmasi($id)
+    {
+        $this->db->trans_begin();
+        $so = $this->db->query('SELECT id, no_so, status, grand_total, dp_persen FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id))->row();
+        if (!$so || $so->status !== 'draft') {
+            $this->db->trans_rollback();
+            return array(false, 'Hanya SO berstatus Draft yang bisa dikonfirmasi.');
+        }
+        $dp_nilai = round((float) $so->grand_total * (float) $so->dp_persen / 100);
+        $dibayar  = $this->total_dibayar($so->id);
+        if ($dibayar + 0.005 < $dp_nilai) {
+            $this->db->trans_rollback();
+            return array(false, 'DP belum cukup. Dibutuhkan Rp ' . number_format($dp_nilai, 0, ',', '.')
+                . ', tercatat Rp ' . number_format($dibayar, 0, ',', '.') . '.');
+        }
+        $this->db->where('id', $so->id)->update('sales_order', array('status' => 'confirmed'));
+        $this->db->trans_commit();
+        return array(true, 'SO ' . $so->no_so . ' dikonfirmasi. Siap diproses ke produksi.');
     }
 }

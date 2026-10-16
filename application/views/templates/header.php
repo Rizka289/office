@@ -385,6 +385,23 @@
                 ],
             ],
         ],
+        [
+            'key'   => 'produksi',
+            'label' => function_exists('translate') ? translate('produksi') : 'Produksi',
+            'icon'  => 'bi bi-box-seam-fill',
+            'roles' => ['super_admin', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
+            'items' => [
+               
+                [
+                    'key'   => 'spk',
+                    'label' => function_exists('translate') ? translate('spk') : 'Spk',
+                    'icon'  => 'bi bi-clipboard-fill',
+                    'url'   => 'spk',
+                    'roles' => ['super_admin', 'staff_purchasing'],
+                ],
+              
+            ],
+        ],
     ];
 
     // Role user yang sedang login. Sesuaikan key session-nya jika berbeda di project ini.

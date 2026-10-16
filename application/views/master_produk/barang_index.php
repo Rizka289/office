@@ -27,7 +27,7 @@
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
                     <th><?= translate('warna') ?></th>
-                    <th><?= translate('jenis') ?></th>
+                    <th><?= translate('label_bar') ?></th>
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('Dimensi') ?></th>
                     <th><?= translate('harga') ?></th>
@@ -139,6 +139,15 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
+                        <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?> --</option>
+                            <option value="stok">Produksi</option>
+                            <option value="beli">Beli</option>
+                            <option value="stok">Stok</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('harga') ?></label>
                         <input type="text" name="harga_satuan" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" autocomplete="off" required>
                         <div class="form-text extra-small text-muted"><?= translate('p_bar_harga') ?></div>
@@ -152,13 +161,6 @@
                         <input type="text" name="komponen" class="form-control form-control-sm" placeholder="<?= translate('p_bar_komponen') ?>" autocomplete="off" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
-                        <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
-                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
-                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
-                        </select>
-                    </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_bar_min') ?>" autocomplete="off" required>
@@ -254,7 +256,7 @@
                         <select name="kategori_rumus" id="edit_kategori_rumus" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?>--</option>
                             <option value="unit_fix">Unit Fix</option>
-                              <option value="jendela_sliding">Jendela Sliding</option>
+                            <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>
                             <option value="pintu_baja">Pintu Baja</option>
@@ -265,6 +267,16 @@
                             <option value="rolling_door_baja">Rooling Door Baja</option>
                             <option value="pintu_baja_double">Pintu Baja Double</option>
                             <option value="alumunium_double">Pintu Alumunium Double</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
+                        <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?> --</option>
+                            <option value="stok">Produksi</option>
+                            <option value="beli">Beli</option>
+                            <option value="stok">Stok</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -282,19 +294,12 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Metode Perolehan / Tipe Barang</label>
-                        <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
-                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
-                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" id="edit_stok" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
-                        <input type="text" name="keterangan" id="edit_keterangan"  class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" required>
+                        <input type="text" name="keterangan" id="edit_keterangan" class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -403,7 +408,7 @@
                     '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
                     '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi + '</td>' +
                     '<td>' + escapeHtml(brg.warna) + '</td>' +
-                    '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
+                    '<td>' + escapeHtml(brg.is_produced) + '</td>' +
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
                     '<td>Rp ' + formatHarga(brg.harga_satuan) + '</td>' +

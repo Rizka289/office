@@ -129,6 +129,7 @@ class Barang extends MY_Controller
         $idkategori  = $this->input->post('id_kategori', true);
         $jenis       = $this->input->post('jenis', true);
         $satuan      = $this->input->post('satuan', true);
+        $is_produced      = $this->input->post('is_produced', true);
         $rumus      = $this->input->post('kategori_rumus', true);
         $dimensi     = trim((string) $this->input->post('dimensi', true));
         $harga_raw   = $this->input->post('harga_satuan', true);
@@ -139,7 +140,7 @@ class Barang extends MY_Controller
         if (
             $this->is_blank($kode) || $this->is_blank($nama) || empty($warna) || empty($idkategori) || $this->is_blank($jenis)
             || $this->is_blank($satuan) || $this->is_blank($dimensi) || $this->is_blank($harga_raw)
-            || $this->is_blank($stokMinimum) || $this->is_blank($komponen) || $this->is_blank($rumus) || $this->is_blank($keterangan) 
+            || $this->is_blank($stokMinimum) || $this->is_blank($komponen) || $this->is_blank($rumus) || $this->is_blank($keterangan) || $this->is_blank($is_produced)
         ) {
             $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
             return;
@@ -169,7 +170,6 @@ class Barang extends MY_Controller
             }
         }
 
-        $is_produced = $this->input->post('is_produced', true);
 
         $data = array(
             'kode_barang'  => $kode,
@@ -181,7 +181,7 @@ class Barang extends MY_Controller
             'kategori_rumus'       => $rumus,
             'dimensi'      => $dimensi,
             'komponen'      => $komponen,
-            'is_produced'  => ($is_produced !== null) ? (int)$is_produced : 0,
+            'is_produced'  => $is_produced,
             'harga_satuan' => $harga_clean,
             'stok_minimum' => $stokMinimum,
             'keterangan' => $keterangan,
@@ -225,6 +225,7 @@ class Barang extends MY_Controller
         $jenis       = $this->input->post('jenis', true);
         $harga_raw   = $this->input->post('harga_satuan', true);
         $satuan      = $this->input->post('satuan', true);
+        $is_produced    = $this->input->post('is_produced', true);
         $dimensi     = $this->input->post('dimensi', true);
         $komponen     = $this->input->post('komponen', true);
         $stokMinimum = $this->input->post('stok_minimum', true);
@@ -233,7 +234,7 @@ class Barang extends MY_Controller
         if (
             empty($id) || $this->is_blank($kode) || $this->is_blank($nama) || empty($warna) || empty($idkategori) || $this->is_blank($jenis)
             || $this->is_blank($satuan) || $this->is_blank($dimensi) || $this->is_blank($harga_raw)
-            || $this->is_blank($stokMinimum) || $this->is_blank($komponen) || $this->is_blank($rumus) || $this->is_blank($keterangan)
+            || $this->is_blank($stokMinimum) || $this->is_blank($komponen) || $this->is_blank($rumus) || $this->is_blank($keterangan) || $this->is_blank($is_produced)
         ) {
             $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
             return;
@@ -259,7 +260,7 @@ class Barang extends MY_Controller
             'satuan'       => $satuan,
             'dimensi'      => $dimensi,
             'komponen'      => $komponen,
-            'is_produced'  => ($is_produced !== null) ? (int)$is_produced : 0,
+            'is_produced'  => $is_produced,
             'harga_satuan' => $harga_clean,
             'stok_minimum' => $stokMinimum,
             'keterangan' => $keterangan,

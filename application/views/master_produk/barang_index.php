@@ -27,7 +27,7 @@
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
                     <th><?= translate('warna') ?></th>
-                    <th><?= translate('label_bar') ?></th>
+                    
                     <th><?= translate('satuan') ?></th>
                     <th><?= translate('Dimensi') ?></th>
                     <th><?= translate('harga') ?></th>
@@ -142,7 +142,7 @@
                         <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
                         <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?> --</option>
-                            <option value="stok">Produksi</option>
+                            <option value="produksi">Produksi</option>
                             <option value="beli">Beli</option>
                             <option value="stok">Stok</option>
                         </select>
@@ -196,7 +196,7 @@
                         <img id="edit_preview_gambar" src="" class="img-thumbnail mb-2" style="max-height: 120px;">
                         <div>
                             <label class="form-label small fw-bold d-block"><?= translate('ubah_foto_barng') ?></label>
-                            <input type="file" name="gambar" class="form-control form-control-sm" accept="image/*">
+                            <input type="file" name="gambar" id="edit_gambar" class="form-control form-control-sm" accept="image/*">
                         </div>
                     </div>
 
@@ -274,7 +274,7 @@
                         <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
                         <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?> --</option>
-                            <option value="stok">Produksi</option>
+                            <option value="produksi">Produksi</option>
                             <option value="beli">Beli</option>
                             <option value="stok">Stok</option>
                         </select>
@@ -381,6 +381,19 @@
             });
         }
 
+        // Jenis barang (enum is_produced: stok / beli / produksi)
+        var JENIS_BARANG = {
+            stok:     { label: 'Stok',                cls: 'bg-primary' },
+            beli:     { label: 'Dibeli / Trading',    cls: 'bg-secondary' },
+            produksi: { label: 'Diproduksi / Custom', cls: 'bg-success' }
+        };
+
+        function badgeJenis(val) {
+            var key = String(val || '').toLowerCase().trim();
+            var cfg = JENIS_BARANG[key] || { label: val || '-', cls: 'bg-light text-dark' };
+            return '<span class="badge ' + cfg.cls + '">' + escapeHtml(cfg.label) + '</span>';
+        }
+
         function renderTable(rows, perPage, page) {
             var $tbody = $('#tbodyNamaBarang');
             $tbody.empty();
@@ -394,9 +407,8 @@
             var startNo = ((page - 1) * perPage) + 1;
 
             rows.forEach(function(brg, idx) {
-                var badgeProduksi = (brg.is_produced == 1) ?
-                    '<span class="badge bg-success">Diproduksi / Custom</span>' :
-                    '<span class="badge bg-secondary">Dibeli / Trading</span>';
+                
+                var badgeProduksi = badgeJenis(brg.is_produced);
 
                 var imgHtml = '<img src="' + brg.gambar_url + '" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">';
 
@@ -408,7 +420,7 @@
                     '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
                     '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi + '</td>' +
                     '<td>' + escapeHtml(brg.warna) + '</td>' +
-                    '<td>' + escapeHtml(brg.is_produced) + '</td>' +
+                   
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
                     '<td>Rp ' + formatHarga(brg.harga_satuan) + '</td>' +
@@ -512,6 +524,9 @@
         $(document).on('click', '.btn-edit', function() {
             var id = $(this).data('id');
 
+            // Kosongkan input file supaya foto dari edit sebelumnya tidak ikut terkirim
+            $('#edit_gambar').val('');
+
             $.ajax({
                 url: "<?= site_url('barang/get_by_id/'); ?>" + id,
                 type: "GET",
@@ -544,6 +559,11 @@
                     alert('Terjadi kesalahan saat mengambil data.');
                 }
             });
+        });
+
+        // Reset input file setiap modal edit ditutup (berhasil update, batal, atau klik luar)
+        $('#modalEditNamaBarang').on('hidden.bs.modal', function() {
+            $('#edit_gambar').val('');
         });
 
         // 3. AJAX UPDATE (FormData)

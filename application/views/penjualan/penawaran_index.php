@@ -39,6 +39,11 @@
     color: #1f7a45;
   }
 
+  .rcv-index-page .kpi-icon.bg-belum {
+    background: #fff3cd;
+    color: #a06a00;
+  }
+
   .rcv-index-page .table-wrap {
     background: #fff;
     border-radius: 12px;
@@ -117,25 +122,81 @@
 
 <div class="rcv-index-page">
 
-  <!-- KPI Ringkasan -->
+  <!-- KPI Ringkasan (bulan ini) -->
   <div class="row g-3 mb-3">
-    <div class="col-6 col-lg-6">
+    <div class="col-6 col-lg-3">
       <div class="kpi-card">
         <div class="kpi-icon bg-total"><i class="bi bi-file-earmark-text"></i></div>
         <div>
-          <div class="kpi-value"><?= isset($total_bulan_ini) ? $total_bulan_ini : 0; ?></div>
-          <div class="kpi-label"><?= translate('total_penawaran') ?></div>
+          <div class="kpi-value"><?= (int) ($total_semua ?? 0); ?></div>
+          <div class="kpi-label">Penawaran Bulan Ini</div>
         </div>
       </div>
     </div>
-    <div class="col-6 col-lg-6">
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-nilai"><i class="bi bi-check-circle"></i></div>
+        <div>
+          <div class="kpi-value"><?= (int) ($total_approved ?? 0); ?></div>
+          <div class="kpi-label">Sudah Approved</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-belum"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+          <div class="kpi-value"><?= (int) ($total_belum ?? 0); ?></div>
+          <div class="kpi-label">Belum Approved</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
       <div class="kpi-card">
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
-          <div class="kpi-value">Rp <?= isset($total_nilai) ? number_format($total_nilai, 0, ',', '.') : 0; ?></div>
-          <div class="kpi-label"><?= translate('nilai_penawaran') ?></div>
+          <div class="kpi-value">Rp <?= number_format((float) ($total_nilai ?? 0), 0, ',', '.'); ?></div>
+          <div class="kpi-label">Nilai Approved Bulan Ini</div>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Rekap penawaran per bulan -->
+  <?php
+    $nama_bulan = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni',
+                   '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
+  ?>
+  <div class="table-wrap mb-3">
+    <div class="px-3 py-2 fw-semibold border-bottom"><i class="bi bi-calendar3 me-1"></i>Rekap Penawaran per Bulan</div>
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Bulan</th>
+            <th class="text-center">Total Surat</th>
+            <th class="text-center">Approved</th>
+            <th class="text-center">Belum Approved</th>
+            <th class="text-end">Nilai Approved</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php if (!empty($rekap_bulanan)): ?>
+            <?php foreach ($rekap_bulanan as $r):
+              list($thn, $bln) = explode('-', $r->periode); ?>
+              <tr>
+                <td class="fw-semibold"><?= $nama_bulan[$bln] . ' ' . $thn; ?></td>
+                <td class="text-center"><?= (int) $r->total; ?></td>
+                <td class="text-center"><?= (int) $r->approved; ?></td>
+                <td class="text-center"><?= (int) $r->belum; ?></td>
+                <td class="text-end">Rp <?= number_format((float) $r->nilai, 0, ',', '.'); ?></td>
+              </tr>
+            <?php endforeach; ?>
+          <?php else: ?>
+            <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>Belum ada data penawaran.</td></tr>
+          <?php endif; ?>
+        </tbody>
+      </table>
     </div>
   </div>
 
@@ -181,7 +242,7 @@
             <th><?= translate('pelanggan') ?></th>
             <th style="width:8%" class="text-center"><?= translate('item') ?></th>
             <th style="width:14%" class="text-end"><?= translate('total') ?></th>
-            <th style="width:10%" class="text-center">Status</th>
+            <th style="width:10%" class="text-center"><?= translate('status') ?></th>
             <th style="width:12%" class="text-center"><?= translate('aksi') ?></th>
           </tr>
         </thead>

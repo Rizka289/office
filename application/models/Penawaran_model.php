@@ -10,6 +10,44 @@ class Penawaran_model extends CI_Model
         parent::__construct();
         $this->load->database();
     }
+    // Ringkasan penawaran pada bulan berjalan (tidak terpengaruh filter di toolbar)
+    public function get_ringkasan_bulan_ini()
+    {
+        $row = $this->db->select("
+                COUNT(*) AS total,
+                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
+                SUM(CASE WHEN status = 'approved' THEN 0 ELSE 1 END) AS belum,
+                COALESCE(SUM(CASE WHEN status = 'approved' THEN grand_total ELSE 0 END), 0) AS nilai
+            ", false)
+            ->where('DATE(tanggal) >=', date('Y-m-01'))
+            ->where('DATE(tanggal) <=', date('Y-m-t'))
+            ->get('penawaran')
+            ->row();
+
+        return [
+            'total'    => (int) ($row->total ?? 0),
+            'approved' => (int) ($row->approved ?? 0),
+            'belum'    => (int) ($row->belum ?? 0),
+            'nilai'    => (float) ($row->nilai ?? 0),
+        ];
+    }
+
+    // Rekap semua penawaran per bulan (bulan terbaru dulu)
+    public function get_rekap_per_bulan($limit = 12)
+    {
+        return $this->db->select("
+                DATE_FORMAT(tanggal, '%Y-%m') AS periode,
+                COUNT(*) AS total,
+                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
+                SUM(CASE WHEN status = 'approved' THEN 0 ELSE 1 END) AS belum,
+                COALESCE(SUM(CASE WHEN status = 'approved' THEN grand_total ELSE 0 END), 0) AS nilai
+            ", false)
+            ->group_by('periode')
+            ->order_by('periode', 'DESC')
+            ->limit((int) $limit)
+            ->get('penawaran')
+            ->result();
+    }
 
     public function get_last_error()
     {
@@ -56,6 +94,8 @@ class Penawaran_model extends CI_Model
 
         return $this->db->get()->result();
     }
+
+
 
     // Header + item lengkap 1 penawaran, untuk halaman detail & cetak.
     // Catatan: kolom customer.alamat / customer.telepon dan users.nama

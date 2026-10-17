@@ -23,17 +23,16 @@ class Sales_order extends MY_Controller
         );
 
         $data['sales_order_list'] = $this->Sales_order_model->get_all_sales_order($filter);
-        $data['total_so']         = 0;
-
-        $total_nilai = 0;
+        $data['total_so'] = 0;
+        $total_dp         = 0;
         foreach ($data['sales_order_list'] as $so) {
             if ($so->status === 'batal') {
-                continue; // SO batal tidak dihitung
+                continue;
             }
             $data['total_so']++;
-            $total_nilai += (float) $so->grand_total;
+            $total_dp += (float) $so->dp_dibayar;
         }
-        $data['total_nilai']   = $total_nilai;
+        $data['total_nilai'] = $total_dp;
 
         $data['filter_q']      = $filter['q'];
         $data['filter_dari']   = $filter['dari'];

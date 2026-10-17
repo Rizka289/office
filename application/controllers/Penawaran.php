@@ -36,15 +36,14 @@ class Penawaran extends MY_Controller
         $data['filter_sampai'] = $filter['sampai'];
 
         $penawaran_list = $this->Penawaran_model->get_all_penawaran($filter);
+        $ringkasan      = $this->Penawaran_model->get_ringkasan_bulan_ini();
 
-        $total_nilai = 0;
-        foreach ($penawaran_list as $row) {
-            $total_nilai += (float)$row->grand_total;
-        }
-
-        $data['penawaran_list']  = $penawaran_list;
-        $data['total_bulan_ini'] = count($penawaran_list);
-        $data['total_nilai']     = $total_nilai;
+        $data['penawaran_list'] = $penawaran_list;
+        $data['total_semua']    = $ringkasan['total'];     // semua penawaran bulan ini
+        $data['total_approved'] = $ringkasan['approved'];  // sudah approved bulan ini
+        $data['total_belum']    = $ringkasan['belum'];     // belum approved bulan ini
+        $data['total_nilai']    = $ringkasan['nilai'];     // nilai uang yang approved bulan ini
+        $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_per_bulan(12);
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/penawaran_index', $data);
@@ -130,7 +129,7 @@ class Penawaran extends MY_Controller
         $aks_qty        = $this->input->post('aks_qty', TRUE)        ?: [];
         $aks_harga      = $this->input->post('aks_harga', TRUE)      ?: [];
         $lebar_m2       = $this->input->post('lebar_m2_books', TRUE) ?: [];
-        $tinggi_m2      = $this->input->post('tinggi_m2_books', TRUE)?: [];
+        $tinggi_m2      = $this->input->post('tinggi_m2_books', TRUE) ?: [];
         $qty_m2         = $this->input->post('qty_books', TRUE)      ?: [];
         $harga_books    = $this->input->post('harga_m2_books', TRUE) ?: [];
         $qty_instalasi = $this->input->post('qty_instalasi', TRUE) ?: [];
@@ -196,7 +195,12 @@ class Penawaran extends MY_Controller
             $total += $total_aks;
 
             // Books Penutup
-            $books_l = 0; $books_t = 0; $books_luas = 0; $books_q = 0; $books_h = 0; $books_total = 0;
+            $books_l = 0;
+            $books_t = 0;
+            $books_luas = 0;
+            $books_q = 0;
+            $books_h = 0;
+            $books_total = 0;
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
                 $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));

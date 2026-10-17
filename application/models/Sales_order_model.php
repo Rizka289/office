@@ -10,7 +10,7 @@ class Sales_order_model extends CI_Model
         $bulan = date('m', strtotime($tanggal));
 
         $sql = 'SELECT COALESCE(MAX(no_urut), 0) AS maks FROM sales_order WHERE tahun = ?'
-             . ($kunci ? ' FOR UPDATE' : '');
+            . ($kunci ? ' FOR UPDATE' : '');
         $row = $this->db->query($sql, array($tahun))->row();
 
         $urut = ((int) $row->maks) + 1;
@@ -96,7 +96,13 @@ class Sales_order_model extends CI_Model
 
     public function get_all_sales_order($filter = array())
     {
-        $this->db->select('so.*, c.nama AS nama_customer, (SELECT COUNT(*) FROM sales_order_detail sod WHERE sod.id_so = so.id) AS total_item')
+        $this->db->select(
+            "so.*, c.nama AS nama_customer,
+     (SELECT COUNT(*) FROM sales_order_detail sod WHERE sod.id_so = so.id) AS total_item,
+     (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+        WHERE sp.id_so = so.id AND sp.jenis = 'dp') AS dp_dibayar",
+            false
+        )
             ->from('sales_order so')
             ->join('customer c', 'c.id = so.id_customer', 'left');
         if (!empty($filter['q'])) {

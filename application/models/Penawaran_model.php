@@ -54,9 +54,38 @@ class Penawaran_model extends CI_Model
         return $this->last_error;
     }
 
+    // Filter bersama untuk daftar & hitungan total (supaya selalu konsisten)
+    private function _filter_penawaran($filter = [])
+    {
+        if (!empty($filter['q'])) {
+            $this->db->group_start();
+            $this->db->like('pen.no_surat', $filter['q']);
+            $this->db->or_like('cus.nama', $filter['q']);
+            $this->db->group_end();
+        }
+
+        if (!empty($filter['dari'])) {
+            $this->db->where('DATE(pen.tanggal) >=', $filter['dari']);
+        }
+
+        if (!empty($filter['sampai'])) {
+            $this->db->where('DATE(pen.tanggal) <=', $filter['sampai']);
+        }
+    }
+
+    // Jumlah total penawaran (sesuai filter) untuk pagination
+    public function count_penawaran($filter = [])
+    {
+        $this->db->from('penawaran pen');
+        $this->db->join('customer cus', 'cus.id = pen.id_customer', 'left');
+        $this->_filter_penawaran($filter);
+        return (int) $this->db->count_all_results();
+    }
+
     // Mengambil daftar penawaran beserta relasinya, dengan filter pencarian
     // (no. surat / nama customer) dan rentang tanggal.
-    public function get_all_penawaran($filter = [])
+    // $limit & $offset dipakai untuk pagination (null = ambil semua).
+    public function get_all_penawaran($filter = [], $limit = null, $offset = 0)
     {
         $this->db->select('
             pen.id,
@@ -73,24 +102,14 @@ class Penawaran_model extends CI_Model
         ');
         $this->db->from('penawaran pen');
         $this->db->join('customer cus', 'cus.id = pen.id_customer', 'left');
-
-        if (!empty($filter['q'])) {
-            $this->db->group_start();
-            $this->db->like('pen.no_surat', $filter['q']);
-            $this->db->or_like('cus.nama', $filter['q']);
-            $this->db->group_end();
-        }
-
-        if (!empty($filter['dari'])) {
-            $this->db->where('DATE(pen.tanggal) >=', $filter['dari']);
-        }
-
-        if (!empty($filter['sampai'])) {
-            $this->db->where('DATE(pen.tanggal) <=', $filter['sampai']);
-        }
+        $this->_filter_penawaran($filter);
 
         $this->db->order_by('pen.tanggal', 'DESC');
         $this->db->order_by('pen.id', 'DESC');
+
+        if ($limit !== null) {
+            $this->db->limit((int) $limit, (int) $offset);
+        }
 
         return $this->db->get()->result();
     }
@@ -135,6 +154,9 @@ class Penawaran_model extends CI_Model
         $items = $this->db->get()->result();
         foreach ($items as &$it) {
             $it->aksesoris = $this->db->get_where('penawaran_detail_aksesoris', [
+                'id_penawaran_detail' => $it->id
+            ])->result();
+            $it->kaca = $this->db->get_where('penawaran_detail_kaca', [
                 'id_penawaran_detail' => $it->id
             ])->result();
         }
@@ -222,6 +244,13 @@ class Penawaran_model extends CI_Model
              WHERE d.id_penawaran = ?',
             [(int) $id_penawaran]
         );
+        // Detail kaca juga ikut dihapus
+        $this->db->query(
+            'DELETE k FROM penawaran_detail_kaca k
+             JOIN penawaran_detail d ON d.id = k.id_penawaran_detail
+             WHERE d.id_penawaran = ?',
+            [(int) $id_penawaran]
+        );
     }
 
     // Insert item ke penawaran_detail beserta aksesorisnya ke
@@ -232,10 +261,14 @@ class Penawaran_model extends CI_Model
         // supaya insert tidak error kalau ada key yang kolomnya belum dibuat.
         $kolom_aks = $this->db->list_fields('penawaran_detail_aksesoris');
         $kolom_det = $this->db->list_fields('penawaran_detail');
+        $kolom_kaca = $this->db->list_fields('penawaran_detail_kaca');
 
         foreach ($items as $item) {
             $aksesoris_list = $item['aksesoris'] ?? [];
             unset($item['aksesoris']);
+
+            $kaca_list = $item['kaca'] ?? [];
+            unset($item['kaca']);
 
             $item['id_penawaran'] = $id_penawaran;
 
@@ -254,6 +287,12 @@ class Penawaran_model extends CI_Model
                 $aks['id_penawaran_detail'] = $id_detail;
                 $aks = array_intersect_key($aks, array_flip($kolom_aks));
                 $this->db->insert('penawaran_detail_aksesoris', $aks);
+            }
+
+            foreach ($kaca_list as $kc) {
+                $kc['id_penawaran_detail'] = $id_detail;
+                $kc = array_intersect_key($kc, array_flip($kolom_kaca));
+                $this->db->insert('penawaran_detail_kaca', $kc);
             }
         }
     }

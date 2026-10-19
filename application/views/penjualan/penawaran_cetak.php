@@ -687,6 +687,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
           // ditampilkan setelah baris barang, jadi kolom gambar harus mencakup keduanya.
           $books_rows = [];
           $aks_rows   = [];
+          $kc_rows   = [];
           $inst_rows  = [];
           foreach ($grp['baris'] as $br_aks) {
             // Books Penutup (rolling door): luas x qty x harga
@@ -725,6 +726,17 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 'qty'       => (int) $ak_row->qty,
                 'harga'     => (float) $ak_row->harga,
                 'total'     => isset($ak_row->total_harga) ? (float) $ak_row->total_harga : (int) $ak_row->qty * (float) $ak_row->harga,
+              ];
+            }
+            foreach (($br_aks->kaca ?? []) as $kaca_row) {
+              $kc_rows[] = (object) [
+                'nama'      => $kaca_row->nama,
+                'lebar_mm'  => null,
+                'tinggi_mm' => null,
+                'luas'      => (float) $kaca_row->luas,
+                'qty'       => null,
+                'harga'     => (float) $kaca_row->harga,
+                'total'     => isset($kaca_row->total_harga) ? (float) $kaca_row->total_harga : (float) $kaca_row->luas * (float) $ak_row->harga,
               ];
             }
           }
@@ -854,6 +866,20 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <td class="num"><?= (int) $ak->qty; ?></td>
               <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
               <td class="money">Rp <?= number_format((float) $ak->total, 0, ',', '.'); ?></td>
+            </tr>
+          <?php endforeach; ?>
+
+          <?php /* Baris kaca (paling bawah): nama -> Deskripsi, qty -> Qty, harga -> Harga / Unit */ ?>
+          <?php foreach ($kc_rows as $kaca): ?>
+            <tr class="kaca-row">
+              <td class="deskripsi-cell" colspan="4" style="text-align: right;">
+                <?= html_escape($kaca->nama); ?>
+              </td>
+             
+              <td class="num"><?=  $fmt_luas($kaca->luas) ; ?></td>
+              <td class="num"></td>
+              <td class="money">Rp <?= number_format((float) $kaca->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format((float) $kaca->total, 0, ',', '.'); ?></td>
             </tr>
           <?php endforeach; ?>
 

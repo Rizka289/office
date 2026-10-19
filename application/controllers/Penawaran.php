@@ -35,7 +35,51 @@ class Penawaran extends MY_Controller
         $data['filter_dari']   = $filter['dari'];
         $data['filter_sampai'] = $filter['sampai'];
 
-        $penawaran_list = $this->Penawaran_model->get_all_penawaran($filter);
+        // Pagination: 5 data per halaman (halaman dipilih lewat ?page=N)
+        $this->load->library('pagination');
+
+        $per_page   = 5;
+        $total_data = $this->Penawaran_model->count_penawaran($filter);
+        $total_page = max(1, (int) ceil($total_data / $per_page));
+        $page       = min(max(1, (int) $this->input->get('page')), $total_page);
+        $offset     = ($page - 1) * $per_page;
+
+        $this->pagination->initialize([
+            'base_url'             => site_url('penawaran'),
+            'total_rows'           => $total_data,
+            'per_page'             => $per_page,
+            'page_query_string'    => TRUE,
+            'query_string_segment' => 'page',
+            'use_page_numbers'     => TRUE,
+            'reuse_query_string'   => TRUE,   // q, dari, sampai ikut terbawa
+            'num_links'            => 2,
+            'full_tag_open'        => '<ul class="pagination pagination-sm mb-0">',
+            'full_tag_close'       => '</ul>',
+            'first_tag_open'       => '<li class="page-item">',
+            'first_tag_close'      => '</li>',
+            'last_tag_open'        => '<li class="page-item">',
+            'last_tag_close'       => '</li>',
+            'next_tag_open'        => '<li class="page-item">',
+            'next_tag_close'       => '</li>',
+            'prev_tag_open'        => '<li class="page-item">',
+            'prev_tag_close'       => '</li>',
+            'num_tag_open'         => '<li class="page-item">',
+            'num_tag_close'        => '</li>',
+            'cur_tag_open'         => '<li class="page-item active"><a class="page-link" href="#">',
+            'cur_tag_close'        => '</a></li>',
+            'attributes'           => ['class' => 'page-link'],
+            'first_link'           => '&laquo;',
+            'last_link'            => '&raquo;',
+            'next_link'            => '&rsaquo;',
+            'prev_link'            => '&lsaquo;',
+        ]);
+
+        $penawaran_list = $this->Penawaran_model->get_all_penawaran($filter, $per_page, $offset);
+
+        $data['pagination']         = $this->pagination->create_links();
+        $data['total_data']         = $total_data;
+        $data['nomor_awal']         = $offset + 1;
+        $data['jumlah_ditampilkan'] = count($penawaran_list);
         $ringkasan      = $this->Penawaran_model->get_ringkasan_bulan_ini();
 
         $data['penawaran_list'] = $penawaran_list;
@@ -134,6 +178,9 @@ class Penawaran extends MY_Controller
         $harga_books    = $this->input->post('harga_m2_books', TRUE) ?: [];
         $qty_instalasi = $this->input->post('qty_instalasi', TRUE) ?: [];
         $harga_instalasi = $this->input->post('harga_m2_instalasi', TRUE) ?: [];
+        $kaca_nama      = $this->input->post('kaca_nama', TRUE)      ?: [];
+        $kaca_luas      = $this->input->post('kaca_luas', TRUE)      ?: [];
+        $kaca_harga     = $this->input->post('kaca_harga', TRUE)     ?: [];
 
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
@@ -193,6 +240,29 @@ class Penawaran extends MY_Controller
                 }
             }
             $total += $total_aks;
+
+            // Detail Kaca: Luas (boleh pakai koma) x Harga per m²
+            $kaca_list  = [];
+            $total_kaca = 0;
+            $kaca_nama_item = $kaca_nama[$i] ?? [];
+            if (is_array($kaca_nama_item)) {
+                foreach ($kaca_nama_item as $k => $nm) {
+                    $nm = trim((string) $nm);
+                    if ($nm === '') continue;
+                    $kl = max(0, $this->_ke_angka($kaca_luas[$i][$k] ?? 0));
+                    $kh = max(0, (float) ($kaca_harga[$i][$k] ?? 0));
+                    $kt = round($kl * $kh, 2);
+
+                    $kaca_list[] = [
+                        'nama'        => $nm,
+                        'luas'        => round($kl, 4),
+                        'harga'       => $kh,
+                        'total_harga' => $kt,
+                    ];
+                    $total_kaca += $kt;
+                }
+            }
+            $total += $total_kaca;
 
             // Books Penutup
             $books_l = 0;
@@ -270,12 +340,25 @@ class Penawaran extends MY_Controller
                 'qty_instalasi' => $instalasi_qty, // Disimpan jika kolom ada di DB, atau lewati jika tidak pakai kolom tersendiri
                 'kelengkapan'     => $kelengkapan_val,
                 'aksesoris'       => $aks_list,
+                'kaca'            => $kaca_list,
             ];
 
             $subtotal += $total;
         }
 
         return [$items, $subtotal];
+    }
+
+    // Ubah "1,25" / "1.25" / "1.234,5" menjadi float
+    private function _ke_angka($v)
+    {
+        $v = trim((string) $v);
+        if ($v === '') return 0.0;
+        if (strpos($v, ',') !== false) {
+            $v = str_replace('.', '', $v);
+            $v = str_replace(',', '.', $v);
+        }
+        return (float) $v;
     }
 
     private function _is_rolling_door($kategori)
@@ -296,6 +379,9 @@ class Penawaran extends MY_Controller
                     $luas = $luas_riil + 1.3;
                 }
                 return $luas;
+            case 'jendela_jalusi':
+            case 'jendela_mati':
+                return max($luas_riil, 1.0);
             case 'pintu_baja':
             case 'pintu_kayu':
             case 'pintu_alumunium':

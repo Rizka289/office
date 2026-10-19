@@ -52,6 +52,7 @@ if ($is_edit && !empty($items_edit)) {
       'harga_m2_instalasi' => $it['harga_m2_instalasi'] ?? '',
       'kelengkapan'        => $it['kelengkapan'] ?? '',
       'aksesoris'          => $it['aksesoris'] ?? [],
+      'kaca'               => $it['kaca'] ?? [],
     ];
   }
 }
@@ -431,6 +432,15 @@ if ($is_edit && !empty($items_edit)) {
         <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
       </div>
 
+      <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
+     <div class="col-12 mt-2 wrap-kaca-container">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i>Biaya Detail Kaca</label>
+          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i> Tambah Detail Kaca</button>
+        </div>
+        <div class="list-kaca"></div>
+      </div>
+
       <!-- Aksesoris Tambahan -->
       <div class="col-12 mt-2 wrap-aksesoris-container">
         <div class="d-flex justify-content-between align-items-center mb-1">
@@ -513,6 +523,33 @@ if ($is_edit && !empty($items_edit)) {
         </div>
       </div>`;
     }
+    function templateBarisKaca(itemIndex) {
+      return `
+      <div class="row g-2 align-items-center mb-1 baris-kaca">
+        <div class="col-md-4">
+          <input type="text" name="kaca_nama[${itemIndex}][]" class="form-control form-control-sm kaca-nama" placeholder="Nama Detail Kaca">
+        </div>
+        <div class="col-md-2">
+          <input type="text" inputmode="decimal" name="kaca_luas[${itemIndex}][]" value="1" class="form-control form-control-sm kaca-luas" placeholder="Luas m² (mis. 1,25)">
+        </div>
+        <div class="col-md-3">
+          <input type="number" name="kaca_harga[${itemIndex}][]" min="0" step="any" value="0" class="form-control form-control-sm kaca-harga" placeholder="Harga / m²">
+        </div>
+        <div class="col-md-2">
+          <input type="text" class="form-control form-control-sm kaca-total" value="Rp 0" readonly tabindex="-1">
+        </div>
+        <div class="col-md-1 text-end">
+          <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-kaca"><i class="bi bi-x-circle"></i></button>
+        </div>
+      </div>`;
+    }
+
+    // Parser angka: menerima "1,25" maupun "1.25" (juga "1.234,56")
+    function toNum(v) {
+      v = String(v === null || v === undefined ? '' : v).trim().replace(/\s/g, '');
+      if (v.indexOf(',') !== -1) v = v.replace(/\./g, '').replace(',', '.');
+      return parseFloat(v) || 0;
+    }
 
     function isiItem(card, d, index) {
       function set(sel, v) {
@@ -562,6 +599,17 @@ if ($is_edit && !empty($items_edit)) {
           lastRow.querySelector('.aks-harga').value = ak.harga || 0;
         });
       }
+
+      if (d.kaca && Array.isArray(d.kaca)) {
+        var listKc = card.querySelector('.list-kaca');
+        d.kaca.forEach(function(kc) {
+          listKc.insertAdjacentHTML('beforeend', templateBarisKaca(index));
+          var lastRow = listKc.lastElementChild;
+          lastRow.querySelector('.kaca-nama').value = kc.nama || '';
+          lastRow.querySelector('.kaca-luas').value = String(parseFloat(kc.luas) || 1).replace('.', ',');
+          lastRow.querySelector('.kaca-harga').value = parseFloat(kc.harga) || 0;
+        });
+      }
     }
 
     function reindexAksesoris() {
@@ -573,6 +621,15 @@ if ($is_edit && !empty($items_edit)) {
         });
       });
     }
+    function reindexKaca() {
+      baris().forEach(function(card, idx) {
+        card.querySelectorAll('.baris-kaca').forEach(function(row) {
+          row.querySelector('.kaca-nama').name = `kaca_nama[${idx}][]`;
+          row.querySelector('.kaca-luas').name = `kaca_luas[${idx}][]`;
+          row.querySelector('.kaca-harga').name = `kaca_harga[${idx}][]`;
+        });
+      });
+    }
 
     function tambahItem(data) {
       var idx = baris().length;
@@ -581,6 +638,7 @@ if ($is_edit && !empty($items_edit)) {
       var newCard = wrap.lastElementChild;
       if (data) isiItem(newCard, data, idx);
       reindexAksesoris();
+      reindexKaca();
       segarkan();
     }
 
@@ -714,6 +772,17 @@ if ($is_edit && !empty($items_edit)) {
         totalAksesoris += (qAks * hAks);
       });
 
+      // Detail Kaca: Luas (boleh koma) x Harga per m²
+      var totalKaca = 0;
+      card.querySelectorAll('.baris-kaca').forEach(function(row) {
+        var lKaca = toNum(row.querySelector('.kaca-luas').value);
+        var hKaca = parseFloat(row.querySelector('.kaca-harga').value) || 0;
+        var tKaca = lKaca * hKaca;
+        var elKTotal = row.querySelector('.kaca-total');
+        if (elKTotal) elKTotal.value = rupiah(tKaca);
+        totalKaca += tKaca;
+      });
+
       var rolling = isRollingDoor(kategori);
       
       // Toggle Books Penutup
@@ -748,7 +817,7 @@ if ($is_edit && !empty($items_edit)) {
         if (elInstTotal) elInstTotal.value = rupiah(totalInstalasi);
       }
 
-      var total = ((kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga)) + totalAksesoris + totalBooks + totalInstalasi;
+      var total = ((kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga)) + totalAksesoris + totalKaca + totalBooks + totalInstalasi;
       card.querySelector('.item-subtotal').textContent = rupiah(total);
 
       return total;
@@ -811,6 +880,17 @@ if ($is_edit && !empty($items_edit)) {
         segarkan();
         return;
       }
+      if (e.target.closest('.btn-tambah-kaca')) {
+        var idxK = baris().indexOf(card);
+        card.querySelector('.list-kaca').insertAdjacentHTML('beforeend', templateBarisKaca(idxK));
+        segarkan();
+        return;
+      }
+      if (e.target.closest('.btn-hapus-kaca')) {
+        e.target.closest('.baris-kaca').remove();
+        segarkan();
+        return;
+      }
       if (e.target.closest('.btn-hapus-aksesoris')) {
         e.target.closest('.baris-aksesoris').remove();
         segarkan();
@@ -821,7 +901,7 @@ if ($is_edit && !empty($items_edit)) {
       var btnGanti = e.target.closest('.btn-ganti-barang');
       if (btnGanti) { gantiBarang(card); return; }
       var btnHapus = e.target.closest('.btn-remove-item');
-      if (btnHapus && !btnHapus.disabled) { card.remove(); reindexAksesoris(); segarkan(); return; }
+      if (btnHapus && !btnHapus.disabled) { card.remove(); reindexAksesoris(); reindexKaca(); segarkan(); return; }
     });
 
     // Customer Auto-complete

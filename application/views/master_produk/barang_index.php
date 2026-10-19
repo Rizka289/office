@@ -128,6 +128,8 @@
                             <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>
+                            <option value="jendela_jalusi">Jendela Jalusi</option>
+                            <option value="jendela_mati">Jendela Mati</option>
                             <option value="pintu_baja">Pintu Baja</option>
                             <option value="pintu_tahan_api">Pintu Tahan Api</option>
                             <option value="pintu_kayu">Pintu Kayu</option>
@@ -259,6 +261,8 @@
                             <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>
+                            <option value="jendela_jalusi">Jendela Jalusi</option>
+                            <option value="jendela_mati">Jendela Mati</option>
                             <option value="pintu_baja">Pintu Baja</option>
                             <option value="pintu_tahan_api">Pintu Tahan Api</option>
                             <option value="pintu_kayu">Pintu Kayu</option>

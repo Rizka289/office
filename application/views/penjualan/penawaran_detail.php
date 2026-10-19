@@ -10,6 +10,8 @@
     box-shadow: 0 2px 10px rgba(15, 42, 41, .04);
   }
 
+  .pnw-detail-page .status-lock { font-size: .8rem; }
+
   .pnw-detail-page .info-card { padding: 18px 20px; margin-bottom: 18px; }
   .pnw-detail-page .info-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .03em; color: #8a938d; margin-bottom: 2px; }
   .pnw-detail-page .info-value { font-size: .95rem; font-weight: 600; margin-bottom: 12px; }
@@ -28,6 +30,7 @@
   }
   .pnw-detail-page table tbody td { padding: .8rem 1rem; vertical-align: top; font-size: .88rem; border-color: #f1f3f2; }
   .pnw-detail-page .spek-line { display: block; font-size: .8rem; color: #6c757d; }
+  .pnw-detail-page .spek-multi { margin-top: 2px; }
   .pnw-detail-page .keterangan-box { font-size: .78rem; color: #8a938d; font-style: italic; margin-top: 4px; }
 
   .pnw-detail-page .summary-card { padding: 18px 20px; max-width: 360px; margin-left: auto; }
@@ -40,20 +43,89 @@
   $ppn      = isset($header->ppn_nominal) ? (float) $header->ppn_nominal : 0;
   $pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
   $grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
+  // Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
+  // maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+  $fmt_luas = function ($v) {
+    $s   = number_format((float) $v, 4, '.', '');
+    $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
+    return number_format((float) $v, $dec, '.', '');
+  };
   $rp = function ($v) { return 'Rp ' . number_format((float) $v, 0, ',', '.'); };
+  $approved = (($header->status ?? 'draft') === 'approved');
 ?>
 
 <div class="pnw-detail-page">
 
+  <?php if ($this->session->flashdata('success')): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+      <i class="bi bi-check-circle-fill me-2"></i><?= html_escape($this->session->flashdata('success')); ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+  <?php endif; ?>
+  <?php if ($this->session->flashdata('error')): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i><?= html_escape($this->session->flashdata('error')); ?>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+    </div>
+  <?php endif; ?>
+
   <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
     <div>
-      <h5 class="mb-0"><?= html_escape($header->no_surat); ?></h5>
+      <h5 class="mb-0">
+        <?= html_escape($header->no_surat); ?>
+        <?php if ($approved): ?>
+          <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i>Approved</span>
+        <?php else: ?>
+          <span class="badge bg-warning text-dark ms-2 align-middle">Belum Approve</span>
+        <?php endif; ?>
+      </h5>
       <div class="text-muted small">Detail Penawaran</div>
+      <?php if ($approved): ?>
+        <div class="text-muted status-lock mt-1">
+          <i class="bi bi-info-circle me-1"></i>Sudah di-approve<?= !empty($header->approved_at) ? ' pada ' . date('d M Y H:i', strtotime($header->approved_at)) : ''; ?>, data tidak bisa diedit lagi.
+        </div>
+      <?php endif; ?>
     </div>
-    <div class="d-flex gap-2">
-      <a href="<?= site_url('penawaran/cetak/' . $header->id); ?>" target="_blank" class="btn btn-brand">
-        <i class="bi bi-printer me-1"></i> Cetak PDF
-      </a>
+    <div class="d-flex gap-2 flex-wrap">
+      <?php if (!$approved): ?>
+        <a href="<?= site_url('penawaran/edit/' . (int) $header->id); ?>" class="btn btn-warning">
+          <i class="bi bi-pencil-square me-1"></i> Edit
+        </a>
+        <?= form_open('penawaran/approve/' . (int) $header->id, [
+              'class'    => 'd-inline',
+              'onsubmit' => "return confirm('Approve penawaran ini? Setelah di-approve, data tidak bisa diedit lagi.');"
+            ]); ?>
+          <button type="submit" class="btn btn-success">
+            <i class="bi bi-check2-circle me-1"></i> Approve
+          </button>
+        <?= form_close(); ?>
+        <?= form_open('penawaran/delete/' . (int) $header->id, [
+              'class'    => 'd-inline',
+              'onsubmit' => "return confirm('Hapus penawaran " . html_escape($header->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+            ]); ?>
+          <button type="submit" class="btn btn-outline-danger">
+            <i class="bi bi-trash me-1"></i> Hapus
+          </button>
+        <?= form_close(); ?>
+      <?php endif; ?>
+      <div class="btn-group">
+        <button type="button" class="btn btn-brand dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-printer me-1"></i> Cetak PDF
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><h6 class="dropdown-header">Termin pembayaran (S&amp;K)</h6></li>
+          <li>
+            <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id . '?termin=50_50'); ?>">
+              50% saat memesan + 50% sebelum kirim
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id . '?termin=100'); ?>">
+              100% saat memesan
+            </a>
+          </li>
+        </ul>
+      </div>
       <a href="<?= site_url('penawaran'); ?>" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-1"></i> Kembali
       </a>
@@ -113,6 +185,29 @@
                   <?php if (!empty($it->warna)): ?>
                     <span class="spek-line">Warna: <?= html_escape($it->warna); ?></span>
                   <?php endif; ?>
+                  <?php if (!empty($it->komponen)): ?>
+                    <span class="spek-line">Komponen: <?= html_escape($it->komponen); ?></span>
+                  <?php endif; ?>
+                  <?php if (!empty($it->books_penutup)): ?>
+                    <span class="spek-line spek-multi">Books Penutup: <?= nl2br(html_escape($it->books_penutup)); ?></span>
+                  <?php endif; ?>
+                  <?php if ((float) ($it->luas_m2_books ?? 0) > 0 && (int) ($it->qty_books ?? 0) > 0): ?>
+                    <span class="spek-line">
+                      Ukuran Books: <?= (int) round((float) $it->lebar_m2_books); ?> &times; <?= (int) round((float) $it->tinggi_m2_books); ?> mm
+                      = <?= $fmt_luas($it->luas_m2_books); ?> m² &times; <?= (int) $it->qty_books; ?> &times; <?= $rp($it->harga_m2_books); ?>
+                      = <?= $rp((float) $it->luas_m2_books * (int) $it->qty_books * (float) $it->harga_m2_books); ?>
+                    </span>
+                  <?php endif; ?>
+                  <?php if ((float) ($it->qty_instalasi ?? 0) > 0 || (float) ($it->harga_m2_instalasi ?? 0) > 0): ?>
+                    <?php $i_luas = (float) ($it->luas_billing_m2 ?? $it->luas_m2 ?? 0); ?>
+                    <span class="spek-line">
+                      Biaya Instalasi: <?= $fmt_luas($i_luas); ?> m² &times; <?= (int) $it->qty_instalasi; ?> &times; <?= $rp($it->harga_m2_instalasi); ?>
+                      = <?= $rp($i_luas * (float) $it->qty_instalasi * (float) $it->harga_m2_instalasi); ?>
+                    </span>
+                  <?php endif; ?>
+                  <?php if (!empty($it->kelengkapan)): ?>
+                    <span class="spek-line spek-multi">Kelengkapan: <?= nl2br(html_escape($it->kelengkapan)); ?></span>
+                  <?php endif; ?>
                   <?php if (!empty($it->finishing)): ?>
                     <span class="spek-line">Finishing: <?= html_escape($it->finishing); ?></span>
                   <?php endif; ?>
@@ -121,12 +216,20 @@
                       Plate Kusen/Daun: <?= html_escape($it->komponen_kusen ?: '-'); ?> / <?= html_escape($it->komponen_daun ?: '-'); ?> mm
                     </span>
                   <?php endif; ?>
+                  <?php if (!empty($it->aksesoris)): ?>
+                    <span class="spek-line spek-multi">Aksesoris:</span>
+                    <?php foreach ($it->aksesoris as $ak): ?>
+                      <span class="spek-line">
+                        &bull; <?= html_escape($ak->nama); ?> (<?= (int) $ak->qty; ?> &times; <?= $rp($ak->harga); ?> = <?= $rp(isset($ak->total_harga) ? $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?>)
+                      </span>
+                    <?php endforeach; ?>
+                  <?php endif; ?>
                   <?php if (!empty($it->keterangan)): ?>
                     <div class="keterangan-box"><?= nl2br(html_escape($it->keterangan)); ?></div>
                   <?php endif; ?>
                 </td>
                 <td><?= (int) $it->lebar_mm; ?> x <?= (int) $it->tinggi_mm; ?></td>
-                <td class="text-center"><?= number_format((float) $it->luas_m2, 2); ?></td>
+                <td class="text-center"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
                 <td class="text-center"><?= (int) $it->qty; ?></td>
                 <td class="text-end"><?= $rp($it->harga_unit); ?></td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>
@@ -148,6 +251,18 @@
       <span>Subtotal</span>
       <span><?= $rp($subtotal); ?></span>
     </div>
+    <?php if ((float) ($header->biaya_pasang ?? 0) > 0): ?>
+      <div class="summary-row">
+        <span>Biaya Pemasangan</span>
+        <span><?= $rp($header->biaya_pasang); ?></span>
+      </div>
+    <?php endif; ?>
+    <?php if ((float) ($header->biaya_ongkir ?? 0) > 0): ?>
+      <div class="summary-row">
+        <span>Biaya Pengiriman</span>
+        <span><?= $rp($header->biaya_ongkir); ?></span>
+      </div>
+    <?php endif; ?>
     <div class="summary-row">
       <span>PPN <?= isset($header->ppn_persen) ? rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.') : '11'; ?>%</span>
       <span><?= $rp($ppn); ?></span>

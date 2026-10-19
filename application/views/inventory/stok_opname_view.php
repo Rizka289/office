@@ -23,7 +23,7 @@
     .so-card {
         border: none;
         border-radius: 14px;
-        overflow: hidden;
+        overflow: visible;
         box-shadow: 0 0.5rem 1.5rem rgba(58, 59, 69, 0.12);
     }
     .so-card .card-body {
@@ -83,6 +83,71 @@
     }
     .so-alert-success { background: #e3f9ee; color: #14683a; }
     .so-alert-danger  { background: #fdecec; color: #9c2b2b; }
+
+    /* ===== Pencarian barang (gaya penawaran) ===== */
+    .so-picker {
+        position: relative;
+    }
+    .so-picker .so-search.is-locked {
+        background: #eaf0ff;
+        color: #224abe;
+        font-weight: 600;
+        cursor: not-allowed;
+    }
+    .so-picker .so-search.is-invalid-pick {
+        border-color: #e74a3b;
+        box-shadow: 0 0 0 0.15rem rgba(231, 74, 59, 0.15);
+    }
+    .so-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        background: #fff;
+        border: 1px solid #dfe3ee;
+        border-radius: 8px;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+        max-height: 240px;
+        overflow-y: auto;
+        margin-top: 4px;
+    }
+    .so-dropdown .so-opt {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: .85rem;
+        border-bottom: 1px solid #f2f4f8;
+    }
+    .so-dropdown .so-opt:last-child {
+        border-bottom: none;
+    }
+    .so-dropdown .so-opt:hover,
+    .so-dropdown .so-opt.active {
+        background: #eef2ff;
+    }
+    .so-dropdown .so-opt .so-nama {
+        font-weight: 600;
+        color: #26332c;
+        display: block;
+    }
+    .so-dropdown .so-opt .so-meta {
+        color: #7a8a80;
+        font-size: .76rem;
+    }
+    .so-dropdown .so-empty {
+        padding: 8px 12px;
+        font-size: .82rem;
+        color: #9aa39d;
+    }
+    .so-ganti {
+        font-size: .8rem;
+        text-decoration: none;
+    }
+    .so-info {
+        font-size: .78rem;
+        color: #7a8a80;
+        margin-top: .3rem;
+    }
 </style>
 
 <div class="container-fluid">
@@ -108,16 +173,31 @@
             </div>
 
             <div class="card-body">
-                <?= form_open('stok_opname/simpan'); ?>
+                <?= form_open('stok_opname/simpan', ['id' => 'formOpname']); ?>
+
+                <!-- Data barang untuk pencarian (client side) -->
+                <script id="dataBarangOpname" type="application/json">
+                    <?= json_encode(array_map(function ($b) {
+                        return [
+                            'id'          => (int) $b['id'],
+                            'kode_barang' => (string) ($b['kode_barang'] ?? ''),
+                            'nama'        => (string) ($b['nama'] ?? ''),
+                            'warna'       => (string) ($b['warna'] ?? ''),
+                            'keterangan'  => (string) ($b['keterangan'] ?? ''),
+                        ];
+                    }, (array) $list_barang), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>
+                </script>
 
                 <div class="so-form-group">
                     <label class="so-label"><i class="fas fa-box"></i>Pilih Barang <span class="text-danger">*</span></label>
-                    <select name="id_barang" class="form-control so-control" required>
-                        <option value="">-- Pilih Barang --</option>
-                        <?php foreach ($list_barang as $b): ?>
-                            <option value="<?= $b['id']; ?>"><?= $b['kode_barang'] . ' - ' . $b['nama']; ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="so-picker">
+                        <input type="hidden" name="id_barang" id="soIdBarang" value="">
+                        <input type="text" id="soSearch" class="form-control so-control so-search"
+                            placeholder="Ketik nama / kode barang..." autocomplete="off" required>
+                        <div class="so-dropdown d-none" id="soDropdown"></div>
+                    </div>
+                    <a href="#" class="so-ganti d-none" id="soGanti"><i class="fas fa-sync-alt mr-1"></i>Ganti barang</a>
+                    <div class="so-info d-none" id="soInfo"></div>
                 </div>
 
                 <div class="so-form-group">
@@ -149,3 +229,167 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    var DATA = [];
+    try {
+        DATA = JSON.parse(document.getElementById('dataBarangOpname').textContent || '[]') || [];
+    } catch (e) {
+        DATA = [];
+    }
+
+    var form     = document.getElementById('formOpname');
+    var inpCari  = document.getElementById('soSearch');
+    var inpId    = document.getElementById('soIdBarang');
+    var dropdown = document.getElementById('soDropdown');
+    var btnGanti = document.getElementById('soGanti');
+    var info     = document.getElementById('soInfo');
+    var aktif    = -1;
+
+    function metaText(b) {
+        var bagian = [];
+        if (b.kode_barang) bagian.push(b.kode_barang);
+        if (b.warna) bagian.push(b.warna);
+        if (b.keterangan) bagian.push(b.keterangan);
+        return bagian.join(' \u2022 ');
+    }
+
+    function cari(kata) {
+        kata = (kata || '').trim().toLowerCase();
+        if (kata === '') return DATA.slice(0, 15);
+        return DATA.filter(function (b) {
+            return b.nama.toLowerCase().indexOf(kata) !== -1 ||
+                b.kode_barang.toLowerCase().indexOf(kata) !== -1;
+        }).slice(0, 15);
+    }
+
+    function tutup() {
+        dropdown.classList.add('d-none');
+        dropdown.innerHTML = '';
+        aktif = -1;
+    }
+
+    function tampilkan(hasil) {
+        dropdown.innerHTML = '';
+        aktif = -1;
+        if (!hasil.length) {
+            var kosong = document.createElement('div');
+            kosong.className = 'so-empty';
+            kosong.textContent = 'Barang tidak ditemukan.';
+            dropdown.appendChild(kosong);
+            dropdown.classList.remove('d-none');
+            return;
+        }
+        hasil.forEach(function (b) {
+            var opt = document.createElement('div');
+            opt.className = 'so-opt';
+            opt.setAttribute('data-id', b.id);
+
+            var nama = document.createElement('span');
+            nama.className = 'so-nama';
+            nama.textContent = b.nama;
+
+            var meta = document.createElement('span');
+            meta.className = 'so-meta';
+            meta.textContent = metaText(b);
+
+            opt.appendChild(nama);
+            opt.appendChild(meta);
+            dropdown.appendChild(opt);
+        });
+        dropdown.classList.remove('d-none');
+    }
+
+    function pilih(id) {
+        var b = DATA.find(function (x) { return String(x.id) === String(id); });
+        if (!b) return;
+
+        inpId.value = b.id;
+        inpCari.value = b.nama;
+        inpCari.readOnly = true;
+        inpCari.classList.add('is-locked');
+        inpCari.classList.remove('is-invalid-pick');
+        btnGanti.classList.remove('d-none');
+
+        var meta = metaText(b);
+        info.textContent = meta;
+        info.classList.toggle('d-none', meta === '');
+        tutup();
+    }
+
+    function ganti() {
+        inpId.value = '';
+        inpCari.value = '';
+        inpCari.readOnly = false;
+        inpCari.classList.remove('is-locked');
+        btnGanti.classList.add('d-none');
+        info.classList.add('d-none');
+        inpCari.focus();
+    }
+
+    function geserAktif(arah) {
+        var opts = dropdown.querySelectorAll('.so-opt');
+        if (!opts.length) return;
+        if (aktif >= 0) opts[aktif].classList.remove('active');
+        aktif = (aktif + arah + opts.length) % opts.length;
+        opts[aktif].classList.add('active');
+        opts[aktif].scrollIntoView({ block: 'nearest' });
+    }
+
+    inpCari.addEventListener('input', function () {
+        tampilkan(cari(inpCari.value));
+    });
+
+    inpCari.addEventListener('focus', function () {
+        if (!inpCari.readOnly) tampilkan(cari(inpCari.value));
+    });
+
+    inpCari.addEventListener('keydown', function (e) {
+        if (inpCari.readOnly) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            geserAktif(1);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            geserAktif(-1);
+        } else if (e.key === 'Enter') {
+            var opts = dropdown.querySelectorAll('.so-opt');
+            if (!dropdown.classList.contains('d-none') && opts.length) {
+                e.preventDefault();
+                pilih(opts[aktif >= 0 ? aktif : 0].getAttribute('data-id'));
+            }
+        } else if (e.key === 'Escape') {
+            tutup();
+        }
+    });
+
+    dropdown.addEventListener('mousedown', function (e) {
+        // mousedown supaya terpilih sebelum input kehilangan fokus
+        var opt = e.target.closest('.so-opt');
+        if (opt) {
+            e.preventDefault();
+            pilih(opt.getAttribute('data-id'));
+        }
+    });
+
+    btnGanti.addEventListener('click', function (e) {
+        e.preventDefault();
+        ganti();
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.so-picker')) tutup();
+    });
+
+    // Pastikan barang benar-benar dipilih dari daftar (bukan hanya diketik)
+    form.addEventListener('submit', function (e) {
+        if (!inpId.value) {
+            e.preventDefault();
+            inpCari.classList.add('is-invalid-pick');
+            inpCari.focus();
+            tampilkan(cari(inpCari.value));
+        }
+    });
+})();
+</script>

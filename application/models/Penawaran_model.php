@@ -395,6 +395,7 @@ class Penawaran_model extends CI_Model
         return true;
     }
 
+
     // Approve penawaran. Hanya berhasil kalau statusnya belum approved
     // (return false kalau sudah approved / id tidak ada).
     public function approve_penawaran($id, $id_user)
@@ -408,5 +409,21 @@ class Penawaran_model extends CI_Model
         ]);
 
         return $this->db->affected_rows() > 0;
+    }
+    // Rekap penawaran HANYA untuk bulan ini saja
+    public function get_rekap_bulan_ini_saja()
+    {
+        return $this->db->select("
+                DATE_FORMAT(tanggal, '%Y-%m') AS periode,
+                COUNT(*) AS total,
+                SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
+                SUM(CASE WHEN status = 'approved' THEN 0 ELSE 1 END) AS belum,
+                COALESCE(SUM(CASE WHEN status = 'approved' THEN grand_total ELSE 0 END), 0) AS nilai
+            ", false)
+            ->where('DATE(tanggal) >=', date('Y-m-01'))
+            ->where('DATE(tanggal) <=', date('Y-m-t'))
+            ->group_by('periode')
+            ->get('penawaran')
+            ->result();
     }
 }

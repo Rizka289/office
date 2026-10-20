@@ -87,7 +87,8 @@ class Penawaran extends MY_Controller
         $data['total_approved'] = $ringkasan['approved'];  // sudah approved bulan ini
         $data['total_belum']    = $ringkasan['belum'];     // belum approved bulan ini
         $data['total_nilai']    = $ringkasan['nilai'];     // nilai uang yang approved bulan ini
-        $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_per_bulan(12);
+        // $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_per_bulan(12); untuk rsekap 12 bulan
+        $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_bulan_ini_saja();
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/penawaran_index', $data);

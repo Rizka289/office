@@ -129,7 +129,7 @@
         <div class="kpi-icon bg-total"><i class="bi bi-file-earmark-text"></i></div>
         <div>
           <div class="kpi-value"><?= (int) ($total_semua ?? 0); ?></div>
-          <div class="kpi-label">Penawaran Bulan Ini</div>
+          <div class="kpi-label"><?= translate('label_penawaran_index') ?></div>
         </div>
       </div>
     </div>
@@ -138,7 +138,7 @@
         <div class="kpi-icon bg-nilai"><i class="bi bi-check-circle"></i></div>
         <div>
           <div class="kpi-value"><?= (int) ($total_approved ?? 0); ?></div>
-          <div class="kpi-label">Sudah Approved</div>
+          <div class="kpi-label"><?= translate('ket_approved') ?></div>
         </div>
       </div>
     </div>
@@ -147,7 +147,7 @@
         <div class="kpi-icon bg-belum"><i class="bi bi-hourglass-split"></i></div>
         <div>
           <div class="kpi-value"><?= (int) ($total_belum ?? 0); ?></div>
-          <div class="kpi-label">Belum Approved</div>
+          <div class="kpi-label"><?= translate('b_setuju') ?></div>
         </div>
       </div>
     </div>
@@ -156,7 +156,7 @@
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
           <div class="kpi-value">Rp <?= number_format((float) ($total_nilai ?? 0), 0, ',', '.'); ?></div>
-          <div class="kpi-label">Nilai Approved Bulan Ini</div>
+          <div class="kpi-label"><?= translate('nilai_penawaran') ?></div>
         </div>
       </div>
     </div>
@@ -168,16 +168,16 @@
                    '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
   ?>
   <div class="table-wrap mb-3">
-    <div class="px-3 py-2 fw-semibold border-bottom"><i class="bi bi-calendar3 me-1"></i>Rekap Penawaran per Bulan</div>
+    <div class="px-3 py-2 fw-semibold border-bottom"><i class="bi bi-calendar3 me-1"></i><?= translate('label_index') ?></div>
     <div class="table-responsive">
       <table class="table mb-0">
         <thead>
           <tr>
-            <th>Bulan</th>
-            <th class="text-center">Total Surat</th>
-            <th class="text-center">Approved</th>
-            <th class="text-center">Belum Approved</th>
-            <th class="text-end">Nilai Approved</th>
+            <th><?= translate('bulan') ?></th>
+            <th class="text-center"><?= translate('t_penawaran') ?></th>
+            <th class="text-center"><?= translate('setuju') ?></th>
+            <th class="text-center"><?= translate('b_setuju') ?></th>
+            <th class="text-end"><?= translate('nilai_penawaran') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -207,7 +207,7 @@
       <label class="form-label small text-muted mb-1"><?= translate('cari') ?></label>
       <div class="input-group">
         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-        <input type="text" name="q" class="form-control" placeholder="No. Penawaran / Customer"
+        <input type="text" name="q" class="form-control" placeholder= "<?= translate('cari_penawaran') ?>"
           value="<?= isset($filter_q) ? html_escape($filter_q) : ''; ?>">
       </div>
     </div>
@@ -259,9 +259,9 @@
                 <td class="text-end">Rp <?= number_format((float) $row->grand_total, 0, ',', '.'); ?></td>
                 <td class="text-center">
                   <?php if (($row->status ?? 'draft') === 'approved'): ?>
-                    <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i>Approved</span>
+                    <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
                   <?php else: ?>
-                    <span class="badge bg-warning text-dark">Belum Approve</span>
+                    <span class="badge bg-warning text-dark"><?= translate('b_setuju') ?></span>
                   <?php endif; ?>
                 </td>
                 <td class="text-center">

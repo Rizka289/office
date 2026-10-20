@@ -154,7 +154,7 @@ if ($is_edit && !empty($items_edit)) {
 
   <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
-      <h4><i class="bi bi-file-earmark-text me-2"></i><?= $is_edit ? 'Edit Penawaran' : 'Buat Penawaran Baru'; ?></h4>
+      <h4><i class="bi bi-file-earmark-text me-2"></i><?= $is_edit ? translate('inf_edit_penawaran') : translate('info_add_penawaran'); ?></h4>
       <small><?= $is_edit ? 'Penawaran belum di-approve: item, biaya pemasangan/pengiriman, dan pajak masih bisa diubah.' : 'Isi data customer dan item barang yang ditawarkan.'; ?></small>
     </div>
     <div class="text-end">
@@ -173,7 +173,7 @@ if ($is_edit && !empty($items_edit)) {
   <?= form_open($form_action, ['id' => 'formPenawaran', 'autocomplete' => 'off']); ?>
 
   <div class="card-modern">
-    <div class="card-header"><i class="bi bi-info-circle me-2"></i>Informasi Penawaran</div>
+    <div class="card-header"><i class="bi bi-info-circle me-2"></i><?= translate('informasi_penawaran') ?></div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-3">

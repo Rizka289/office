@@ -155,10 +155,10 @@ if ($is_edit && !empty($items_edit)) {
   <div class="page-header d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
       <h4><i class="bi bi-file-earmark-text me-2"></i><?= $is_edit ? translate('inf_edit_penawaran') : translate('info_add_penawaran'); ?></h4>
-      <small><?= $is_edit ? 'Penawaran belum di-approve: item, biaya pemasangan/pengiriman, dan pajak masih bisa diubah.' : 'Isi data customer dan item barang yang ditawarkan.'; ?></small>
+      <small><?= $is_edit ? translate('lbl_kop_edit_penawaran') : translate('lbl_kop_add_penawaran'); ?></small>
     </div>
     <div class="text-end">
-      <div class="fw-bold fs-5">No. Surat: <?= html_escape($no_surat); ?></div>
+      <div class="fw-bold fs-5"> <?= translate('no_penawaran') . ' : ' . ' ' . html_escape($no_surat); ?></div>
     </div>
   </div>
 
@@ -177,15 +177,15 @@ if ($is_edit && !empty($items_edit)) {
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-3">
-          <label class="form-label">No. Surat</label>
+          <label class="form-label"><?= translate('no_penawaran')  ?></label>
           <input type="text" name="no_surat" class="form-control" value="<?= html_escape($no_surat); ?>" readonly>
         </div>
         <div class="col-md-3">
-          <label for="tanggal" class="form-label">Tanggal <span class="text-danger">*</span></label>
+          <label for="tanggal" class="form-label"><?= translate('tanggal') ?><span class="text-danger">*</span></label>
           <input type="date" id="tanggal" name="tanggal" class="form-control" value="<?= html_escape($tanggal_val); ?>" required <?= $hdr_lock; ?>>
         </div>
         <div class="col-md-6">
-          <label for="customer_search" class="form-label">Customer <span class="text-danger">*</span></label>
+          <label for="customer_search" class="form-label"><?= translate('pelanggan') ?><span class="text-danger">*</span></label>
           <?php
           $cust_id_val   = $is_edit ? (int) $pen->id_customer : 0;
           $cust_nama_val = '';
@@ -198,15 +198,15 @@ if ($is_edit && !empty($items_edit)) {
           ?>
           <div class="customer-picker">
             <input type="hidden" name="id_customer" id="id_customer" value="<?= $cust_id_val > 0 ? $cust_id_val : ''; ?>" <?= $hdr_lock; ?>>
-            <input type="text" id="customer_search" class="form-control" placeholder="Ketik nama customer atau pilih dari daftar..."
+            <input type="text" id="customer_search" class="form-control" placeholder= "<?= translate('p_s_penawaran') ?>"
               autocomplete="off" value="<?= html_escape($cust_nama_val); ?>" <?= $hdr_lock; ?>>
             <i class="bi bi-chevron-down customer-caret"></i>
             <div class="customer-dropdown-list d-none"></div>
           </div>
         </div>
         <div class="col-12">
-          <label for="catatan" class="form-label">Catatan (opsional)</label>
-          <textarea id="catatan" name="catatan" class="form-control" rows="2" placeholder="Mis. estimasi pengerjaan, syarat pembayaran khusus, dll." <?= $hdr_lock; ?>><?= $is_edit ? html_escape($pen->catatan) : ''; ?></textarea>
+          <label for="catatan" class="form-label"><?= translate('catatan') ?></label>
+          <textarea id="catatan" name="catatan" class="form-control" rows="2" placeholder="<?= translate('p_catatan_pnwrn') ?>" <?= $hdr_lock; ?>><?= $is_edit ? html_escape($pen->catatan) : ''; ?></textarea>
         </div>
       </div>
     </div>
@@ -214,39 +214,39 @@ if ($is_edit && !empty($items_edit)) {
 
   <div class="card-modern">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <span><i class="bi bi-list-check me-2"></i>Item Penawaran</span>
+      <span><i class="bi bi-list-check me-2"></i><?= translate('item_penawaran') ?></span>
       <button type="button" class="btn btn-sm btn-outline-success" id="btnTambahItem" <?= $ada_customer ? '' : 'disabled'; ?>>
-        <i class="bi bi-plus-lg me-1"></i>Tambah Item
+        <i class="bi bi-plus-lg me-1"></i><?= translate('add') ?>
       </button>
     </div>
     <div class="card-body">
       <div id="wrapItem"></div>
-      <div class="form-text">Ukuran dalam milimeter (mm). Luas m² dan Total dihitung otomatis.</div>
+      <div class="form-text"><?= translate('ket_item') ?></div>
     </div>
   </div>
 
   <div class="card-modern">
-    <div class="card-header"><i class="bi bi-truck me-2"></i>Biaya Pemasangan &amp; Pengiriman Global</div>
+    <div class="card-header"><i class="bi bi-truck me-2"></i><?= translate('lbl_biaya_pasang') ?></div>
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-6">
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pasang" name="pakai_pasang" value="1" <?= $pasang_on ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_pasang">Sudah termasuk biaya pemasangan umum</label>
+            <label class="form-check-label" for="pakai_pasang"><?= translate('biaya_pasang') ?></label>
           </div>
           <div id="wrapPasang" class="<?= $pasang_on ? '' : 'd-none'; ?>">
-            <label for="biaya_pasang" class="form-label">Nominal biaya pemasangan (Rp)</label>
-            <input type="number" min="0" step="1" id="biaya_pasang" name="biaya_pasang" class="form-control" placeholder="0" value="<?= html_escape($pasang_val); ?>" <?= $pasang_on ? '' : 'disabled'; ?>>
+            <label for="biaya_pasang" class="form-label"><?= translate('rp_pasang') ?></label>
+            <input type="number" min="0" step="1" id="biaya_pasang" name="biaya_pasang" class="form-control" placeholder="Rp" value="<?= html_escape($pasang_val); ?>" <?= $pasang_on ? '' : 'disabled'; ?>>
           </div>
         </div>
         <div class="col-md-6">
           <div class="form-check form-switch mb-2">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_ongkir" name="pakai_ongkir" value="1" <?= $ongkir_on ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_ongkir">Sudah termasuk biaya pengiriman (ongkir)</label>
+            <label class="form-check-label" for="pakai_ongkir"><?= translate('rp_ongkir') ?></label>
           </div>
           <div id="wrapOngkir" class="<?= $ongkir_on ? '' : 'd-none'; ?>">
-            <label for="biaya_ongkir" class="form-label">Nominal biaya pengiriman (Rp)</label>
-            <input type="number" min="0" step="1" id="biaya_ongkir" name="biaya_ongkir" class="form-control" placeholder="0" value="<?= html_escape($ongkir_val); ?>" <?= $ongkir_on ? '' : 'disabled'; ?>>
+            <label for="biaya_ongkir" class="form-label"><?= translate('biaya_ongkir') ?></label>
+            <input type="number" min="0" step="1" id="biaya_ongkir" name="biaya_ongkir" class="form-control" placeholder="Rp" value="<?= html_escape($ongkir_val); ?>" <?= $ongkir_on ? '' : 'disabled'; ?>>
           </div>
         </div>
       </div>
@@ -256,15 +256,15 @@ if ($is_edit && !empty($items_edit)) {
   <div class="row g-3 mb-3">
     <div class="col-lg-6">
       <div class="card-modern h-100 mb-0">
-        <div class="card-header"><i class="bi bi-percent me-2"></i>Pajak</div>
+        <div class="card-header"><i class="bi bi-percent me-2"></i><?= translate('pajak') ?></div>
         <div class="card-body">
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= ($is_edit && (float) $pen->ppn_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_ppn">Kenakan PPN <?= html_escape($tarif_ppn); ?>%</label>
+            <label class="form-check-label" for="pakai_ppn"><?=  translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</label>
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_pph">Kenakan PPh <?= html_escape($tarif_pph); ?>%</label>
+            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>%</label>
           </div>
         </div>
       </div>
@@ -297,10 +297,10 @@ if ($is_edit && !empty($items_edit)) {
 
   <div class="footer-actions">
     <a href="<?= $url_batal; ?>" class="btn btn-outline-secondary">
-      <i class="bi bi-x-lg me-1"></i>Batal
+      <i class="bi bi-x-lg me-1"></i><?= translate('btn_batal') ?>
     </a>
     <button type="submit" class="btn btn-success fw-bold" id="btnSimpan" <?= $ada_customer ? '' : 'disabled'; ?>>
-      <i class="bi bi-check2-circle me-1"></i><?= $is_edit ? 'Simpan Perubahan' : 'Simpan Penawaran'; ?>
+      <i class="bi bi-check2-circle me-1"></i><?= $is_edit ? translate('update') : translate('button_save'); ?>
     </button>
   </div>
 
@@ -315,19 +315,19 @@ if ($is_edit && !empty($items_edit)) {
     </div>
     <div class="row g-2">
       <div class="col-md-4">
-        <label class="form-label">Barang <span class="text-danger">*</span></label>
+        <label class="form-label"><?= translate('nama_barang') ?><span class="text-danger">*</span></label>
         <div class="barang-picker">
           <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
           <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
-            placeholder="Ketik nama/kode barang..." autocomplete="off" required>
+            placeholder="<?= translate('cari') ?>" autocomplete="off" required>
           <div class="barang-dropdown-list d-none"></div>
         </div>
         <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
-          <i class="bi bi-arrow-repeat me-1"></i>Ganti barang
+          <i class="bi bi-arrow-repeat me-1"></i><?= translate('ganti_barang') ?>
         </button>
       </div>
       <div class="col-md-4">
-        <label class="form-label">Warna</label>
+        <label class="form-label"><?= translate('warna') ?></label>
         <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
       </div>
       <div class="col-md-4">
@@ -435,8 +435,8 @@ if ($is_edit && !empty($items_edit)) {
       <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
      <div class="col-12 mt-2 wrap-kaca-container">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i>Biaya Detail Kaca</label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i> Tambah Detail Kaca</button>
+          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
+          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
         </div>
         <div class="list-kaca"></div>
       </div>
@@ -444,19 +444,19 @@ if ($is_edit && !empty($items_edit)) {
       <!-- Aksesoris Tambahan -->
       <div class="col-12 mt-2 wrap-aksesoris-container">
         <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i>Aksesoris Tambahan</label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> Tambah Aksesoris</button>
+          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
+          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
         </div>
         <div class="list-aksesoris"></div>
       </div>
 
       <div class="col-12">
-        <label class="form-label">Keterangan (opsional)</label>
+        <label class="form-label"><?= translate('catatan') ?></label>
         <textarea name="keterangan[]" class="form-control" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
       </div>
 
       <div class="col-12 text-end">
-        <label class="form-label d-block">Subtotal Item</label>
+        <label class="form-label d-block"><?= translate('subtotal') ?></label>
         <span class="item-subtotal">Rp 0</span>
       </div>
     </div>

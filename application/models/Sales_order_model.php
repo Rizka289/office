@@ -33,7 +33,7 @@ class Sales_order_model extends CI_Model
             ->get()->result();
     }
 
-    // Tabel 1 + 2 + 3: header, item, aksesoris (aksesoris ditempel ke tiap item)
+    // Penawaran: header + item + aksesoris + kaca
     public function get_penawaran_lengkap($id)
     {
         $header = $this->db
@@ -49,7 +49,8 @@ class Sales_order_model extends CI_Model
         $items = $this->db->where('id_penawaran', (int) $id)
             ->order_by('id', 'ASC')->get('penawaran_detail')->result();
 
-        $this->_tempel_aksesoris($items, 'penawaran_detail_aksesoris', 'id_penawaran_detail');
+        $this->_tempel_anak($items, 'penawaran_detail_aksesoris', 'id_penawaran_detail', 'aksesoris');
+        $this->_tempel_anak($items, 'penawaran_detail_kaca', 'id_penawaran_detail', 'kaca');
         return array('header' => $header, 'items' => $items);
     }
 
@@ -69,28 +70,32 @@ class Sales_order_model extends CI_Model
         $items = $this->db->where('id_so', (int) $id)
             ->order_by('id', 'ASC')->get('sales_order_detail')->result();
 
-        $this->_tempel_aksesoris($items, 'sales_order_detail_aksesoris', 'id_so_detail');
+        $this->_tempel_anak($items, 'sales_order_detail_aksesoris', 'id_so_detail', 'aksesoris');
+        // FIX: dulu membaca penawaran_detail_kaca memakai id item SO (salah tabel)
+        $this->_tempel_anak($items, 'sales_order_detail_kaca', 'id_so_detail', 'kaca');
         return array('header' => $header, 'items' => $items);
     }
 
-    // satu query untuk semua aksesoris, lalu dibagi ke item masing-masing
-    private function _tempel_aksesoris(&$items, $tabel, $kolom_fk)
+    // Satu query untuk semua baris anak (aksesoris / kaca), lalu dibagi ke tiap item.
+    // $prop = nama properti di item: 'aksesoris' atau 'kaca'
+    private function _tempel_anak(&$items, $tabel, $kolom_fk, $prop)
     {
-        $ids = array();
+        $ids  = array();
+        $peta = array();
         foreach ($items as $it) {
-            $it->aksesoris = array();
-            $ids[] = (int) $it->id;
+            $it->$prop = array();
+            $ids[]     = (int) $it->id;
+            $peta[(int) $it->id] = $it;
         }
         if (!$ids) {
             return;
         }
-        $aks = $this->db->where_in($kolom_fk, $ids)->order_by('id', 'ASC')->get($tabel)->result();
-        $peta = array();
-        foreach ($items as $it) {
-            $peta[(int) $it->id] = $it;
-        }
-        foreach ($aks as $a) {
-            $peta[(int) $a->$kolom_fk]->aksesoris[] = $a;
+        $rows = $this->db->where_in($kolom_fk, $ids)->order_by('id', 'ASC')->get($tabel)->result();
+        foreach ($rows as $r) {
+            $k = (int) $r->$kolom_fk;
+            if (isset($peta[$k])) {
+                $peta[$k]->{$prop}[] = $r;
+            }
         }
     }
 
@@ -98,13 +103,18 @@ class Sales_order_model extends CI_Model
     {
         $this->db->select(
             "so.*, c.nama AS nama_customer,
-     (SELECT COUNT(*) FROM sales_order_detail sod WHERE sod.id_so = so.id) AS total_item,
-     (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
-        WHERE sp.id_so = so.id AND sp.jenis = 'dp') AS dp_dibayar",
+            (SELECT COUNT(*) FROM sales_order_detail sod WHERE sod.id_so = so.id) AS total_item,
+            (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+                WHERE sp.id_so = so.id AND sp.jenis = 'dp') AS total_dp,
+            (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+                WHERE sp.id_so = so.id) AS total_diterima,
+            (so.grand_total - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+                WHERE sp.id_so = so.id)) AS sisa_bayar",
             false
         )
             ->from('sales_order so')
             ->join('customer c', 'c.id = so.id_customer', 'left');
+
         if (!empty($filter['q'])) {
             $this->db->group_start()
                 ->like('so.no_so', $filter['q'])
@@ -121,7 +131,7 @@ class Sales_order_model extends CI_Model
         return $this->db->order_by('so.tanggal', 'DESC')->order_by('so.id', 'DESC')->get()->result();
     }
 
-    // Salin penawaran (3 tabel) -> sales_order (3 tabel) dalam satu transaksi
+    // Salin penawaran (4 tabel) -> sales_order (4 tabel) dalam satu transaksi
     public function simpan_dari_penawaran($id_penawaran, $input, $id_user)
     {
         $this->db->trans_begin();
@@ -165,11 +175,9 @@ class Sales_order_model extends CI_Model
         ));
         $id_so = $this->db->insert_id();
 
-        // ---- Tabel 2 + 3: item, lalu aksesoris per item ----
-        // Kolom penawaran_detail & sales_order_detail namanya sama, jadi cukup
-        // buang id & id_penawaran lalu isi id_so. Dilooping karena id baru tiap item
-        // dibutuhkan untuk menyambungkan aksesoris.
-        $items = $this->db->where('id_penawaran', $p->id)->order_by('id', 'ASC')->get('penawaran_detail')->result_array();
+        // ---- Tabel 2: item; Tabel 3: aksesoris; Tabel 4: kaca ----
+        $items = $this->db->where('id_penawaran', $p->id)->order_by('id', 'ASC')
+            ->get('penawaran_detail')->result_array();
 
         foreach ($items as $row) {
             $id_lama = (int) $row['id'];
@@ -178,6 +186,7 @@ class Sales_order_model extends CI_Model
             $this->db->insert('sales_order_detail', $row);
             $id_baru = $this->db->insert_id();
 
+            // aksesoris
             $aks = $this->db->where('id_penawaran_detail', $id_lama)->get('penawaran_detail_aksesoris')->result_array();
             foreach ($aks as $a) {
                 $this->db->insert('sales_order_detail_aksesoris', array(
@@ -187,6 +196,15 @@ class Sales_order_model extends CI_Model
                     'harga'        => $a['harga'],
                     'total_harga'  => $a['total_harga'],
                 ));
+            }
+
+            // kaca: salin semua kolom, hanya id & FK yang diganti
+            // (syarat: kolom sales_order_detail_kaca sama dengan penawaran_detail_kaca)
+            $kaca = $this->db->where('id_penawaran_detail', $id_lama)->get('penawaran_detail_kaca')->result_array();
+            foreach ($kaca as $k) {
+                unset($k['id'], $k['id_penawaran_detail']);
+                $k['id_so_detail'] = $id_baru;
+                $this->db->insert('sales_order_detail_kaca', $k);
             }
         }
 
@@ -275,6 +293,10 @@ class Sales_order_model extends CI_Model
         }
         $this->db->trans_begin();
         $so = $this->db->query('SELECT id, status, grand_total, dp_persen FROM sales_order WHERE id = ? FOR UPDATE', array((int) $b->id_so))->row();
+        if (!$so) {
+            $this->db->trans_rollback();
+            return array(false, 'SO tidak ditemukan.', 0);
+        }
         if (in_array($so->status, array('produksi', 'terkirim', 'selesai', 'batal'), true)) {
             $this->db->trans_rollback();
             return array(false, 'Pembayaran tidak bisa dihapus karena SO sudah berstatus ' . $so->status . '.', (int) $so->id);

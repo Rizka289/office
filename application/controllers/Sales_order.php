@@ -13,7 +13,7 @@ class Sales_order extends MY_Controller
     public function index()
     {
         $data['title']       = translate('pesanan_penjualan');
-        $data['page_title']  =  translate('pesanan_penjualan');
+        $data['page_title']  = translate('pesanan_penjualan');
         $data['active_menu'] = 'sales_order';
 
         $filter = array(
@@ -23,16 +23,33 @@ class Sales_order extends MY_Controller
         );
 
         $data['sales_order_list'] = $this->Sales_order_model->get_all_sales_order($filter);
-        $data['total_so'] = 0;
-        $total_dp         = 0;
+
+        $total_so       = 0;
+        $total_nilai    = 0; // grand_total semua SO aktif
+        $total_dp       = 0; // uang muka (jenis = dp) yang sudah masuk
+        $total_diterima = 0; // semua pembayaran (DP + pelunasan)
+        $total_sisa     = 0; // sisa tagihan
+
         foreach ($data['sales_order_list'] as $so) {
             if ($so->status === 'batal') {
-                continue;
+                continue; // SO batal tidak ikut KPI
             }
-            $data['total_so']++;
-            $total_dp += (float) $so->dp_dibayar;
+            $total_so++;
+
+            $grand    = (float) $so->grand_total;
+            $diterima = (float) $so->total_diterima;
+
+            $total_nilai    += $grand;
+            $total_dp       += (float) $so->total_dp;
+            $total_diterima += $diterima;
+            $total_sisa     += isset($so->sisa_bayar) ? (float) $so->sisa_bayar : ($grand - $diterima);
         }
-        $data['total_nilai'] = $total_dp;
+
+        $data['total_so']       = $total_so;
+        $data['total_nilai']    = $total_nilai;
+        $data['total_dp']       = $total_dp;
+        $data['total_diterima'] = $total_diterima;
+        $data['sisa_diterima']  = $total_sisa;
 
         $data['filter_q']      = $filter['q'];
         $data['filter_dari']   = $filter['dari'];
@@ -65,6 +82,7 @@ class Sales_order extends MY_Controller
     public function tambah()
     {
         $data['title']          = 'Buat Sales Order';
+        $data['active_menu']    = 'sales_order';
         $data['penawaran_list'] = $this->Sales_order_model->get_penawaran_siap();
         $data['no_so']          = $this->Sales_order_model->generate_no(date('Y-m-d'))['no_so'];
 
@@ -97,6 +115,8 @@ class Sales_order extends MY_Controller
 
     public function simpan()
     {
+        $this->_wajib_post();
+
         $id_penawaran = (int) $this->input->post('id_penawaran');
         $tanggal      = $this->input->post('tanggal');
         $termin       = $this->input->post('termin');
@@ -110,11 +130,9 @@ class Sales_order extends MY_Controller
         }
         if ($termin === '100') {
             $dp = 0;
-        }
-        if ($termin === '50-50') {
+        } elseif ($termin === '50-50') {
             $dp = 50;
-        }
-        if ($termin === '30-70') {
+        } elseif ($termin === '30-70') {
             $dp = 30;
         }
         if ($dp < 0 || $dp > 100) {
@@ -164,20 +182,12 @@ class Sales_order extends MY_Controller
     public function batal($id = 0)
     {
         $this->_wajib_post();
-        $so = $this->Sales_order_model->get_so_lengkap($id);
-        if (!$so) {
+        if (!$this->Sales_order_model->get_so_lengkap($id)) {
             show_404();
         }
         list($ok, $pesan) = $this->Sales_order_model->batalkan($id);
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
         redirect('sales_order/detail/' . (int) $id);
-    }
-
-    private function _wajib_post()
-    {
-        if ($this->input->method() !== 'post') {
-            show_404();
-        }
     }
 
     // Catat pembayaran (DP / pelunasan) dari halaman detail
@@ -216,6 +226,13 @@ class Sales_order extends MY_Controller
         list($ok, $pesan, $id_so) = $this->Sales_order_model->hapus_pembayaran($id_bayar);
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
         redirect($id_so ? 'sales_order/detail/' . $id_so : 'sales_order');
+    }
+
+    private function _wajib_post()
+    {
+        if ($this->input->method() !== 'post') {
+            show_404();
+        }
     }
 
     // Sesuaikan dengan key session login di aplikasi Anda

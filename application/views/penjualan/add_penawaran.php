@@ -271,23 +271,23 @@ if ($is_edit && !empty($items_edit)) {
     </div>
     <div class="col-lg-6">
       <div class="card-modern h-100 mb-0">
-        <div class="card-header"><i class="bi bi-receipt me-2"></i>Ringkasan</div>
+        <div class="card-header"><i class="bi bi-receipt me-2"></i><?= translate('rincian') ?></div>
         <div class="card-body">
           <div class="summary-box mb-3">
-            <div class="text-muted small">Jumlah item</div>
+            <div class="text-muted small"><?= translate('jml_item') ?></div>
             <div class="fw-bold fs-5" id="sumJumlahItem">0</div>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted">Subtotal</span><span id="sumSubtotal">Rp 0</span>
+            <span class="text-muted"><?= translate('subtotal') ?></span><span id="sumSubtotal">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted">PPN <?= html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
+            <span class="text-muted"><?= translate('ppn') . ' ' .html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted">PPh <?= html_escape($tarif_pph); ?>%</span><span id="sumPph">Rp 0</span>
+            <span class="text-muted"> <?= translate('pph') .' ' .html_escape($tarif_pph); ?>%</span><span id="sumPph">Rp 0</span>
           </div>
           <div class="total-box mt-3">
-            <div class="text-muted small">Grand Total</div>
+            <div class="text-muted small"><?= translate('grand_total') ?></div>
             <div class="h3 fw-bold mb-0" id="sumGrandTotal">Rp 0</div>
           </div>
         </div>

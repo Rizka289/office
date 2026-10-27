@@ -9,6 +9,21 @@ $rp     = function ($n) {
 $num    = function ($n, $d = 0) {
   return number_format((float) $n, $d, ',', '.');
 };
+// Ukuran yang ditampilkan. Rolling door (baja / tahan api): lebar +200 mm & tinggi +600 mm
+// (sama dengan penawaran cetak). Kategori lain tampil apa adanya.
+$ukuran_tampil = function ($row) {
+  $l = (int) $row->lebar_mm;
+  $t = (int) $row->tinggi_mm;
+  $rumus = (string) ($row->rumus ?? '');
+  $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', $rumus)
+    || ($rumus === '' && preg_match('/ro{1,2}l{1,2}ing\s*door/i', (string) ($row->jenis_item ?? '')));
+  if ($is_rd) {
+    $l += 200;
+    $t += 600;
+  }
+  return array($l, $t);
+};
+
 $isi    = function ($v) {
   $v = trim((string) $v);
   return $v !== '' && $v !== '-';
@@ -358,23 +373,23 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
       <div>
         <div class="no-so"><?= html_escape($h->no_so) ?></div>
         <div class="meta mt-1">
-          <?= html_escape($h->nama_customer) ?> &nbsp;|&nbsp; Tanggal SO <?= date('d M Y', strtotime($h->tanggal)) ?>
+          <?= html_escape($h->nama_customer) ?> &nbsp;|&nbsp; <?= translate('tanggal') . ' ' . date('d M Y', strtotime($h->tanggal)) ?>
         </div>
       </div>
       <div class="d-flex align-items-center gap-2 no-print">
         <span class="badge bg-<?= $st[0] ?> fs-6 fw-normal px-3 py-2"><?= $st[1] ?></span>
-        <a href="<?= site_url('sales_order') ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+        <a href="<?= site_url('sales_order') ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?></a>
         <?php if ($h->status === 'draft'): ?>
           <?= form_open('sales_order/konfirmasi/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Konfirmasi SO ini? Setelah dikonfirmasi SO siap diproses.')")) ?>
-          <button type="submit" class="btn btn-warning btn-sm" <?= $kurang_dp > 0 ? 'disabled title="DP belum cukup, catat pembayaran dulu"' : '' ?>><i class="bi bi-check2-circle me-1"></i>Konfirmasi SO</button>
+          <button type="submit" class="btn btn-warning btn-sm" <?= $kurang_dp > 0 ? 'disabled title="DP belum cukup, catat pembayaran dulu"' : '' ?>><i class="bi bi-check2-circle me-1"></i><?= translate('btn_setuju_so') ?></button>
           <?= form_close() ?>
         <?php endif; ?>
         <?php if (in_array($h->status, array('draft', 'confirmed'), true) && $total_kirim <= 0): ?>
           <?= form_open('sales_order/batal/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Batalkan SO ini?')")) ?>
-          <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-x-circle me-1"></i>Batalkan</button>
+          <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-x-circle me-1"></i><?= translate('btn_batal') ?></button>
           <?= form_close() ?>
         <?php endif; ?>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i>Cetak halaman</button>
+        <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i><?= translate('cetak') ?></button>
       </div>
     </div>
   </div>
@@ -385,24 +400,24 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
     <div class="col-lg-8">
 
       <div class="panel mb-3">
-        <div class="panel-title"><i class="bi bi-info-circle"></i>Data order</div>
+        <div class="panel-title"><i class="bi bi-info-circle"></i><?= translate('dftr_pesanan_so') ?></div>
         <div class="panel-body">
           <div class="row g-3">
             <div class="col-md-6">
               <dl class="kv">
-                <dt>Customer</dt>
+                <dt><?= translate('pelanggan') ?></dt>
                 <dd><?= html_escape($h->nama_customer) ?></dd>
-                <dt>No. PO customer</dt>
+                <dt><?= translate('no_po') ?></dt>
                 <dd><?= $isi($h->no_po_customer) ? html_escape($h->no_po_customer) : '<span class="text-muted">Tidak ada</span>' ?></dd>
-                <dt>Dari penawaran</dt>
-                <dd><a href="<?= site_url('penawaran/edit/' . (int) $h->id_penawaran) ?>">Lihat penawaran asal</a></dd>
+                <dt><?= translate('dari_penawaran') ?></dt>
+                <dd><a href="<?= site_url('penawaran/edit/' . (int) $h->id_penawaran) ?>"><?= translate('a_penawaran') ?></a></dd>
               </dl>
             </div>
             <div class="col-md-6">
               <dl class="kv">
-                <dt>Target kirim</dt>
+                <dt><?= translate('target_kirim') ?></dt>
                 <dd><?= $isi($h->tgl_kirim) ? date('d M Y', strtotime($h->tgl_kirim)) : '<span class="text-muted">Belum ditentukan</span>' ?></dd>
-                <dt>Alamat kirim</dt>
+                <dt><?= translate('almt_kirim') ?></dt>
                 <dd><?= $isi($h->alamat_kirim) ? $multi($h->alamat_kirim) : '<span class="text-muted">-</span>' ?></dd>
               </dl>
             </div>
@@ -417,32 +432,43 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 
       <!-- Item -->
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="mb-0"><i class="bi bi-list-ul me-1"></i>Item order (<?= count($items) ?>)</h6>
-        <span class="text-muted small">Terkirim <?= $num($total_kirim, 2) ?> dari <?= $num($total_qty, 2) ?> unit</span>
+        <h6 class="mb-0"><i class="bi bi-list-ul me-1"></i>(<?= translate('item_list') . ' ' . count($items) ?>)</h6>
+        <span class="text-muted small"><?= translate('kirim') . ' ' . $num($total_kirim, 2) ?> <?= translate('dari') . ' ' . $num($total_qty, 2)  . ' ' . translate('satuan') ?> </span>
       </div>
 
       <?php if (empty($items)): ?>
         <div class="panel">
           <div class="panel-body text-center text-muted py-5">
-            <i class="bi bi-inbox fs-2 d-block mb-2"></i>Sales Order ini belum punya item.
+            <i class="bi bi-inbox fs-2 d-block mb-2"></i><?= translate('d_so') ?>
           </div>
         </div>
       <?php endif; ?>
 
       <?php $no = 1;
       foreach ($items as $it):
+        // var_dump($it);
         $luas_bill  = (float) $it->luas_billing_m2 > 0 ? (float) $it->luas_billing_m2 : (float) $it->luas_m2;
         $ada_books  = $isi($it->books_penutup) || (int) $it->qty_books > 0;
         $ada_instal = (int) $it->qty_instalasi > 0 && (float) $it->harga_m2_instalasi > 0;
         $ada_motor  = $isi($it->tipe_motor) || $isi($it->input_power) || $isi($it->voltage);
         $ada_komp   = $isi($it->komponen) || $isi($it->komponen_kusen) || $isi($it->komponen_daun);
-        $aks        = !empty($it->aksesoris) ? $it->aksesoris : array();
+        $aks  = !empty($it->aksesoris) ? $it->aksesoris : array();
+        $kaca = !empty($it->kaca) ? $it->kaca : array();
 
         $total_books  = (float) $it->luas_m2_books * (int) $it->qty_books * (float) $it->harga_m2_books;
         $total_instal = $luas_bill * (float) $it->harga_m2_instalasi * (int) $it->qty_instalasi;
         $total_aks    = 0;
+        $total_kaca    = 0;
+
+        // perulangan aksesoris
         foreach ($aks as $a) {
+          // var_dump($a);
           $total_aks += (float) $a->total_harga;
+        }
+        // perulangan kaca
+        foreach ($kaca as $k) {
+          // var_dump($k);
+          $total_kaca += (float) $k->total_harga;
         }
 
         $qty_it   = (float) $it->qty;
@@ -454,49 +480,53 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
             <div>
               <div class="item-name"><?= $no++ ?>. <?= html_escape($it->jenis_item) ?></div>
               <div class="item-sub">
-                <?= $num($it->qty, 2) ?> unit
+                <?= $num($it->qty, 2)  . ' ' . translate('satuan') ?>
                 <?php if ($isi($it->warna)): ?> &middot; <?= html_escape($it->warna) ?><?php endif; ?>
               </div>
             </div>
             <div class="item-total">
               <div class="amt"><?= $rp($it->total_harga) ?></div>
-              <div class="item-sub">Total item</div>
+              <!-- <div class="item-sub">Total item</div> -->
             </div>
           </div>
 
           <div class="item-body">
             <div class="specs">
               <div class="spec">
-                <div class="lbl">Ukuran (L x T)</div>
-                <div class="val"><?= $num($it->lebar_mm) ?> x <?= $num($it->tinggi_mm) ?> mm</div>
+                <div class="lbl"><?= translate('l*t') ?></div>
+                <?php list($uk_l, $uk_t) = $ukuran_tampil($it); ?>
+                <div class="val"><?= $num($uk_l) ?> x <?= $num($uk_t) ?> mm</div>
               </div>
-              <div class="spec">
-                <div class="lbl">Luas</div>
-                <div class="val"><?= $num($it->luas_m2, 4) ?> m&sup2;</div>
-              </div>
+
 
               <?php if ((float) $it->luas_billing_m2 > 0 && (float) $it->luas_billing_m2 != (float) $it->luas_m2): ?>
                 <div class="spec">
-                  <div class="lbl">Luas untuk tagihan</div>
+                  <div class="lbl"><?= translate('t_luas') ?></div>
                   <div class="val"><?= $num($it->luas_billing_m2, 4) ?> m&sup2;</div>
                 </div>
               <?php endif; ?>
               <div class="spec">
-                <div class="lbl">Harga satuan</div>
+                <div class="lbl"><?= translate('harga') ?></div>
                 <div class="val"><?= $rp($it->harga_unit) ?></div>
               </div>
               <?php if ($isi($it->finishing)): ?>
                 <div class="spec">
-                  <div class="lbl">Finishing</div>
+                  <div class="lbl"><?= translate('finishing') ?></div>
                   <div class="val"><?= html_escape($it->finishing) ?></div>
                 </div>
               <?php endif; ?>
               <?php if ($isi($it->komponen)): ?>
                 <div class="spec">
-                  <div class="lbl">Komponen</div>
+                  <div class="lbl"><?= translate('komponen') ?></div>
                   <div class="val"><?= html_escape($it->komponen) ?></div>
                 </div>
               <?php endif; ?>
+              <?php if ($isi($it->keterangan)): ?>
+              <div class="spec">
+                <div class="lbl"><?= translate('keterangan') ?></div>
+                <div class="val"><?= $multi($it->keterangan) ?></div>
+              </div>
+            <?php endif; ?>
               <?php if ($isi($it->komponen_kusen)): ?>
                 <div class="spec">
                   <div class="lbl">Kusen</div>
@@ -511,9 +541,7 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               <?php endif; ?>
             </div>
 
-            <?php if ($isi($it->keterangan)): ?>
-              <div class="note mt-3"><?= $multi($it->keterangan) ?></div>
-            <?php endif; ?>
+            
 
             <?php if ($ada_motor): ?>
               <div class="block">
@@ -609,10 +637,32 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               </div>
             <?php endif; ?>
 
+            <?php if (!empty($kaca)): ?>
+              <div class="block">
+                <div class="block-title"><i class="bi bi-plus-square me-1"></i>Biaya Detail Kaca (<?= count($kaca) ?>)</div>
+                <table class="mini-table">
+                  <tr>
+                    <th>Nama</th>
+                    <th class="r">Qty</th>
+                    <th class="r">Harga</th>
+                    <th class="r">Subtotal</th>
+                  </tr>
+                  <?php foreach ($kaca as $k): ?>
+                    <tr>
+                      <td><?= html_escape($k->nama) ?></td>
+                      <td class="r"><?= (int) $k->luas ?></td>
+                      <td class="r"><?= $rp($k->harga) ?></td>
+                      <td class="r fw-semibold"><?= $rp($k->total_harga) ?></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </table>
+              </div>
+            <?php endif; ?>
+
             <!-- Progres kirim per item -->
             <div class="block">
               <div class="d-flex justify-content-between small mb-1">
-              
+
               </div>
               <div class="progress" style="height:6px" role="progressbar" aria-valuenow="<?= $pct_it ?>" aria-valuemin="0" aria-valuemax="100">
                 <div class="progress-bar bg-success" style="width: <?= $pct_it ?>%"></div>

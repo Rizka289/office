@@ -68,7 +68,7 @@ class Sales_order extends MY_Controller
         }
 
         $data['title']       = 'Detail ' . $so['header']->no_so;
-        $data['page_title']  = 'Detail Sales Order';
+        $data['page_title']  = translate('detai_so');
         $data['active_menu'] = 'sales_order';
         $so['pembayaran']    = $this->Sales_order_model->get_pembayaran($id);
         $so['total_dibayar'] = $this->Sales_order_model->total_dibayar($id);

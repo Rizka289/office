@@ -529,13 +529,13 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
             <?php endif; ?>
               <?php if ($isi($it->komponen_kusen)): ?>
                 <div class="spec">
-                  <div class="lbl">Kusen</div>
+                  <div class="lbl"><?= translate('kusen') ?></div>
                   <div class="val"><?= html_escape($it->komponen_kusen) ?></div>
                 </div>
               <?php endif; ?>
               <?php if ($isi($it->komponen_daun)): ?>
                 <div class="spec">
-                  <div class="lbl">Daun</div>
+                  <div class="lbl"><?= translate('daun') ?></div>
                   <div class="val"><?= html_escape($it->komponen_daun) ?></div>
                 </div>
               <?php endif; ?>
@@ -545,18 +545,18 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 
             <?php if ($ada_motor): ?>
               <div class="block">
-                <div class="block-title"><i class="bi bi-gear me-1"></i>Motor</div>
+                <div class="block-title"><i class="bi bi-gear me-1"></i><?= translate('motor') ?></div>
                 <div class="specs">
                   <?php if ($isi($it->tipe_motor)): ?><div class="spec">
-                      <div class="lbl">Tipe</div>
+                      <div class="lbl"><?= translate('tipe') ?></div>
                       <div class="val"><?= html_escape($it->tipe_motor) ?></div>
                     </div><?php endif; ?>
                   <?php if ($isi($it->input_power)): ?><div class="spec">
-                      <div class="lbl">Daya</div>
+                      <div class="lbl"><?= translate('daya') ?></div>
                       <div class="val"><?= html_escape($it->input_power) ?></div>
                     </div><?php endif; ?>
                   <?php if ($isi($it->voltage)): ?><div class="spec">
-                      <div class="lbl">Tegangan</div>
+                      <div class="lbl"><?= translate('tegangan') ?></div>
                       <div class="val"><?= html_escape($it->voltage) ?></div>
                     </div><?php endif; ?>
                 </div>
@@ -565,16 +565,16 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 
             <?php if ($ada_books): ?>
               <div class="block">
-                <div class="block-title"><i class="bi bi-layers me-1"></i>Books penutup</div>
+                <div class="block-title"><i class="bi bi-layers me-1"></i><?= translate('books_penutup') ?></div>
                 <?php if ($isi($it->books_penutup)): ?><div class="mb-2 small"><?= $multi($it->books_penutup) ?></div><?php endif; ?>
                 <?php if ((int) $it->qty_books > 0): ?>
                   <table class="mini-table">
                     <tr>
-                      <th>Ukuran</th>
-                      <th class="r">Luas</th>
-                      <th class="r">Qty</th>
-                      <th class="r">Harga / m&sup2;</th>
-                      <th class="r">Subtotal</th>
+                      <th><?= translate('ukuran') ?></th>
+                      <th class="r"><?= translate('luas') ?></th>
+                      <th class="r"><?= translate('qty') ?></th>
+                      <th class="r"><?= translate('harga') ?> / m&sup2;</th>
+                      <th class="r"><?= translate('subtotal') ?></th>
                     </tr>
                     <tr>
                       <td><?= $num($it->lebar_m2_books) ?> x <?= $num($it->tinggi_m2_books) ?> mm</td>
@@ -590,20 +590,20 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 
             <?php if ($isi($it->kelengkapan)): ?>
               <div class="block">
-                <div class="block-title"><i class="bi bi-check2-square me-1"></i>Kelengkapan</div>
+                <div class="block-title"><i class="bi bi-check2-square me-1"></i><?= translate('kelengkapan') ?></div>
                 <div class="small"><?= $multi($it->kelengkapan) ?></div>
               </div>
             <?php endif; ?>
 
             <?php if ($ada_instal): ?>
               <div class="block">
-                <div class="block-title"><i class="bi bi-tools me-1"></i>Biaya instalasi</div>
+                <div class="block-title"><i class="bi bi-tools me-1"></i><?= translate('b_instalasi') ?></div>
                 <table class="mini-table">
                   <tr>
-                    <th>Luas</th>
-                    <th class="r">Qty</th>
-                    <th class="r">Tarif / m&sup2;</th>
-                    <th class="r">Subtotal</th>
+                    <th><?= translate('luas') ?></th>
+                    <th class="r"><?= translate('qty') ?></th>
+                    <th class="r"><?= translate('harga') ?> / m&sup2;</th>
+                    <th class="r"><?= translate('subtotal') ?></th>
                   </tr>
                   <tr>
                     <td><?= $num($luas_bill, 4) ?> m&sup2;</td>
@@ -617,13 +617,13 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 
             <?php if (!empty($aks)): ?>
               <div class="block">
-                <div class="block-title"><i class="bi bi-plus-square me-1"></i>Aksesoris (<?= count($aks) ?>)</div>
+                <div class="block-title"><i class="bi bi-plus-square me-1"></i><?= translate('aksesoris') ?> (<?= count($aks) ?>)</div>
                 <table class="mini-table">
                   <tr>
-                    <th>Nama</th>
-                    <th class="r">Qty</th>
-                    <th class="r">Harga</th>
-                    <th class="r">Subtotal</th>
+                    <th><?= translate('nama') ?></th>
+                    <th class="r"><?= translate('qty') ?></th>
+                    <th class="r"><?= translate('harga') ?></th>
+                    <th class="r"><?= translate('subtotal') ?></th>
                   </tr>
                   <?php foreach ($aks as $a): ?>
                     <tr>
@@ -639,13 +639,13 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 
             <?php if (!empty($kaca)): ?>
               <div class="block">
-                <div class="block-title"><i class="bi bi-plus-square me-1"></i>Biaya Detail Kaca (<?= count($kaca) ?>)</div>
+                <div class="block-title"><i class="bi bi-plus-square me-1"></i><?= translate('B_detail_kaca') ?> (<?= count($kaca) ?>)</div>
                 <table class="mini-table">
                   <tr>
-                    <th>Nama</th>
-                    <th class="r">Qty</th>
-                    <th class="r">Harga</th>
-                    <th class="r">Subtotal</th>
+                    <th><?= translate('nama') ?></th>
+                    <th class="r"><?= translate('qty') ?></th>
+                    <th class="r"><?= translate('harga') ?></th>
+                    <th class="r"><?= translate('subtotal') ?></th>
                   </tr>
                   <?php foreach ($kaca as $k): ?>
                     <tr>
@@ -678,26 +678,26 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
       <div class="sticky-side">
 
         <div class="panel mb-3">
-          <div class="panel-title"><i class="bi bi-receipt"></i>Ringkasan biaya</div>
+          <div class="panel-title"><i class="bi bi-receipt"></i><?= translate('R_biaya') ?></div>
           <div class="panel-body">
-            <div class="sum-row"><span>Subtotal</span><span><?= $rp($h->subtotal) ?></span></div>
+            <div class="sum-row"><span><?= translate('subtotal') ?></span><span><?= $rp($h->subtotal) ?></span></div>
             <?php if ((float) $h->biaya_pasang > 0): ?>
-              <div class="sum-row"><span>Biaya pemasangan</span><span><?= $rp($h->biaya_pasang) ?></span></div>
+              <div class="sum-row"><span><?= translate('rp_pasang') ?></span><span><?= $rp($h->biaya_pasang) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->biaya_ongkir > 0): ?>
-              <div class="sum-row"><span>Biaya pengiriman</span><span><?= $rp($h->biaya_ongkir) ?></span></div>
+              <div class="sum-row"><span></span><span><?= translate('rp_pengiriman') . ' '. $rp($h->biaya_ongkir) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->ppn_persen > 0): ?>
-              <div class="sum-row"><span>PPN <?= $num($h->ppn_persen, 2) ?>%</span><span><?= $rp($h->ppn_nominal) ?></span></div>
+              <div class="sum-row"><span><?= translate('ppn') . ' ' . $num($h->ppn_persen, 2) ?>%</span><span><?= $rp($h->ppn_nominal) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->pph_persen > 0): ?>
-              <div class="sum-row"><span>PPh <?= $num($h->pph_persen, 2) ?>%</span><span><?= $rp($h->pph_nominal) ?></span></div>
+              <div class="sum-row"><span><?= translate('pph'). ' ' . $num($h->pph_persen, 2) ?>%</span><span><?= $rp($h->pph_nominal) ?></span></div>
             <?php endif; ?>
             <div class="sum-grand">
-              <div class="small text-muted">Grand total</div>
+              <div class="small text-muted"><?= translate('grand_total') ?></div>
               <div class="amt"><?= $rp($h->grand_total) ?></div>
             </div>
-            <div class="small text-muted"><i class="bi bi-lock me-1"></i>Angka diambil dari penawaran dan tidak bisa diubah di sini.</div>
+            <div class="small text-muted"><i class="bi bi-lock me-1"></i><?= translate('lbl_gt_so') ?></div>
           </div>
         </div>
 

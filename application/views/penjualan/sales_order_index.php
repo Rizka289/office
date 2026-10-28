@@ -53,7 +53,7 @@ $rp = function ($n) {
         <div class="kpi-icon bg-total"><i class="bi bi-cart-check"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= (int) ($total_so ?? 0); ?></div>
-          <div class="kpi-label text-muted small">Total Sales Order</div>
+          <div class="kpi-label text-muted small"><?= translate('lbl_t_so') ?></div>
         </div>
       </div>
     </div>
@@ -62,7 +62,7 @@ $rp = function ($n) {
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($total_dp ?? 0); ?></div>
-          <div class="kpi-label text-muted small">Uang Muka (DP) Masuk</div>
+          <div class="kpi-label text-muted small"><?= translate('lbl_dp') ?></div>
         </div>
       </div>
     </div>
@@ -71,7 +71,7 @@ $rp = function ($n) {
         <div class="kpi-icon bg-sisa"><i class="bi bi-wallet2"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($sisa_diterima ?? 0); ?></div>
-          <div class="kpi-label text-muted small">Sisa Tagihan</div>
+          <div class="kpi-label text-muted small"><?= translate('lbl_tagihan') ?></div>
         </div>
       </div>
     </div>
@@ -81,19 +81,19 @@ $rp = function ($n) {
   <div class="toolbar-card">
     <?= form_open('sales_order', array('method' => 'get', 'class' => 'row g-2 align-items-end')); ?>
     <div class="col-md-3">
-      <label class="form-label small text-muted mb-1">Cari</label>
+      <label class="form-label small text-muted mb-1"><?= translate('cari') ?></label>
       <div class="input-group">
         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-        <input type="text" name="q" class="form-control" placeholder="No. SO / PO / Customer"
+        <input type="text" name="q" class="form-control" placeholder="<?= translate('p_search_so') ?>"
           value="<?= html_escape($filter_q ?? ''); ?>">
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <label class="form-label small text-muted mb-1">Dari Tanggal</label>
+      <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal1') ?></label>
       <input type="date" name="dari" class="form-control" value="<?= html_escape($filter_dari ?? ''); ?>">
     </div>
     <div class="col-6 col-md-3">
-      <label class="form-label small text-muted mb-1">Sampai Tanggal</label>
+      <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal2') ?></label>
       <input type="date" name="sampai" class="form-control" value="<?= html_escape($filter_sampai ?? ''); ?>">
     </div>
     <div class="col-6 col-md-1 d-grid">
@@ -101,7 +101,7 @@ $rp = function ($n) {
     </div>
     <div class="col-12 col-md-2 d-grid">
       <a href="<?= site_url('sales_order/tambah'); ?>" class="btn btn-success">
-        <i class="bi bi-plus-lg me-1"></i>Buat SO Baru
+        <i class="bi bi-plus-lg me-1"></i><?= translate('add') ?>
       </a>
     </div>
     <?= form_close(); ?>
@@ -113,17 +113,17 @@ $rp = function ($n) {
       <table class="table mb-0 align-middle">
         <thead>
           <tr>
-            <th style="width:3%">#</th>
-            <th style="width:14%">No. SO</th>
-            <th style="width:10%">Tanggal</th>
-            <th>Customer</th>
-            <th style="width:12%">No. PO Customer</th>
-            <th style="width:6%" class="text-center">Item</th>
-            <th style="width:12%" class="text-end">Grand Total</th>
-            <th style="width:12%" class="text-end">Uang Muka</th>
-            <th style="width:12%" class="text-end">Sisa Tagihan</th>
-            <th style="width:8%" class="text-center">Status</th>
-            <th style="width:8%" class="text-center">Aksi</th>
+            <th style="width:3%"><?= translate('no') ?></th>
+            <th style="width:14%"><?= translate('no_so') ?></th>
+            <th style="width:10%"><?= translate('tanggal') ?></th>
+            <th><?= translate('pelanggan') ?></th>
+            <th style="width:12%"><?= translate('no_po_pelanggan') ?></th>
+            <th style="width:6%" class="text-center"><?= translate('item') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('grand_total') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('lbl_dp') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('lbl_tagihan') ?></th>
+            <th style="width:8%" class="text-center"><?= translate('status') ?></th>
+            <th style="width:8%" class="text-center"><?= translate('aksi') ?></th>
           </tr>
         </thead>
         <tbody>

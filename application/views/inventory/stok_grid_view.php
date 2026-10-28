@@ -9,7 +9,7 @@
         <div class="col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchStok" class="form-control" placeholder="Cari nama barang / lokasi ...">
+                <input type="text" id="searchStok" class="form-control" placeholder="Cari kode / nama / warna / lokasi / keterangan ...">
             </div>
         </div>
     </div>
@@ -19,7 +19,10 @@
             <thead class="table-light">
                 <tr>
                     <th style="width: 50px;"><?= translate('no') ?></th>
+                    <th><?= translate('kode') ?></th>
                     <th><?= translate('nama_barang') ?></th>
+                    <th><?= translate('warna') ?></th>
+                    <th><?= translate('keterangan') ?></th>
                     <th><?= translate('lokasi_gudang') ?></th>
                     <th><?= translate('stok') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
@@ -27,7 +30,7 @@
             </thead>
             <tbody id="stokTableBody">
                 <tr>
-                    <td colspan="5" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="8" class="text-center text-muted">Memuat data...</td>
                 </tr>
             </tbody>
         </table>
@@ -49,10 +52,15 @@
         var searchTimer = null;
 
         // Endpoint diarahkan ke Controller Stok
-        var listDataUrl = "<?= site_url('stok/list_data'); ?>"; 
+        var listDataUrl = "<?= site_url('stok/list_data'); ?>";
 
         function escapeHtml(str) {
             return $('<div>').text(str == null ? '' : str).html();
+        }
+
+        // Tampilkan "-" kalau nilai kosong
+        function textOrDash(str) {
+            return (str == null || str === '') ? '<span class="text-muted">-</span>' : escapeHtml(str);
         }
 
         // Render baris tabel dari data JSON
@@ -61,7 +69,7 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.append('<tr><td colspan="5" class="text-center text-muted">Data stok tidak ditemukan.</td></tr>');
+                $tbody.append('<tr><td colspan="8" class="text-center text-muted">Data stok tidak ditemukan.</td></tr>');
                 return;
             }
 
@@ -70,7 +78,10 @@
                 var no = startNo + idx + 1;
                 var tr = '<tr>' +
                     '<td>' + no + '</td>' +
-                    '<td class="fw-semibold">' + escapeHtml(stok.nama_barang) + '</td>' +
+                    '<td class="fw-semibold">' + textOrDash(stok.kode_barang) + '</td>' +
+                    '<td class="fw-semibold">' + textOrDash(stok.nama_barang) + '</td>' +
+                    '<td>' + textOrDash(stok.warna) + '</td>' +
+                    '<td>' + textOrDash(stok.keterangan) + '</td>' +
                     '<td>' + escapeHtml(stok.kode_lokasi) + '-' + (stok.nama_lokasi ? escapeHtml(stok.nama_lokasi) : '<span class="text-muted">-</span>') + '</td>' +
                     '<td><span class="badge bg-info text-dark">' + escapeHtml(stok.total_stok) + '</span></td>' +
                     '<td class="text-center">' +
@@ -124,11 +135,11 @@
                         var end = Math.min(response.current_page * response.per_page, response.total);
                         $('#stokInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
                     } else {
-                        $('#stokTableBody').html('<tr><td colspan="5" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                        $('#stokTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal memuat data.</td></tr>');
                     }
                 },
                 error: function() {
-                    $('#stokTableBody').html('<tr><td colspan="5" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                    $('#stokTableBody').html('<tr><td colspan="8" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
                 }
             });
         }

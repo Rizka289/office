@@ -1,5 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
+// Lokasi file: application/models/Stok_model.php
+
 class Stok_model extends CI_Model
 {
     public function __construct()
@@ -8,28 +10,62 @@ class Stok_model extends CI_Model
         $this->load->database();
     }
 
-    // Query Dasar untuk konsistensi data
+    // Subquery: keterangan riwayat TERAKHIR untuk pasangan barang + lokasi.
+    // Sesuaikan nama kolom stok_riwayat (id, id_barang, id_location, keterangan)
+    // dengan struktur tabel Anda. Kalau ada kolom tanggal, pakai:
+    // ORDER BY sr.created_at DESC, sr.id DESC
+    private function _keterangan_sql()
+    {
+        return "(SELECT sr.keterangan
+                 FROM stok_riwayat sr
+                 WHERE sr.id_barang = sb.id_barang
+                   AND sr.id_location = sb.id_location
+                   AND sr.keterangan IS NOT NULL
+                   AND sr.keterangan <> ''
+                 ORDER BY sr.id DESC
+                 LIMIT 1)";
+    }
+
+    // Query dasar untuk konsistensi data
     private function _build_stok_query($search = null)
     {
-        $this->db->select('
+        $ket_sql = $this->_keterangan_sql();
+
+        $this->db->select("
             sb.id_barang,
             sb.id_location,
+            barang.kode_barang,
             barang.nama AS nama_barang,
+            barang.warna,
             location.zone_name AS nama_lokasi,
             location.location_code AS kode_lokasi,
-            SUM(sb.stok) AS total_stok
-        ');
+            SUM(sb.stok) AS total_stok,
+            $ket_sql AS keterangan
+        ", false);
         $this->db->from('stok_barang sb');
         $this->db->join('barang barang', 'barang.id = sb.id_barang', 'left');
         $this->db->join('locations location', 'location.id = sb.id_location', 'left');
-        $this->db->group_by('sb.id_barang, sb.id_location');
+
+        // Semua kolom non-agregat wajib masuk GROUP BY (aman untuk ONLY_FULL_GROUP_BY)
+        $this->db->group_by(
+            'sb.id_barang, sb.id_location, barang.kode_barang, barang.nama, barang.warna, ' .
+            'location.zone_name, location.location_code'
+        );
 
         if (!empty($search)) {
+            $kw = $this->db->escape_like_str($search);
+
             $this->db->group_start();
             $this->db->like('barang.nama', $search);
+            $this->db->or_like('barang.kode_barang', $search);
+            $this->db->or_like('barang.warna', $search);
             $this->db->or_like('location.zone_name', $search);
+            $this->db->or_like('location.location_code', $search);
+            $this->db->or_where("$ket_sql LIKE '%{$kw}%'", null, false);
             $this->db->group_end();
         }
+
+        $this->db->order_by('barang.nama', 'ASC');
     }
 
     // Hitung total baris grup untuk pagination
@@ -37,7 +73,7 @@ class Stok_model extends CI_Model
     {
         $this->_build_stok_query($search);
         $query = $this->db->get();
-        return $query->num_rows(); // Menghitung total grup hasil GROUP BY
+        return $query->num_rows(); // total grup hasil GROUP BY
     }
 
     // Ambil data paginated

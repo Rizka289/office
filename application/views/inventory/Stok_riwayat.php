@@ -46,7 +46,9 @@
                     <thead>
                         <tr>
                             <th>Waktu</th>
+                            <th>Kode Barang</th>
                             <th>Barang</th>
+                            <th>Warna</th>
                             <th>Lokasi</th>
                             <th>Jenis Transaksi</th>
                             <th>Masuk</th>
@@ -59,10 +61,15 @@
                     </thead>
                     <tbody>
                         <?php if (!empty($riwayat)): ?>
-                            <?php foreach ($riwayat as $row): ?>
+                            <?php foreach ($riwayat as $row): 
+                                // var_dump($row);
+                                ?>
+                                
                                 <tr>
                                     <td><?= date('d-m-Y H:i', strtotime($row['created_at'])); ?></td>
-                                    <td><?= htmlspecialchars($row['nama'] ?? $row['id_barang']); ?></td>
+                                   <td><?= $row['kode_barang']; ?></span></td>
+                                    <td><?= htmlspecialchars($row['nama'] ?? $row['id_barang']);?></td>
+                                    <td><?= htmlspecialchars($row['warna']);?></td>
                                     <td><?= htmlspecialchars(($row['location_code'] ?? '') . ' - ' . ($row['zone_name'] ?? $row['id_location'])); ?></td>
                                     <td><?= $row['jenis_transaksi']; ?></span></td>
                                     <td class="text-success font-weight-bold"><?= $row['qty_masuk'] > 0 ? '+' . $row['qty_masuk'] : '-'; ?></td>

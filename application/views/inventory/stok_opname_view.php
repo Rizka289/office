@@ -211,10 +211,24 @@
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-sort-numeric-up"></i>Jumlah Fisik Real (Qty Fisik) <span class="text-danger">*</span></label>
-                    <input type="number" min="0" name="qty_fisik" class="form-control so-control" placeholder="Masukkan jumlah fisik barang saat ini" required>
+                    <label class="so-label"><i class="fas fa-exchange-alt"></i>Jenis Input <span class="text-danger">*</span></label>
+                    <select name="mode" id="soMode" class="form-control so-control" required>
+                        <option value="tambah" selected>Stok Awal / Tambah Stok (jumlah ditambahkan ke stok saat ini)</option>
+                        <option value="opname">Opname (jumlah = stok fisik sebenarnya, stok sistem disamakan)</option>
+                    </select>
+                    <div class="so-info" id="soModeInfo"></div>
                 </div>
 
+                <div class="so-form-group">
+                    <label class="so-label"><i class="fas fa-sort-numeric-up"></i><span id="soQtyLabel">Jumlah Stok yang Ditambahkan</span> <span class="text-danger">*</span></label>
+                    <input type="number" min="0" name="qty_fisik" id="soQty" class="form-control so-control" placeholder="Masukkan jumlah" required>
+                </div>
+
+                <div class="so-form-group">
+                    <label class="so-label"><i class="fas fa-ruler-combined"></i>Ukuran</label>
+                    <textarea name="ukuran" class="form-control so-control" rows="3" placeholder="Contoh: 700 * 800"></textarea>
+                </div>
+                
                 <div class="so-form-group">
                     <label class="so-label"><i class="fas fa-comment-dots"></i>Keterangan / Alasan Selisih</label>
                     <textarea name="keterangan" class="form-control so-control" rows="3" placeholder="Contoh: Penyesuaian stok awal gudang / Barang rusak 2 pcs"></textarea>
@@ -381,6 +395,28 @@
     document.addEventListener('click', function (e) {
         if (!e.target.closest('.so-picker')) tutup();
     });
+
+    // Label & petunjuk sesuai jenis input
+    var selMode  = document.getElementById('soMode');
+    var lblQty   = document.getElementById('soQtyLabel');
+    var infoMode = document.getElementById('soModeInfo');
+    var inpQty   = document.getElementById('soQty');
+
+    function updateMode() {
+        if (selMode.value === 'opname') {
+            lblQty.textContent = 'Jumlah Fisik Real (Qty Fisik)';
+            inpQty.min = 0;
+            inpQty.placeholder = 'Masukkan jumlah fisik barang saat ini';
+            infoMode.textContent = 'Stok sistem akan DIGANTI menjadi angka ini. Kalau lebih kecil dari stok sistem, selisihnya tercatat sebagai barang keluar.';
+        } else {
+            lblQty.textContent = 'Jumlah Stok yang Ditambahkan';
+            inpQty.min = 1;
+            inpQty.placeholder = 'Masukkan jumlah yang ditambahkan';
+            infoMode.textContent = 'Jumlah ini DITAMBAHKAN ke stok yang sudah ada dan tercatat sebagai barang masuk.';
+        }
+    }
+    selMode.addEventListener('change', updateMode);
+    updateMode();
 
     // Pastikan barang benar-benar dipilih dari daftar (bukan hanya diketik)
     form.addEventListener('submit', function (e) {

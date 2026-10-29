@@ -3,6 +3,9 @@ defined('BASEPATH') OR exit('No direct script access allowed');
 
 class Stok_opname extends CI_Controller {
 
+    // Daftar opsi yang valid (harus sama dengan <option> di view)
+    private $opsi_valid = ['bukaan_kanan', 'bukaan_kiri', 'aksesoris', 'bahan'];
+
     public function __construct()
     {
         parent::__construct();
@@ -25,11 +28,19 @@ class Stok_opname extends CI_Controller {
     {
         $id_barang   = $this->input->post('id_barang');
         $id_location = $this->input->post('id_location');
+        $opsi        = $this->input->post('opsi');
         $qty_raw     = $this->input->post('qty_fisik');
-        $mode        = $this->input->post('mode');          // 'tambah' | 'opname'
-        $ukuran      = trim((string) $this->input->post('ukuran'));
+        $mode        = $this->input->post('mode');                   // 'tambah' | 'opname'
+        $ukuran      = trim((string) $this->input->post('ukuran'));  // opsional
         $keterangan  = $this->input->post('keterangan');
-        $created_by  = $this->session->userdata('id_user') ?? 1; // Sesuai session user kamu
+
+        // Petugas input: dari session login (key 'user_id' diset di Login::proses)
+        $created_by  = $this->session->userdata('user_id');
+
+        if (empty($created_by)) {
+            $this->session->set_flashdata('error', 'Sesi login habis, silakan login ulang.');
+            redirect('login');
+        }
 
         if (!in_array($mode, ['tambah', 'opname'], true)) {
             $mode = 'tambah';
@@ -37,6 +48,12 @@ class Stok_opname extends CI_Controller {
 
         if (empty($id_barang) || empty($id_location)) {
             $this->session->set_flashdata('error', 'Barang dan Lokasi wajib diisi!');
+            redirect('stok_opname');
+        }
+
+        // Opsi wajib dan harus salah satu dari daftar valid
+        if (!in_array($opsi, $this->opsi_valid, true)) {
+            $this->session->set_flashdata('error', 'Opsi wajib dipilih!');
             redirect('stok_opname');
         }
 
@@ -61,6 +78,7 @@ class Stok_opname extends CI_Controller {
         $simpan = $this->Stok_opname_model->proses_stok_opname([
             'id_barang'   => $id_barang,
             'id_location' => $id_location,
+            'opsi'        => $opsi,
             'qty_fisik'   => $qty,
             'mode'        => $mode,
             'ukuran'      => ($ukuran !== '' ? $ukuran : null),

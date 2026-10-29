@@ -5,15 +5,16 @@ class Stok_opname_model extends CI_Model {
 
     public function get_all_barang()
     {
-        return $this->db->get('barang')->result_array(); // Sesuaikan nama tabel barang
+        return $this->db->get('barang')->result_array();
     }
 
     public function get_all_location()
     {
-        return $this->db->get('locations')->result_array(); // Sesuaikan nama tabel lokasi
+        return $this->db->get('locations')->result_array();
     }
 
     /**
+     * Kunci stok = id_barang + id_location + opsi.
      * $data['mode'] :
      *   'tambah' => qty DITAMBAHKAN ke stok saat ini (stok awal / barang masuk)
      *   'opname' => qty adalah JUMLAH FISIK sebenarnya; stok sistem disamakan,
@@ -23,16 +24,19 @@ class Stok_opname_model extends CI_Model {
     {
         $mode = isset($data['mode']) ? $data['mode'] : 'tambah';
         $qty  = (int) $data['qty_fisik'];
+        $opsi = (string) $data['opsi'];
 
         $this->db->trans_begin();
 
-        // 1. Stok sistem saat ini.
-        //    Pakai SUM semua baris barang+lokasi (grid stok juga menjumlah),
-        //    supaya kalau ada lebih dari 1 baris, stok_sebelum tidak salah hitung.
-        $rows = $this->db->order_by('id', 'ASC')->get_where('stok_barang', [
-            'id_barang'   => $data['id_barang'],
-            'id_location' => $data['id_location']
-        ])->result();
+        // 1. Stok sistem saat ini untuk barang + lokasi + OPSI yang sama.
+        //    FOR UPDATE: kunci baris supaya 2 user yang simpan bersamaan
+        //    tidak membaca stok_sebelum yang sama.
+        $rows = $this->db->query(
+            'SELECT id, stok FROM stok_barang
+             WHERE id_barang = ? AND id_location = ? AND opsi = ?
+             ORDER BY id ASC FOR UPDATE',
+            [$data['id_barang'], $data['id_location'], $opsi]
+        )->result();
 
         $stok_sebelum = 0;
         foreach ($rows as $r) {
@@ -60,6 +64,7 @@ class Stok_opname_model extends CI_Model {
             $this->db->insert('stok_barang', [
                 'id_barang'   => $data['id_barang'],
                 'id_location' => $data['id_location'],
+                'opsi'        => $opsi,
                 'stok'        => $stok_sesudah
             ]);
         }
@@ -67,12 +72,13 @@ class Stok_opname_model extends CI_Model {
         // 4. Catat ke stok_riwayat
         $ket_default = ($mode === 'opname') ? 'Penyesuaian Stok Opname' : 'Input Stok Awal';
 
-        $data_riwayat = [
+        $this->db->insert('stok_riwayat', [
             'id_barang'       => $data['id_barang'],
             'id_location'     => $data['id_location'],
-            'jenis_transaksi' => 'STOK_OPNAME', // ENUM yang sudah ada
+            'jenis_transaksi' => 'STOK_OPNAME',
             'id_referensi'    => NULL,
             'ukuran'          => isset($data['ukuran']) ? $data['ukuran'] : NULL,
+            'opsi'            => $opsi,
             'qty_masuk'       => $qty_masuk,
             'qty_keluar'      => $qty_keluar,
             'stok_sebelum'    => $stok_sebelum,
@@ -80,9 +86,7 @@ class Stok_opname_model extends CI_Model {
             'keterangan'      => !empty($data['keterangan']) ? $data['keterangan'] : $ket_default,
             'created_by'      => $data['created_by'],
             'created_at'      => date('Y-m-d H:i:s')
-        ];
-
-        $this->db->insert('stok_riwayat', $data_riwayat);
+        ]);
 
         if ($this->db->trans_status() === FALSE) {
             $this->db->trans_rollback();

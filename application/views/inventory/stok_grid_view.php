@@ -22,6 +22,7 @@
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('nama_barang') ?></th>
                     <th><?= translate('warna') ?></th>
+                    <th><?= translate('ukuran') ?></th>
                     <th><?= translate('keterangan') ?></th>
                     <th><?= translate('lokasi_gudang') ?></th>
                     <th><?= translate('stok') ?></th>
@@ -81,6 +82,7 @@
                     '<td class="fw-semibold">' + textOrDash(stok.kode_barang) + '</td>' +
                     '<td class="fw-semibold">' + textOrDash(stok.nama_barang) + '</td>' +
                     '<td>' + textOrDash(stok.warna) + '</td>' +
+                    '<td>' + textOrDash(stok.ukuran) + '</td>' +
                     '<td>' + textOrDash(stok.keterangan) + '</td>' +
                     '<td>' + escapeHtml(stok.kode_lokasi) + '-' + (stok.nama_lokasi ? escapeHtml(stok.nama_lokasi) : '<span class="text-muted">-</span>') + '</td>' +
                     '<td><span class="badge bg-info text-dark">' + escapeHtml(stok.total_stok) + '</span></td>' +

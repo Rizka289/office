@@ -8,20 +8,20 @@
 </style>
 
 <div class="container-fluid">
-    <h1 class="h3 mb-4 text-gray-800"><?= $title; ?></h1>
+    
 
     <!-- Form Filter -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Filter Riwayat Stok</h6>
+            <h6 class="m-0 font-weight-bold text-primary"><?= translate('lbl_filter_stok') ?></h6>
         </div>
         <div class="card-body">
             <form method="GET" action="<?= site_url('stok_riwayat'); ?>">
                 <div class="form-row align-items-end">
                     <div class="form-group col-md-5">
-                        <label for="filter_barang">Barang</label>
+                        <label for="filter_barang"><?= translate('pilih_barang') ?></label>
                         <select name="id_barang" id="filter_barang" class="form-control select2-filter" style="width:100%">
-                            <option value="">-- Semua Barang --</option>
+                            <option value="">-- <?= translate('pilih_barang') ?> --</option>
                             <?php foreach ($list_barang as $b): ?>
                                 <option value="<?= $b['id']; ?>" <?= ($filter_barang == $b['id']) ? 'selected' : ''; ?>>
                                     <?= htmlspecialchars($b['kode_barang'] . ' - ' . $b['nama'] . (!empty($b['warna']) ? ' (' . $b['warna'] . ')' : '')); ?>
@@ -31,9 +31,9 @@
                     </div>
 
                     <div class="form-group col-md-4">
-                        <label for="filter_location">Lokasi/Gudang</label>
+                        <label for="filter_location"><?= translate('pilih_lokasi') ?></label>
                         <select name="id_location" id="filter_location" class="form-control select2-filter" style="width:100%">
-                            <option value="">-- Semua Lokasi --</option>
+                            <option value="">-- <?= translate('pilih_lokasi') ?> --</option>
                             <?php foreach ($list_location as $l): ?>
                                 <option value="<?= $l['id']; ?>" <?= ($filter_location == $l['id']) ? 'selected' : ''; ?>>
                                     <?= htmlspecialchars(($l['location_code'] ?? '') . ' - ' . ($l['zone_name'] ?? '')); ?>
@@ -43,7 +43,7 @@
                     </div>
 
                     <div class="form-group col-md-3 mt-3 mt-md-0">
-                        <button type="submit" class="btn btn-primary mr-2">Filter</button>
+                        <button type="submit" class="btn btn-primary mr-2"><?= translate('cari') ?></button>
                         <a href="<?= site_url('stok_riwayat'); ?>" class="btn btn-secondary">Reset</a>
                     </div>
                 </div>
@@ -62,14 +62,14 @@
                             <th>Kode Barang</th>
                             <th>Barang</th>
                             <th>Warna</th>
+                            <th>Ukuran</th>
+                            <th>Opsi</th>
                             <th>Lokasi</th>
                             <th>Jenis Transaksi</th>
                             <th>Masuk</th>
                             <th>Keluar</th>
-                            <th>Opsi</th>
                             <th>Stok Sebelum</th>
                             <th>Stok Sesudah</th>
-                            <th>Ukuran</th>
                             <th>Keterangan</th>
                             <th>Petugas</th>
                         </tr>
@@ -82,14 +82,14 @@
                                     <td><?= htmlspecialchars($row['kode_barang'] ?? ''); ?></td>
                                     <td><?= htmlspecialchars($row['nama'] ?? $row['id_barang']); ?></td>
                                     <td><?= htmlspecialchars($row['warna'] ?? ''); ?></td>
+                                    <td><?= htmlspecialchars($row['ukuran'] ?? ''); ?></td>
+                                    <td><?= $row['opsi']; ?></td>
                                     <td><?= htmlspecialchars(($row['location_code'] ?? '') . ' - ' . ($row['zone_name'] ?? $row['id_location'])); ?></td>
                                     <td><?= htmlspecialchars($row['jenis_transaksi'] ?? ''); ?></td>
                                     <td class="text-success font-weight-bold"><?= $row['qty_masuk'] > 0 ? '+' . $row['qty_masuk'] : '-'; ?></td>
                                     <td class="text-danger font-weight-bold"><?= $row['qty_keluar'] > 0 ? '-' . $row['qty_keluar'] : '-'; ?></td>
-                                    <td><?= $row['opsi']; ?></td>
                                     <td><?= $row['stok_sebelum']; ?></td>
                                     <td><strong><?= $row['stok_sesudah']; ?></strong></td>
-                                    <td><?= htmlspecialchars($row['ukuran'] ?? ''); ?></td>
                                     <td><?= htmlspecialchars($row['keterangan'] ?? ''); ?></td>
                                     <td><?= htmlspecialchars($row['username'] ?? '-'); ?></td>
                                 </tr>

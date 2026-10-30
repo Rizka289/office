@@ -14,7 +14,8 @@ class Stok_opname extends CI_Controller {
 
     public function index()
     {
-        $data['title']         = 'Form Stok Opname';
+        $data['title']         = translate('so');
+        $data['page_title']     =  translate('so');
         $data['active_menu']   = 'stok_opname';
         $data['list_barang']   = $this->Stok_opname_model->get_all_barang();
         $data['list_location'] = $this->Stok_opname_model->get_all_location();

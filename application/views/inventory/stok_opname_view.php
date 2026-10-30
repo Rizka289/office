@@ -201,7 +201,7 @@
         <div class="card so-card">
             <div class="so-header">
                 <h1><i class="fas fa-clipboard-list mr-2"></i><?= $title; ?></h1>
-                <p>Catat hasil pengecekan fisik stok barang di gudang</p>
+                <p><?= translate('lbl_stok_opname') ?></p>
             </div>
 
             <div class="card-body">
@@ -221,21 +221,21 @@
                 </script>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-box"></i>Pilih Barang <span class="text-danger">*</span></label>
+                    <label class="so-label"><i class="fas fa-box"></i><?= translate('pilih_barang') ?> <span class="text-danger">*</span></label>
                     <div class="so-picker">
                         <input type="hidden" name="id_barang" id="soIdBarang" value="">
                         <input type="text" id="soSearch" class="form-control so-control so-search"
-                            placeholder="Ketik nama / kode barang..." autocomplete="off" required>
+                            placeholder="<?= translate('p_stok_nb') ?>" autocomplete="off" required>
                         <div class="so-dropdown d-none" id="soDropdown"></div>
                     </div>
-                    <a href="#" class="so-ganti d-none" id="soGanti"><i class="fas fa-sync-alt mr-1"></i>Ganti barang</a>
+                    <a href="#" class="so-ganti d-none" id="soGanti"><i class="fas fa-sync-alt mr-1"></i><?= translate('ganti_barang') ?></a>
                     <div class="so-info d-none" id="soInfo"></div>
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-warehouse"></i>Pilih Lokasi/Gudang <span class="text-danger">*</span></label>
+                    <label class="so-label"><i class="fas fa-warehouse"></i><?= translate('pilih_lokasi') ?> <span class="text-danger">*</span></label>
                     <select name="id_location" class="form-control so-control" required>
-                        <option value="">-- Pilih Lokasi --</option>
+                        <option value="">-- <?= translate('pilih_lokasi') ?> --</option>
                         <?php foreach ($list_location as $l): ?>
                             <option value="<?= $l['id']; ?>"><?= $l['zone_name']; ?></option>
                         <?php endforeach; ?>
@@ -243,42 +243,42 @@
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-exchange-alt"></i>Jenis Input <span class="text-danger">*</span></label>
+                    <label class="so-label"><i class="fas fa-exchange-alt"></i><?= translate('jenis_input') ?><span class="text-danger">*</span></label>
                     <select name="mode" id="soMode" class="form-control so-control" required>
-                        <option value="tambah" selected>Stok Awal / Tambah Stok (jumlah ditambahkan ke stok saat ini)</option>
-                        <option value="opname">Opname (jumlah = stok fisik sebenarnya, stok sistem disamakan)</option>
+                        <option value="tambah" selected><?= translate('opsi_input1') ?></option>
+                        <option value="opname"><?= translate('opsi_input2') ?></option>
                     </select>
                     <div class="so-info" id="soModeInfo"></div>
                 </div>
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-tags"></i>Opsi <span class="text-danger">*</span></label>
+                    <label class="so-label"><i class="fas fa-tags"></i><?= translate('opsi') ?> <span class="text-danger">*</span></label>
                     <select name="opsi" id="soOpsi" class="form-control so-control" required>
-                        <option value="">-- Pilih Opsi --</option>
-                        <option value="bukaan_kanan">Bukaan Kanan</option>
-                        <option value="bukaan_kiri">Bukaan Kiri</option>
-                        <option value="aksesoris">Aksesoris</option>
-                        <option value="bahan">Bahan</option>
+                        <option value="">-- <?= translate('opsi') ?>--</option>
+                        <option value="bukaan_kanan"><?= translate('b_kanan') ?></option>
+                        <option value="bukaan_kiri"><?= translate('b_kiri') ?></option>
+                        <option value="aksesoris"><?= translate('aksesoris') ?></option>
+                        <option value="bahan"><?= translate('bahan') ?></option>
                     </select>
-                    <div class="so-info">Stok dibedakan per barang + lokasi + opsi.</div>
+                    <div class="so-info"><?= translate('lbl_opsi') ?></div>
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-sort-numeric-up"></i><span id="soQtyLabel">Jumlah Stok yang Ditambahkan</span> <span class="text-danger">*</span></label>
+                    <label class="so-label"><i class="fas fa-sort-numeric-up"></i><span id="soQtyLabel"><?= translate('jml_stok') ?></span> <span class="text-danger">*</span></label>
                     <input type="number" min="0" name="qty_fisik" id="soQty" class="form-control so-control" placeholder="Masukkan jumlah" required>
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-ruler-combined"></i>Ukuran</label>
-                    <textarea name="ukuran" class="form-control so-control" rows="3" placeholder="Contoh: 700 * 800"></textarea>
+                    <label class="so-label"><i class="fas fa-ruler-combined"></i><?= translate('ukuran') ?></label>
+                    <textarea name="ukuran" class="form-control so-control" rows="3" placeholder="<?= translate('p_uk') ?>"></textarea>
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-comment-dots"></i>Keterangan / Alasan Selisih</label>
-                    <textarea name="keterangan" class="form-control so-control" rows="3" placeholder="Contoh: Penyesuaian stok awal gudang / Barang rusak 2 pcs"></textarea>
+                    <label class="so-label"><i class="fas fa-comment-dots"></i><?= translate('keterangan') ?></label>
+                    <textarea name="keterangan" class="form-control so-control" rows="3" placeholder="<?= translate('p_ket_so') ?>"></textarea>
                 </div>
 
                 <button type="submit" class="so-btn">
-                    <i class="fas fa-save mr-1"></i> Simpan Stok Opname
+                    <i class="fas fa-save mr-1"></i> <?= translate('button_save') ?>
                 </button>
 
                 </form>
@@ -444,6 +444,7 @@
         });
 
         // Label & petunjuk sesuai jenis input
+        
         var selMode = document.getElementById('soMode');
         var lblQty = document.getElementById('soQtyLabel');
         var infoMode = document.getElementById('soModeInfo');
@@ -451,15 +452,15 @@
 
         function updateMode() {
             if (selMode.value === 'opname') {
-                lblQty.textContent = 'Jumlah Fisik Real (Qty Fisik)';
+                lblQty.textContent = '<?= translate("jml_opname") ?>'; // Ubah sesuai key translate kamu
                 inpQty.min = 0;
-                inpQty.placeholder = 'Masukkan jumlah fisik barang saat ini';
-                infoMode.textContent = 'Stok sistem akan DIGANTI menjadi angka ini. Kalau lebih kecil dari stok sistem, selisihnya tercatat sebagai barang keluar.';
+                inpQty.placeholder = '<?= translate("p_jml_fisik") ?>'; // Contoh key translate placeholder
+                infoMode.textContent = '<?= translate("info_opname") ?>'; // Contoh key translate info
             } else {
-                lblQty.textContent = 'Jumlah Stok yang Ditambahkan';
+                lblQty.textContent = '<?= translate("jml_stok") ?>';
                 inpQty.min = 1;
-                inpQty.placeholder = 'Masukkan jumlah yang ditambahkan';
-                infoMode.textContent = 'Jumlah ini DITAMBAHKAN ke stok yang sudah ada dan tercatat sebagai barang masuk.';
+                inpQty.placeholder = '<?= translate("p_jml_tambah") ?>'; // Contoh key translate placeholder
+                infoMode.textContent = '<?= translate("info_tambah") ?>'; // Contoh key translate info
             }
         }
         selMode.addEventListener('change', updateMode);

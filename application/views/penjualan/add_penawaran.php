@@ -315,7 +315,7 @@ if ($is_edit && !empty($items_edit)) {
     </div>
     <div class="row g-2">
       <div class="col-md-4">
-        <label class="form-label"><?= translate('nama_barang') ?><span class="text-danger">*</span></label>
+        <label class="form-label"><?= translate('pilih_barang') ?><span class="text-danger">*</span></label>
         <div class="barang-picker">
           <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
           <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"

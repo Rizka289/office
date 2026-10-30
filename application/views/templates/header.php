@@ -378,7 +378,7 @@
                 ],
                 [
                     'key'   => 'stok_opname',
-                    'label' => 'Stok Opname',
+                    'label' => translate('so'),
                     'icon'  => 'bi bi-clipboard-fill',
                     'url'   => 'stok_opname',
                     'roles' => ['super_admin', 'staff_purchasing'],

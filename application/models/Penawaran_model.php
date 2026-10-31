@@ -145,7 +145,7 @@ class Penawaran_model extends CI_Model
             b.nama   AS nama_barang,
             b.gambar AS gambar_barang,
             b.kategori_rumus AS rumus,
-            b.keterangan As keterangan
+            b.keterangan AS keterangan_barang
         ');
         $this->db->from('penawaran_detail pd');
         $this->db->join('barang b', 'b.id = pd.id_barang', 'left');

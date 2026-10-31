@@ -64,6 +64,7 @@ if ($is_edit && !empty($items_edit)) {
     --pnw-brand-dark: #234f38;
     --pnw-radius: 14px;
   }
+
   .pnw-page .page-header {
     background: linear-gradient(135deg, var(--pnw-brand), var(--pnw-brand-dark));
     color: #fff;
@@ -72,8 +73,16 @@ if ($is_edit && !empty($items_edit)) {
     margin-bottom: 22px;
     box-shadow: 0 6px 18px rgba(35, 79, 56, .25);
   }
-  .pnw-page .page-header h4 { margin: 0; font-weight: 600; }
-  .pnw-page .page-header small { opacity: .85; }
+
+  .pnw-page .page-header h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .pnw-page .page-header small {
+    opacity: .85;
+  }
+
   .pnw-page .card-modern {
     background: #fff;
     border: none;
@@ -81,6 +90,7 @@ if ($is_edit && !empty($items_edit)) {
     box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
     margin-bottom: 20px;
   }
+
   .pnw-page .card-modern .card-header {
     background: #fff;
     border-bottom: 1px solid #eef1ef;
@@ -89,13 +99,28 @@ if ($is_edit && !empty($items_edit)) {
     color: var(--pnw-brand-dark);
     padding: 14px 20px;
   }
-  .pnw-page .card-modern .card-body { padding: 20px; }
-  .pnw-page .form-label { font-weight: 500; font-size: .84rem; color: #4a4a4a; }
-  .pnw-page .form-control[readonly] { background: #f3f6f4; color: #5a5a5a; }
-  .pnw-page .form-control:focus, .pnw-page .form-select:focus {
+
+  .pnw-page .card-modern .card-body {
+    padding: 20px;
+  }
+
+  .pnw-page .form-label {
+    font-weight: 500;
+    font-size: .84rem;
+    color: #4a4a4a;
+  }
+
+  .pnw-page .form-control[readonly] {
+    background: #f3f6f4;
+    color: #5a5a5a;
+  }
+
+  .pnw-page .form-control:focus,
+  .pnw-page .form-select:focus {
     border-color: var(--pnw-brand);
     box-shadow: 0 0 0 .2rem rgba(47, 111, 79, .15);
   }
+
   .pnw-page .item-card {
     border: 1px solid #eef1ef;
     border-radius: 12px;
@@ -104,39 +129,156 @@ if ($is_edit && !empty($items_edit)) {
     position: relative;
     background: #fbfdfc;
   }
-  .pnw-page .item-card .item-title { font-weight: 700; color: var(--pnw-brand-dark); font-size: .88rem; }
-  .pnw-page .item-card .item-subtotal { font-weight: 700; color: var(--pnw-brand-dark); }
-  .pnw-page .btn-remove-item { color: #b3261e; }
-  .pnw-page .btn-remove-item:hover { color: #7a1a15; }
-  .pnw-page .btn-remove-item:disabled { color: #c9c9c9; }
-  .pnw-page .barang-picker { position: relative; }
-  .pnw-page .it-books-penutup, .pnw-page .it-kelengkapan { min-height: 130px; resize: vertical; }
-  .pnw-page .it-jenis.is-locked { background: #eef6f1; color: var(--pnw-brand-dark); font-weight: 600; cursor: not-allowed; }
+
+  .pnw-page .item-card .item-title {
+    font-weight: 700;
+    color: var(--pnw-brand-dark);
+    font-size: .88rem;
+  }
+
+  .pnw-page .item-card .item-subtotal {
+    font-weight: 700;
+    color: var(--pnw-brand-dark);
+  }
+
+  .pnw-page .btn-remove-item {
+    color: #b3261e;
+  }
+
+  .pnw-page .btn-remove-item:hover {
+    color: #7a1a15;
+  }
+
+  .pnw-page .btn-remove-item:disabled {
+    color: #c9c9c9;
+  }
+
+  .pnw-page .barang-picker {
+    position: relative;
+  }
+
+  .pnw-page .it-books-penutup,
+  .pnw-page .it-kelengkapan {
+    min-height: 130px;
+    resize: vertical;
+  }
+
+  .pnw-page .it-jenis.is-locked {
+    background: #eef6f1;
+    color: var(--pnw-brand-dark);
+    font-weight: 600;
+    cursor: not-allowed;
+  }
+
   .pnw-page .barang-dropdown-list {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
-    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .12); max-height: 220px; overflow-y: auto; margin-top: 4px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid #dfe6e2;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 4px;
   }
-  .pnw-page .barang-dropdown-list .barang-opt { padding: 8px 12px; cursor: pointer; font-size: .85rem; border-bottom: 1px solid #f2f4f3; }
-  .pnw-page .barang-dropdown-list .barang-opt:hover { background: #eef6f1; }
-  .pnw-page .barang-dropdown-list .barang-opt .bo-nama { font-weight: 600; color: #26332c; display: block; }
-  .pnw-page .barang-dropdown-list .barang-opt .bo-meta { color: #7a8a80; font-size: .76rem; }
-  .pnw-page .customer-picker { position: relative; }
-  .pnw-page .customer-picker .form-control { padding-right: 34px; }
-  .pnw-page .customer-picker .customer-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7a8a80; font-size: .8rem; pointer-events: none; }
+
+  .pnw-page .barang-dropdown-list .barang-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .85rem;
+    border-bottom: 1px solid #f2f4f3;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt:hover {
+    background: #eef6f1;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt .bo-nama {
+    font-weight: 600;
+    color: #26332c;
+    display: block;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt .bo-meta {
+    color: #7a8a80;
+    font-size: .76rem;
+  }
+
+  .pnw-page .customer-picker {
+    position: relative;
+  }
+
+  .pnw-page .customer-picker .form-control {
+    padding-right: 34px;
+  }
+
+  .pnw-page .customer-picker .customer-caret {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a8a80;
+    font-size: .8rem;
+    pointer-events: none;
+  }
+
   .pnw-page .customer-dropdown-list {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
-    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .12); max-height: 240px; overflow-y: auto; margin-top: 4px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid #dfe6e2;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: 4px;
   }
-  .pnw-page .customer-dropdown-list .customer-opt { padding: 8px 12px; cursor: pointer; font-size: .88rem; font-weight: 600; color: #26332c; border-bottom: 1px solid #f2f4f3; }
-  .pnw-page .customer-dropdown-list .customer-opt:hover { background: #eef6f1; }
-  .pnw-page .summary-box { background: #f8faf9; border: 1px dashed #cfe0d6; border-radius: 10px; padding: 16px 18px; }
-  .pnw-page .total-box { background: #f8faf9; border-left: 4px solid var(--pnw-brand); border-radius: 10px; padding: 16px 18px; }
+
+  .pnw-page .customer-dropdown-list .customer-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    color: #26332c;
+    border-bottom: 1px solid #f2f4f3;
+  }
+
+  .pnw-page .customer-dropdown-list .customer-opt:hover {
+    background: #eef6f1;
+  }
+
+  .pnw-page .summary-box {
+    background: #f8faf9;
+    border: 1px dashed #cfe0d6;
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .pnw-page .total-box {
+    background: #f8faf9;
+    border-left: 4px solid var(--pnw-brand);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
   .pnw-page .footer-actions {
-    position: sticky; bottom: 0; background: #fff; padding: 14px 20px;
-    border-radius: var(--pnw-radius); box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
-    display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; z-index: 5;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 14px 20px;
+    border-radius: var(--pnw-radius);
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    z-index: 5;
   }
 </style>
 
@@ -198,7 +340,7 @@ if ($is_edit && !empty($items_edit)) {
           ?>
           <div class="customer-picker">
             <input type="hidden" name="id_customer" id="id_customer" value="<?= $cust_id_val > 0 ? $cust_id_val : ''; ?>" <?= $hdr_lock; ?>>
-            <input type="text" id="customer_search" class="form-control" placeholder= "<?= translate('p_s_penawaran') ?>"
+            <input type="text" id="customer_search" class="form-control" placeholder="<?= translate('p_s_penawaran') ?>"
               autocomplete="off" value="<?= html_escape($cust_nama_val); ?>" <?= $hdr_lock; ?>>
             <i class="bi bi-chevron-down customer-caret"></i>
             <div class="customer-dropdown-list d-none"></div>
@@ -260,7 +402,7 @@ if ($is_edit && !empty($items_edit)) {
         <div class="card-body">
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= ($is_edit && (float) $pen->ppn_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_ppn"><?=  translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</label>
+            <label class="form-check-label" for="pakai_ppn"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</label>
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
@@ -281,10 +423,10 @@ if ($is_edit && !empty($items_edit)) {
             <span class="text-muted"><?= translate('subtotal') ?></span><span id="sumSubtotal">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"><?= translate('ppn') . ' ' .html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
+            <span class="text-muted"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"> <?= translate('pph') .' ' .html_escape($tarif_pph); ?>%</span><span id="sumPph">Rp 0</span>
+            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>%</span><span id="sumPph">Rp 0</span>
           </div>
           <div class="total-box mt-3">
             <div class="text-muted small"><?= translate('grand_total') ?></div>
@@ -389,9 +531,15 @@ if ($is_edit && !empty($items_edit)) {
         <label class="form-label">Kelengkapan</label>
         <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
       </div>
+      <div class="col-12">
+        <label class="form-label"><?= translate('catatan') ?></label>
+        <textarea name="keterangan[]" class="form-control it-keterangan" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
+      </div>
 
       <!-- Books Penutup (khusus rolling door) -->
-      <div class="col-12 books-blok d-none"><div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div></div>
+      <div class="col-12 books-blok d-none">
+        <div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div>
+      </div>
       <div class="col-md-3 books-blok d-none">
         <label class="form-label">Lebar (mm)</label>
         <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
@@ -418,7 +566,9 @@ if ($is_edit && !empty($items_edit)) {
       </div>
 
       <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
-      <div class="col-12 instalasi-blok d-none"><div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div></div>
+      <div class="col-12 instalasi-blok d-none">
+        <div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div>
+      </div>
       <div class="col-md-4 instalasi-blok d-none">
         <label class="form-label">Qty Instalasi</label>
         <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
@@ -433,7 +583,7 @@ if ($is_edit && !empty($items_edit)) {
       </div>
 
       <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
-     <div class="col-12 mt-2 wrap-kaca-container">
+      <div class="col-12 mt-2 wrap-kaca-container">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
           <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
@@ -450,10 +600,7 @@ if ($is_edit && !empty($items_edit)) {
         <div class="list-aksesoris"></div>
       </div>
 
-      <div class="col-12">
-        <label class="form-label"><?= translate('catatan') ?></label>
-        <textarea name="keterangan[]" class="form-control" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
-      </div>
+
 
       <div class="col-12 text-end">
         <label class="form-label d-block"><?= translate('subtotal') ?></label>
@@ -523,6 +670,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
       </div>`;
     }
+
     function templateBarisKaca(itemIndex) {
       return `
       <div class="row g-2 align-items-center mb-1 baris-kaca">
@@ -621,6 +769,7 @@ if ($is_edit && !empty($items_edit)) {
         });
       });
     }
+
     function reindexKaca() {
       baris().forEach(function(card, idx) {
         card.querySelectorAll('.baris-kaca').forEach(function(row) {
@@ -690,7 +839,7 @@ if ($is_edit && !empty($items_edit)) {
 
       var inputCari = card.querySelector('.it-barang-search');
       var inputId = card.querySelector('.it-id-barang');
-      
+
       var elWarna = card.querySelector('.it-warna');
       if (elWarna) elWarna.value = b.warna || '';
       var elHarga = card.querySelector('.it-harga');
@@ -698,7 +847,7 @@ if ($is_edit && !empty($items_edit)) {
       var elKomponen = card.querySelector('.it-komponen');
       if (elKomponen) elKomponen.value = b.komponen || '';
       var elKet = card.querySelector('.it-keterangan');
-      if (elKet) elKet.value = b.keterangan || '';
+      if (elKet && !elKet.value.trim()) elKet.value = b.keterangan || '';
 
       if (inputCari) {
         inputCari.value = b.nama;
@@ -784,19 +933,19 @@ if ($is_edit && !empty($items_edit)) {
       });
 
       var rolling = isRollingDoor(kategori);
-      
+
       // Toggle Books Penutup
       card.querySelectorAll('.books-blok').forEach(function(el) {
         el.classList.toggle('d-none', !rolling);
       });
       var totalBooks = 0;
       if (rolling) {
-        var bLebar  = parseFloat(card.querySelector('.it-books-lebar').value) || 0;
+        var bLebar = parseFloat(card.querySelector('.it-books-lebar').value) || 0;
         var bTinggi = parseFloat(card.querySelector('.it-books-tinggi').value) || 0;
-        var bQty    = parseFloat(card.querySelector('.it-books-qty').value) || 0;
-        var bHarga  = parseFloat(card.querySelector('.it-books-harga').value) || 0;
-        var bLuas   = Math.round((bLebar / 1000) * (bTinggi / 1000) * 10000) / 10000;
-        totalBooks  = bLuas * bQty * bHarga;
+        var bQty = parseFloat(card.querySelector('.it-books-qty').value) || 0;
+        var bHarga = parseFloat(card.querySelector('.it-books-harga').value) || 0;
+        var bLuas = Math.round((bLebar / 1000) * (bTinggi / 1000) * 10000) / 10000;
+        totalBooks = bLuas * bQty * bHarga;
         var elBLuas = card.querySelector('.it-books-luas');
         if (elBLuas) elBLuas.value = bLuas.toFixed(4);
         var elBTotal = card.querySelector('.it-books-total');
@@ -850,11 +999,19 @@ if ($is_edit && !empty($items_edit)) {
       document.getElementById('sumGrandTotal').textContent = rupiah(grand);
     }
 
-    btnTambah.addEventListener('click', function() { tambahItem(); });
+    btnTambah.addEventListener('click', function() {
+      tambahItem();
+    });
     chkPpn.addEventListener('change', segarkan);
     chkPph.addEventListener('change', segarkan);
-    chkPasang.addEventListener('change', function() { toggleBiaya(chkPasang, wrapPasang, inpPasang); segarkan(); });
-    chkOngkir.addEventListener('change', function() { toggleBiaya(chkOngkir, wrapOngkir, inpOngkir); segarkan(); });
+    chkPasang.addEventListener('change', function() {
+      toggleBiaya(chkPasang, wrapPasang, inpPasang);
+      segarkan();
+    });
+    chkOngkir.addEventListener('change', function() {
+      toggleBiaya(chkOngkir, wrapOngkir, inpOngkir);
+      segarkan();
+    });
     inpPasang.addEventListener('input', segarkan);
     inpOngkir.addEventListener('input', segarkan);
 
@@ -897,18 +1054,32 @@ if ($is_edit && !empty($items_edit)) {
         return;
       }
       var opt = e.target.closest('.barang-opt');
-      if (opt) { pilihBarang(card, opt.getAttribute('data-id')); return; }
+      if (opt) {
+        pilihBarang(card, opt.getAttribute('data-id'));
+        return;
+      }
       var btnGanti = e.target.closest('.btn-ganti-barang');
-      if (btnGanti) { gantiBarang(card); return; }
+      if (btnGanti) {
+        gantiBarang(card);
+        return;
+      }
       var btnHapus = e.target.closest('.btn-remove-item');
-      if (btnHapus && !btnHapus.disabled) { card.remove(); reindexAksesoris(); reindexKaca(); segarkan(); return; }
+      if (btnHapus && !btnHapus.disabled) {
+        card.remove();
+        reindexAksesoris();
+        reindexKaca();
+        segarkan();
+        return;
+      }
     });
 
     // Customer Auto-complete
     var DATA_CUSTOMER = [];
     try {
       DATA_CUSTOMER = JSON.parse(document.getElementById('dataCustomer').textContent || '[]') || [];
-    } catch (e) { DATA_CUSTOMER = []; }
+    } catch (e) {
+      DATA_CUSTOMER = [];
+    }
 
     var custInput = document.getElementById('customer_search');
     var custId = document.getElementById('id_customer');
@@ -917,7 +1088,9 @@ if ($is_edit && !empty($items_edit)) {
     function cariCustomer(kata) {
       kata = (kata || '').trim().toLowerCase();
       if (kata === '') return DATA_CUSTOMER;
-      return DATA_CUSTOMER.filter(function(c) { return c.nama.toLowerCase().indexOf(kata) !== -1; });
+      return DATA_CUSTOMER.filter(function(c) {
+        return c.nama.toLowerCase().indexOf(kata) !== -1;
+      });
     }
 
     function tutupDropdownCustomer() {
@@ -946,7 +1119,9 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     function pilihCustomer(id) {
-      var c = DATA_CUSTOMER.find(function(x) { return String(x.id) === String(id); });
+      var c = DATA_CUSTOMER.find(function(x) {
+        return String(x.id) === String(id);
+      });
       if (!c) return;
       custId.value = c.id;
       custInput.value = c.nama;
@@ -954,8 +1129,13 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     if (custInput && !custInput.disabled) {
-      custInput.addEventListener('focus', function() { tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value)); });
-      custInput.addEventListener('input', function() { custId.value = ''; tampilkanCustomer(cariCustomer(custInput.value)); });
+      custInput.addEventListener('focus', function() {
+        tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value));
+      });
+      custInput.addEventListener('input', function() {
+        custId.value = '';
+        tampilkanCustomer(cariCustomer(custInput.value));
+      });
       custList.addEventListener('click', function(e) {
         var opt = e.target.closest('.customer-opt');
         if (opt) pilihCustomer(opt.getAttribute('data-id'));
@@ -987,7 +1167,9 @@ if ($is_edit && !empty($items_edit)) {
     });
 
     if (ITEMS_EDIT.length) {
-      ITEMS_EDIT.forEach(function(d) { tambahItem(d); });
+      ITEMS_EDIT.forEach(function(d) {
+        tambahItem(d);
+      });
     } else {
       tambahItem();
     }

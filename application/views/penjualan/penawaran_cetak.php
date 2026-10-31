@@ -62,8 +62,11 @@ foreach ($items as $it) {
     ];
   }
 
-  if (!empty($it->keterangan) && !in_array($it->keterangan, $kelompok[$kunci]['keterangan'], TRUE)) {
-    $kelompok[$kunci]['keterangan'][] = $it->keterangan;
+  // Keterangan per item (penawaran_detail.keterangan) - berlaku untuk semua kategori
+  // (rolling door, unit fix, pintu, jendela, dst.). Hanya yang tidak kosong yang dicetak.
+  $ket_item = trim((string) ($it->keterangan ?? ''));
+  if ($ket_item !== '' && !in_array($ket_item, $kelompok[$kunci]['keterangan'], TRUE)) {
+    $kelompok[$kunci]['keterangan'][] = $ket_item;
   }
 
   $kelompok[$kunci]['baris'][] = $it;

@@ -12,7 +12,7 @@
         <div class="col-12 col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchNamaBarang" class="form-control" placeholder= " <?= translate('cari')?> ">
+                <input type="text" id="searchNamaBarang" class="form-control" placeholder=" <?= translate('cari') ?> ">
             </div>
         </div>
     </div>
@@ -22,16 +22,16 @@
             <thead class="table-light">
                 <tr>
                     <th><?= translate('no') ?></th>
-                    <th>Foto</th>
+                    <th><?= translate('foto') ?> </th>
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('kategori_barang') ?></th>
                     <th><?= translate('nama_barang') ?></th>
                     <th><?= translate('warna') ?></th>
-                    <th><?= translate('jenis') ?></th>
+                    
                     <th><?= translate('satuan') ?></th>
-                    <th><?= translate('dimensi') ?></th>
+                    <th><?= translate('Dimensi') ?></th>
                     <th><?= translate('harga') ?></th>
-                    <th><?= translate('min_stok') ?></th>
+                    <th><?= translate('deskripsi') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
                 </tr>
             </thead>
@@ -121,6 +121,35 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('kategori_rumus') ?></label>
+                        <select name="kategori_rumus" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?> --</option>
+                            <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_sliding">Jendela Sliding</option>
+                            <option value="jendela_swing_b1">Jendela Swing B1</option>
+                            <option value="jendela_swing_b2">Jendela Swing B2</option>
+                            <option value="jendela_jalusi">Jendela Jalusi</option>
+                            <option value="jendela_mati">Jendela Mati</option>
+                            <option value="pintu_baja">Pintu Baja</option>
+                            <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_kayu">Pintu Kayu</option>
+                            <option value="pintu_alumunium">Pintu Alumunium</option>
+                            <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>
+                            <option value="rolling_door_baja">Rooling Door Baja</option>
+                            <option value="pintu_baja_double">Pintu Baja Double</option>
+                            <option value="alumunium_double">Pintu Alumunium Double</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
+                        <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?> --</option>
+                            <option value="produksi">Produksi</option>
+                            <option value="beli">Beli</option>
+                            <option value="stok">Stok</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('harga') ?></label>
                         <input type="text" name="harga_satuan" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" autocomplete="off" required>
                         <div class="form-text extra-small text-muted"><?= translate('p_bar_harga') ?></div>
@@ -129,17 +158,18 @@
                         <label class="form-label small fw-bold"><?= translate('Dimensi') ?></label>
                         <input type="text" name="dimensi" class="form-control form-control-sm" placeholder="<?= translate('p_bar_dimensi') ?>" autocomplete="off" required>
                     </div>
-
                     <div class="mb-3">
-                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
-                        <select name="is_produced" id="is_produced" class="form-select form-select-sm" required>
-                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
-                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
-                        </select>
+                        <label class="form-label small fw-bold"><?= translate('komponen') ?></label>
+                        <input type="text" name="komponen" class="form-control form-control-sm" placeholder="<?= translate('p_bar_komponen') ?>" autocomplete="off" required>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_bar_min') ?>" autocomplete="off" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
+                        <input type="text" name="keterangan" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" autocomplete="off" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -167,8 +197,8 @@
                     <div class="mb-3 text-center">
                         <img id="edit_preview_gambar" src="" class="img-thumbnail mb-2" style="max-height: 120px;">
                         <div>
-                            <label class="form-label small fw-bold d-block">Ubah Foto Barang (Opsional)</label>
-                            <input type="file" name="gambar" class="form-control form-control-sm" accept="image/*">
+                            <label class="form-label small fw-bold d-block"><?= translate('ubah_foto_barng') ?></label>
+                            <input type="file" name="gambar" id="edit_gambar" class="form-control form-control-sm" accept="image/*">
                         </div>
                     </div>
 
@@ -224,25 +254,56 @@
                         </select>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('kategori_rumus') ?></label>
+                        <select name="kategori_rumus" id="edit_kategori_rumus" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?>--</option>
+                            <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_sliding">Jendela Sliding</option>
+                            <option value="jendela_swing_b1">Jendela Swing B1</option>
+                            <option value="jendela_swing_b2">Jendela Swing B2</option>
+                            <option value="jendela_jalusi">Jendela Jalusi</option>
+                            <option value="jendela_mati">Jendela Mati</option>
+                            <option value="pintu_baja">Pintu Baja</option>
+                            <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_kayu">Pintu Kayu</option>
+                            <option value="pintu_alumunium">Pintu Alumunium</option>
+                            <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>
+                            <option value="rolling_door_baja">Rooling Door Baja</option>
+                            <option value="pintu_baja_double">Pintu Baja Double</option>
+                            <option value="alumunium_double">Pintu Alumunium Double</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('label_bar') ?></label>
+                        <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
+                            <option value="">-- <?= translate('select') ?> --</option>
+                            <option value="produksi">Produksi</option>
+                            <option value="beli">Beli</option>
+                            <option value="stok">Stok</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('harga') ?></label>
                         <input type="text" name="harga_satuan" id="edit_harga" class="form-control form-control-sm input-harga" placeholder="Contoh: 15000,50 atau 15000.50" required>
                         <div class="form-text extra-small text-muted">Gunakan tanda koma (,) atau titik (.) untuk desimal.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold"><?= translate('dimensi') ?></label>
+                        <label class="form-label small fw-bold"><?= translate('Dimensi') ?></label>
                         <input type="text" name="dimensi" id="edit_dimensi" class="form-control form-control-sm" placeholder="Masukkan Dimensi" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('komponen') ?></label>
+                        <input type="text" name="komponen" id="edit_komponen" class="form-control form-control-sm" placeholder="Masukkan Komponen" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label small fw-bold">Metode Perolehan / Tipe Barang</label>
-                        <select name="is_produced" id="edit_is_produced" class="form-select form-select-sm" required>
-                            <option value="0">Dibeli / Non-Produksi (Bahan Baku / Aksesori / Trading)</option>
-                            <option value="1">Diproduksi Sendiri / Custom (Pintu & Jendela)</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('min_stok') ?></label>
                         <input type="number" name="stok_minimum" id="edit_stok" min="0" class="form-control form-control-sm" placeholder="Masukkan stok minimum" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
+                        <input type="text" name="keterangan" id="edit_keterangan" class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" required>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -324,21 +385,34 @@
             });
         }
 
+        // Jenis barang (enum is_produced: stok / beli / produksi)
+        var JENIS_BARANG = {
+            stok:     { label: 'Stok',                cls: 'bg-primary' },
+            beli:     { label: 'Dibeli / Trading',    cls: 'bg-secondary' },
+            produksi: { label: 'Diproduksi / Custom', cls: 'bg-success' }
+        };
+
+        function badgeJenis(val) {
+            var key = String(val || '').toLowerCase().trim();
+            var cfg = JENIS_BARANG[key] || { label: val || '-', cls: 'bg-light text-dark' };
+            return '<span class="badge ' + cfg.cls + '">' + escapeHtml(cfg.label) + '</span>';
+        }
+
         function renderTable(rows, perPage, page) {
             var $tbody = $('#tbodyNamaBarang');
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.html('<tr><td colspan="11" class="text-center text-muted">Data nama barang tidak ditemukan.</td></tr>');
+                var emptyMessage = "<?= translate('p_nama_barang'); ?>";
+                $tbody.append('<tr><td colspan="6" class="text-center text-muted">' + emptyMessage + '</td></tr>');
                 return;
             }
 
             var startNo = ((page - 1) * perPage) + 1;
 
             rows.forEach(function(brg, idx) {
-                var badgeProduksi = (brg.is_produced == 1) ?
-                    '<span class="badge bg-success">Diproduksi / Custom</span>' :
-                    '<span class="badge bg-secondary">Dibeli / Trading</span>';
+                
+                var badgeProduksi = badgeJenis(brg.is_produced);
 
                 var imgHtml = '<img src="' + brg.gambar_url + '" class="rounded" style="width: 40px; height: 40px; object-fit: cover;">';
 
@@ -350,11 +424,11 @@
                     '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
                     '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi + '</td>' +
                     '<td>' + escapeHtml(brg.warna) + '</td>' +
-                    '<td>' + escapeHtml(brg.jenis_barang) + '</td>' +
+                   
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +
                     '<td>' + escapeHtml(brg.dimensi) + '</td>' +
                     '<td>Rp ' + formatHarga(brg.harga_satuan) + '</td>' +
-                    '<td>' + escapeHtml(brg.stok_minimum) + '</td>' +
+                    '<td>' + escapeHtml(brg.keterangan) + '</td>' +
                     '<td class="text-center">' +
                     '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + brg.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
                     '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + brg.id + '" data-nama="' + escapeHtml(brg.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
@@ -454,6 +528,9 @@
         $(document).on('click', '.btn-edit', function() {
             var id = $(this).data('id');
 
+            // Kosongkan input file supaya foto dari edit sebelumnya tidak ikut terkirim
+            $('#edit_gambar').val('');
+
             $.ajax({
                 url: "<?= site_url('barang/get_by_id/'); ?>" + id,
                 type: "GET",
@@ -467,10 +544,13 @@
                         $('#edit_id_kategori').val(response.data.id_kategori);
                         $('#edit_jenis').val(response.data.jenis_barang);
                         $('#edit_satuan').val(response.data.satuan);
+                        $('#edit_kategori_rumus').val(response.data.kategori_rumus);
                         $('#edit_dimensi').val(response.data.dimensi);
+                        $('#edit_komponen').val(response.data.komponen);
                         $('#edit_is_produced').val(response.data.is_produced);
                         $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
+                        $('#edit_keterangan').val(response.data.keterangan);
 
                         $('#edit_preview_gambar').attr('src', response.data.gambar_url);
 
@@ -483,6 +563,11 @@
                     alert('Terjadi kesalahan saat mengambil data.');
                 }
             });
+        });
+
+        // Reset input file setiap modal edit ditutup (berhasil update, batal, atau klik luar)
+        $('#modalEditNamaBarang').on('hidden.bs.modal', function() {
+            $('#edit_gambar').val('');
         });
 
         // 3. AJAX UPDATE (FormData)

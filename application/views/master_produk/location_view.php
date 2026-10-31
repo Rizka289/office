@@ -13,7 +13,7 @@
         <div class="col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchLocation" class="form-control" placeholder="Cari lokasi rak ...">
+                <input type="text" id="searchLocation" class="form-control" placeholder="<?= translate('p_search_lok') ?>">
             </div>
         </div>
     </div>

@@ -7,7 +7,7 @@ class Supplier_model extends CI_Model
         parent::__construct();
         $this->load->database();
     }
-    // Mengambil semua data dari tabel 'user'
+    // Mengambil semua data dari tabel 'supplier'
     public function get_all_supplier()
     {
         $query = $this->db->get('supplier');
@@ -25,7 +25,7 @@ class Supplier_model extends CI_Model
                 ->group_end();
         }
     }
-    // Mengambil data kategori barang dengan pagination & search (untuk grid)
+    // Mengambil data supplier dengan pagination & search (untuk grid)
     public function get_supplier_paginated($search = '', $limit = 5, $offset = 0)
     {
         $this->applySearchFilter($search);
@@ -35,7 +35,7 @@ class Supplier_model extends CI_Model
         return $this->db->get('supplier')->result_array();
     }
 
-    // Hitung total data kategori barang (dengan search yang sama) untuk pagination
+    // Hitung total data supplier (dengan search yang sama) untuk pagination
     public function count_supplier($search = '')
     {
         $this->applySearchFilter($search);
@@ -53,7 +53,7 @@ class Supplier_model extends CI_Model
     {
         return $this->db->get_where('supplier', ['id' => $id])->row();
     }
-    // Simpan data user baru
+    // Simpan data supplier baru
     public function insert_supplier($data)
     {
         return $this->db->insert('supplier', $data);
@@ -64,9 +64,20 @@ class Supplier_model extends CI_Model
         return $this->db->update('supplier', $data);
     }
 
+    // Hapus supplier. Mengembalikan array ['success' => bool, 'error' => ['code' => .., 'message' => ..]]
     public function delete_supplier($id)
     {
+        // Matikan sementara db_debug supaya error DB (mis. FK constraint)
+        // tidak memunculkan halaman error 500 dari CodeIgniter
+        $debug = $this->db->db_debug;
+        $this->db->db_debug = FALSE;
+
         $this->db->where('id', $id);
-        return $this->db->delete('supplier');
+        $ok    = $this->db->delete('supplier');
+        $error = $this->db->error(); // ['code' => ..., 'message' => ...]
+
+        $this->db->db_debug = $debug;
+
+        return ['success' => (bool) $ok, 'error' => $error];
     }
 }

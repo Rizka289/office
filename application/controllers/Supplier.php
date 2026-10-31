@@ -1,15 +1,15 @@
 <?php
 defined('BASEPATH') or exit('No direct script access allowed');
 
-// Lokasi file: application/controllers/super_admin/User.php
-// URL akses: domain.com/super_admin/user
+// Lokasi file: application/controllers/Supplier.php
+// URL akses: domain.com/supplier
 
 class Supplier extends MY_Controller
 {
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole(['super_admin', 'staff_purchasing']); // hanya super admin yang boleh akses seluruh method di sini
+        $this->requireRole(['super_admin', 'staff_purchasing']); // hanya role ini yang boleh akses seluruh method di sini
         $this->load->model('Supplier_model');
         $this->load->helper('url');
     }
@@ -20,13 +20,12 @@ class Supplier extends MY_Controller
         $data['page_title']     =  translate('app_list') . ' ' . translate('list_pemasok');
         $data['active_menu']   = 'supplier';
 
-
-
         $this->load->view('templates/header', $data);
         $this->load->view('master_data/supplier_index', $data);
         $this->load->view('templates/footer', $data);
     }
-    // Endpoint AJAX: ambil data kategori barang dengan pagination (max 5/halaman) & search
+
+    // Endpoint AJAX: ambil data supplier dengan pagination (max 5/halaman) & search
     public function list_data()
     {
         $search = $this->input->get('search', true);
@@ -51,16 +50,13 @@ class Supplier extends MY_Controller
         ]);
     }
 
-
-
-
     // Method simpan data via AJAX
     public function simpan()
     {
-        $nama     = $this->input->post('nama', true);
-        $kontak = $this->input->post('kontak', true);
+        $nama      = $this->input->post('nama', true);
+        $kontak    = $this->input->post('kontak', true);
         $deskripsi = $this->input->post('deskripsi', true);
-        $alamat = $this->input->post('alamat', true);
+        $alamat    = $this->input->post('alamat', true);
 
         if (empty($nama) || empty($kontak) || empty($deskripsi) || empty($alamat)) {
             $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
@@ -69,9 +65,9 @@ class Supplier extends MY_Controller
 
         $data = array(
             'nama'       => $nama,
-            'kontak'   => $kontak,
-            'deskripsi'   => $deskripsi,
-            'alamat'   => $alamat,
+            'kontak'     => $kontak,
+            'deskripsi'  => $deskripsi,
+            'alamat'     => $alamat,
             'created_at' => date('Y-m-d H:i:s')
         );
 
@@ -79,12 +75,12 @@ class Supplier extends MY_Controller
 
         $this->jsonResponse(
             $simpan
-                ? ['status' => true, 'message' => 'Data berhasil disimpan']
-                : ['status' => false, 'message' => 'Gagal menyimpan data']
+                ? ['status' => true, 'message' => translate('message_sukses')]
+                : ['status' => false, 'message' => translate('message_gagal')]
         );
     }
 
-    // Ambil data user berdasarkan ID (untuk form edit modal)
+    // Ambil data supplier berdasarkan ID (untuk form edit modal)
     public function get_by_id($id)
     {
         $supplier = $this->Supplier_model->get_by_id($id);
@@ -95,51 +91,60 @@ class Supplier extends MY_Controller
         );
     }
 
-    // Update data user via AJAX
+    // Update data supplier via AJAX
     public function update()
     {
-        $id       = $this->input->post('id', true);
-        $nama     = $this->input->post('nama', true);
-        $deskripsi     = $this->input->post('deskripsi', true);
-        $kontak = $this->input->post('kontak', true);
-        $alamat = $this->input->post('alamat', true);
+        $id        = $this->input->post('id', true);
+        $nama      = $this->input->post('nama', true);
+        $deskripsi = $this->input->post('deskripsi', true);
+        $kontak    = $this->input->post('kontak', true);
+        $alamat    = $this->input->post('alamat', true);
 
         if (empty($id) || empty($nama) || empty($kontak) || empty($alamat) || empty($deskripsi)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Field nama, kontak, dan alamat wajib diisi!']);
+            $this->jsonResponse(['status' => false, 'message' => 'Field nama, kontak, deskripsi, dan alamat wajib diisi!']);
             return;
         }
 
         $data = array(
-            'nama'     => $nama,
-            'kontak' => $kontak,
+            'nama'      => $nama,
+            'kontak'    => $kontak,
             'deskripsi' => $deskripsi,
-            'alamat'     => $alamat
+            'alamat'    => $alamat
         );
-
 
         $update = $this->Supplier_model->update_supplier($id, $data);
 
         $this->jsonResponse(
             $update
-                ? ['status' => true, 'message' => 'Data berhasil diperbarui']
-                : ['status' => false, 'message' => 'Gagal memperbarui data']
+                ? ['status' => true, 'message' =>  translate('message_update')]
+                : ['status' => false, 'message' =>translate('message_update_gagal')]
         );
     }
 
-    // Delete data user via AJAX
-    public function delete($id)
+    // Delete data supplier via AJAX
+    public function delete($id = NULL)
     {
         if (empty($id)) {
             $this->jsonResponse(['status' => false, 'message' => 'ID tidak ditemukan!']);
             return;
         }
 
-        $delete = $this->Supplier_model->delete_supplier($id);
+        $result = $this->Supplier_model->delete_supplier($id);
 
-        $this->jsonResponse(
-            $delete
-                ? ['status' => true, 'message' => 'Data berhasil dihapus']
-                : ['status' => false, 'message' => 'Gagal menghapus data']
-        );
+        if ($result['success']) {
+            $this->jsonResponse(['status' => true, 'message' => 'Data berhasil dihapus']);
+            return;
+        }
+
+        $code = (int) $result['error']['code'];
+        log_message('error', 'Delete Supplier gagal: ' . $result['error']['message']);
+
+        if ($code === 1451) { // foreign key constraint
+            $msg = translate('p_supplier_relasi');
+        } else {
+            $msg = 'Gagal menghapus data dari database';
+        }
+
+        $this->jsonResponse(['status' => false, 'message' => $msg]);
     }
 }

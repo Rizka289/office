@@ -10,7 +10,7 @@ class Stok_model extends CI_Model
         $this->load->database();
     }
 
-    // Subquery: keterangan riwayat TERAKHIR untuk kombinasi barang + lokasi + opsi.
+    // Subquery: keterangan riwayat TERAKHIR untuk kombinasi barang + lokasi + opsi + ukuran.
     // "<=>" = pembanding NULL-safe (NULL <=> NULL bernilai true).
     private function _keterangan_sql()
     {
@@ -19,44 +19,30 @@ class Stok_model extends CI_Model
                  WHERE sr.id_barang = sb.id_barang
                    AND sr.id_location = sb.id_location
                    AND sr.opsi <=> sb.opsi
+                   AND sr.ukuran <=> sb.ukuran
                    AND sr.keterangan IS NOT NULL
                    AND sr.keterangan <> ''
-                   AND sr.ukuran <> ''
                  ORDER BY sr.id DESC
                  LIMIT 1)";
     }
 
-    // Subquery: ukuran riwayat TERAKHIR untuk kombinasi barang + lokasi + opsi.
-    private function _ukuran_sql()
-    {
-        return "(SELECT sr.ukuran
-                 FROM stok_riwayat sr
-                 WHERE sr.id_barang = sb.id_barang
-                   AND sr.id_location = sb.id_location
-                   AND sr.opsi <=> sb.opsi
-                   AND sr.ukuran IS NOT NULL
-                   AND sr.ukuran <> ''
-                 ORDER BY sr.id DESC
-                 LIMIT 1)";
-    }
-
-    // Query dasar: satu baris = satu kombinasi barang + lokasi + opsi
+    // Query dasar: satu baris = satu kombinasi barang + lokasi + opsi + ukuran
+    // (sama dengan kunci stok di Stok_opname_model)
     private function _build_stok_query($search = null)
     {
-        $ket_sql    = $this->_keterangan_sql();
-        $ukuran_sql = $this->_ukuran_sql();
+        $ket_sql = $this->_keterangan_sql();
 
         $this->db->select("
             sb.id_barang,
             sb.id_location,
             sb.opsi,
+            sb.ukuran,
             barang.kode_barang,
             barang.nama AS nama_barang,
             barang.warna,
             location.zone_name AS nama_lokasi,
             location.location_code AS kode_lokasi,
             SUM(sb.stok) AS total_stok,
-            $ukuran_sql AS ukuran,
             $ket_sql AS keterangan
         ", false);
         $this->db->from('stok_barang sb');
@@ -65,7 +51,7 @@ class Stok_model extends CI_Model
 
         // Semua kolom non-agregat wajib masuk GROUP BY (aman untuk ONLY_FULL_GROUP_BY)
         $this->db->group_by(
-            'sb.id_barang, sb.id_location, sb.opsi, barang.kode_barang, barang.nama, barang.warna, ' .
+            'sb.id_barang, sb.id_location, sb.opsi, sb.ukuran, barang.kode_barang, barang.nama, barang.warna, ' .
             'location.zone_name, location.location_code'
         );
 
@@ -77,19 +63,20 @@ class Stok_model extends CI_Model
             $this->db->or_like('barang.kode_barang', $search);
             $this->db->or_like('barang.warna', $search);
             $this->db->or_like('sb.opsi', $search);
+            $this->db->or_like('sb.ukuran', $search);
             $this->db->or_like('location.zone_name', $search);
             $this->db->or_like('location.location_code', $search);
-            $this->db->or_where("$ukuran_sql LIKE '%{$kw}%'", null, false);
             $this->db->or_where("$ket_sql LIKE '%{$kw}%'", null, false);
             $this->db->group_end();
         }
 
         $this->db->order_by('barang.nama', 'ASC');
         $this->db->order_by('sb.opsi', 'ASC');
+        $this->db->order_by('sb.ukuran', 'ASC');
         $this->db->order_by('location.location_code', 'ASC');
     }
 
-    // Hitung total grup (barang + lokasi + opsi) untuk pagination
+    // Hitung total grup (barang + lokasi + opsi + ukuran) untuk pagination
     public function count_stok($search = null)
     {
         $this->_build_stok_query($search);

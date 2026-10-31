@@ -523,7 +523,7 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               <?php endif; ?>
               <?php if ($isi($it->keterangan)): ?>
               <div class="spec">
-                <div class="lbl"><?= translate('keterangan') ?></div>
+                <div class="lbl"><?= translate('deskripsi') ?></div>
                 <div class="val"><?= $multi($it->keterangan) ?></div>
               </div>
             <?php endif; ?>

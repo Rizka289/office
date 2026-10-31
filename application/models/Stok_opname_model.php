@@ -14,7 +14,7 @@ class Stok_opname_model extends CI_Model {
     }
 
     /**
-     * Kunci stok = id_barang + id_location + opsi.
+     * Kunci stok = id_barang + id_location + opsi + ukuran.
      * $data['mode'] :
      *   'tambah' => qty DITAMBAHKAN ke stok saat ini (stok awal / barang masuk)
      *   'opname' => qty adalah JUMLAH FISIK sebenarnya; stok sistem disamakan,
@@ -22,20 +22,21 @@ class Stok_opname_model extends CI_Model {
      */
     public function proses_stok_opname($data)
     {
-        $mode = isset($data['mode']) ? $data['mode'] : 'tambah';
-        $qty  = (int) $data['qty_fisik'];
-        $opsi = (string) $data['opsi'];
+        $mode   = isset($data['mode']) ? $data['mode'] : 'tambah';
+        $qty    = (int) $data['qty_fisik'];
+        $opsi   = (string) $data['opsi'];
+        $ukuran = isset($data['ukuran']) ? (string) $data['ukuran'] : '';   // '' = tanpa ukuran
 
         $this->db->trans_begin();
 
-        // 1. Stok sistem saat ini untuk barang + lokasi + OPSI yang sama.
+        // 1. Stok sistem saat ini untuk barang + lokasi + opsi + UKURAN yang sama.
         //    FOR UPDATE: kunci baris supaya 2 user yang simpan bersamaan
         //    tidak membaca stok_sebelum yang sama.
         $rows = $this->db->query(
             'SELECT id, stok FROM stok_barang
-             WHERE id_barang = ? AND id_location = ? AND opsi = ?
+             WHERE id_barang = ? AND id_location = ? AND opsi = ? AND ukuran = ?
              ORDER BY id ASC FOR UPDATE',
-            [$data['id_barang'], $data['id_location'], $opsi]
+            [$data['id_barang'], $data['id_location'], $opsi, $ukuran]
         )->result();
 
         $stok_sebelum = 0;
@@ -65,6 +66,7 @@ class Stok_opname_model extends CI_Model {
                 'id_barang'   => $data['id_barang'],
                 'id_location' => $data['id_location'],
                 'opsi'        => $opsi,
+                'ukuran'      => $ukuran,
                 'stok'        => $stok_sesudah
             ]);
         }
@@ -77,7 +79,7 @@ class Stok_opname_model extends CI_Model {
             'id_location'     => $data['id_location'],
             'jenis_transaksi' => 'STOK_OPNAME',
             'id_referensi'    => NULL,
-            'ukuran'          => isset($data['ukuran']) ? $data['ukuran'] : NULL,
+            'ukuran'          => $ukuran,
             'opsi'            => $opsi,
             'qty_masuk'       => $qty_masuk,
             'qty_keluar'      => $qty_keluar,

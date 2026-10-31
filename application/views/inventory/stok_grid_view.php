@@ -22,9 +22,9 @@
                     <th><?= translate('kode') ?></th>
                     <th><?= translate('nama_barang') ?></th>
                     <th><?= translate('warna') ?></th>
-                    <th>Ukuran</th>
-                    <th>Opsi</th>
-                    <th><?= translate('keterangan') ?></th>
+                    <th><?= translate('ukuran') ?></th>
+                    <th><?= translate('opsi1') ?></th>
+                    <th><?= translate('deskripsi') ?></th>
                     <th><?= translate('lokasi_gudang') ?></th>
                     <th><?= translate('stok') ?></th>
                     <th class="text-center"><?= translate('aksi') ?></th>
@@ -87,9 +87,13 @@
                 var lokasi = escapeHtml(stok.kode_lokasi) + '-' +
                     (stok.nama_lokasi ? escapeHtml(stok.nama_lokasi) : '<span class="text-muted">-</span>');
 
-                // Detail -> buka Kartu Stok dengan filter barang + lokasi
+                // Detail -> buka Kartu Stok dengan filter barang + lokasi + opsi + ukuran
+                // ukuran kosong dikirim sebagai '__none__' (= tanpa ukuran)
+                var ukuranParam = (stok.ukuran == null || stok.ukuran === '') ? '__none__' : stok.ukuran;
                 var href = riwayatUrl + '?id_barang=' + encodeURIComponent(stok.id_barang) +
-                    '&id_location=' + encodeURIComponent(stok.id_location);
+                    '&id_location=' + encodeURIComponent(stok.id_location) +
+                    '&opsi=' + encodeURIComponent(stok.opsi == null ? '' : stok.opsi) +
+                    '&ukuran=' + encodeURIComponent(ukuranParam);
 
                 var tr = '<tr>' +
                     '<td>' + no + '</td>' +

@@ -58,20 +58,20 @@
                 <table class="table table-bordered table-striped" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
-                            <th>Waktu</th>
-                            <th>Kode Barang</th>
-                            <th>Barang</th>
-                            <th>Warna</th>
-                            <th>Ukuran</th>
-                            <th>Opsi</th>
-                            <th>Lokasi</th>
-                            <th>Jenis Transaksi</th>
-                            <th>Masuk</th>
-                            <th>Keluar</th>
-                            <th>Stok Sebelum</th>
-                            <th>Stok Sesudah</th>
-                            <th>Keterangan</th>
-                            <th>Petugas</th>
+                            <th><?= translate('tanggal') ?></th>
+                            <th><?= translate('kode') ?></th>
+                            <th><?= translate('nama') ?></th>
+                            <th><?= translate('warna') ?></th>
+                            <th><?= translate('ukuran') ?></th>
+                            <th><?= translate('opsi1') ?></th>
+                            <th><?= translate('lokasi_gudang') ?></th>
+                            <th><?= translate('jenis_transaksi') ?></th>
+                            <th><?= translate('stok_in') ?></th>
+                            <th><?= translate('stok_out') ?></th>
+                            <th><?= translate('stok_sblm') ?></th>
+                            <th><?= translate('stok_stlh') ?></th>
+                            <th><?= translate('deskripsi') ?></th>
+                            <th><?= translate('petugas') ?></th>
                         </tr>
                     </thead>
                     <tbody>

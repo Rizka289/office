@@ -32,7 +32,6 @@ class Stok_opname extends CI_Controller {
         $opsi        = $this->input->post('opsi');
         $qty_raw     = $this->input->post('qty_fisik');
         $mode        = $this->input->post('mode');                   // 'tambah' | 'opname'
-        $ukuran      = trim((string) $this->input->post('ukuran'));  // opsional
         $keterangan  = $this->input->post('keterangan');
 
         // Petugas input: dari session login (key 'user_id' diset di Login::proses)
@@ -58,6 +57,20 @@ class Stok_opname extends CI_Controller {
             redirect('stok_opname');
         }
 
+        // Ukuran ikut jadi pembeda stok (id_barang + lokasi + opsi + ukuran).
+        // Rapikan spasi/enter supaya "60 x 90" dan "60  x  90" dianggap sama.
+        $ukuran = preg_replace('/\s+/u', ' ', trim((string) $this->input->post('ukuran')));
+
+        // Aksesoris tidak punya ukuran
+        if ($opsi === 'aksesoris') {
+            $ukuran = '';
+        }
+
+        if (mb_strlen($ukuran) > 100) {
+            $this->session->set_flashdata('error', 'Ukuran maksimal 100 karakter!');
+            redirect('stok_opname');
+        }
+
         // Jangan sampai input kosong dianggap 0 (bisa mengosongkan stok)
         if ($qty_raw === null || $qty_raw === '' || !is_numeric($qty_raw)) {
             $this->session->set_flashdata('error', 'Jumlah wajib diisi dengan angka!');
@@ -80,9 +93,9 @@ class Stok_opname extends CI_Controller {
             'id_barang'   => $id_barang,
             'id_location' => $id_location,
             'opsi'        => $opsi,
+            'ukuran'      => $ukuran,          // selalu string, '' kalau kosong
             'qty_fisik'   => $qty,
             'mode'        => $mode,
-            'ukuran'      => ($ukuran !== '' ? $ukuran : null),
             'keterangan'  => $keterangan,
             'created_by'  => $created_by
         ]);

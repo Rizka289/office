@@ -10,13 +10,34 @@
     box-shadow: 0 2px 10px rgba(15, 42, 41, .04);
   }
 
-  .pnw-detail-page .status-lock { font-size: .8rem; }
+  .pnw-detail-page .status-lock {
+    font-size: .8rem;
+  }
 
-  .pnw-detail-page .info-card { padding: 18px 20px; margin-bottom: 18px; }
-  .pnw-detail-page .info-label { font-size: .74rem; text-transform: uppercase; letter-spacing: .03em; color: #8a938d; margin-bottom: 2px; }
-  .pnw-detail-page .info-value { font-size: .95rem; font-weight: 600; margin-bottom: 12px; }
+  .pnw-detail-page .info-card {
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
 
-  .pnw-detail-page .table-wrap { overflow: hidden; margin-bottom: 18px; }
+  .pnw-detail-page .info-label {
+    font-size: .74rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: #8a938d;
+    margin-bottom: 2px;
+  }
+
+  .pnw-detail-page .info-value {
+    font-size: .95rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .pnw-detail-page .table-wrap {
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+
   .pnw-detail-page table thead th {
     background: var(--brand-light);
     color: var(--brand-dark);
@@ -28,30 +49,70 @@
     border: none;
     padding: .85rem 1rem;
   }
-  .pnw-detail-page table tbody td { padding: .8rem 1rem; vertical-align: top; font-size: .88rem; border-color: #f1f3f2; }
-  .pnw-detail-page .spek-line { display: block; font-size: .8rem; color: #6c757d; }
-  .pnw-detail-page .spek-multi { margin-top: 2px; }
-  .pnw-detail-page .keterangan-box { font-size: .78rem; color: #8a938d; font-style: italic; margin-top: 4px; }
 
-  .pnw-detail-page .summary-card { padding: 18px 20px; max-width: 360px; margin-left: auto; }
-  .pnw-detail-page .summary-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: .9rem; }
-  .pnw-detail-page .summary-row.total { border-top: 2px solid var(--brand-light); margin-top: 6px; padding-top: 12px; font-size: 1.05rem; font-weight: 700; color: var(--brand-dark); }
+  .pnw-detail-page table tbody td {
+    padding: .8rem 1rem;
+    vertical-align: top;
+    font-size: .88rem;
+    border-color: #f1f3f2;
+  }
+
+  .pnw-detail-page .spek-line {
+    display: block;
+    font-size: .8rem;
+    color: #6c757d;
+  }
+
+  .pnw-detail-page .spek-multi {
+    margin-top: 2px;
+  }
+
+  .pnw-detail-page .keterangan-box {
+    font-size: .78rem;
+    color: #8a938d;
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .pnw-detail-page .summary-card {
+    padding: 18px 20px;
+    max-width: 360px;
+    margin-left: auto;
+  }
+
+  .pnw-detail-page .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: .9rem;
+  }
+
+  .pnw-detail-page .summary-row.total {
+    border-top: 2px solid var(--brand-light);
+    margin-top: 6px;
+    padding-top: 12px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--brand-dark);
+  }
 </style>
 
 <?php
-  $subtotal = isset($header->subtotal) ? (float) $header->subtotal : 0;
-  $ppn      = isset($header->ppn_nominal) ? (float) $header->ppn_nominal : 0;
-  $pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
-  $grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
-  // Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
-  // maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
-  $fmt_luas = function ($v) {
-    $s   = number_format((float) $v, 4, '.', '');
-    $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
-    return number_format((float) $v, $dec, '.', '');
-  };
-  $rp = function ($v) { return 'Rp ' . number_format((float) $v, 0, ',', '.'); };
-  $approved = (($header->status ?? 'draft') === 'approved');
+$subtotal = isset($header->subtotal) ? (float) $header->subtotal : 0;
+$ppn      = isset($header->ppn_nominal) ? (float) $header->ppn_nominal : 0;
+$pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
+$grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
+// Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
+// maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+$fmt_luas = function ($v) {
+  $s   = number_format((float) $v, 4, '.', '');
+  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
+  return number_format((float) $v, $dec, '.', '');
+};
+$rp = function ($v) {
+  return 'Rp ' . number_format((float) $v, 0, ',', '.');
+};
+$approved = (($header->status ?? 'draft') === 'approved');
 ?>
 
 <div class="pnw-detail-page">
@@ -74,60 +135,63 @@
       <h5 class="mb-0">
         <?= html_escape($header->no_surat); ?>
         <?php if ($approved): ?>
-          <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i>Approved</span>
+          <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
         <?php else: ?>
-          <span class="badge bg-warning text-dark ms-2 align-middle">Belum Approve</span>
+          <span class="badge bg-warning text-dark ms-2 align-middle"><?= translate('b_setuju') ?></span>
         <?php endif; ?>
       </h5>
-      <div class="text-muted small">Detail Penawaran</div>
+      <div class="text-muted small"><?= translate('detail_penawaran') ?></div>
       <?php if ($approved): ?>
         <div class="text-muted status-lock mt-1">
-          <i class="bi bi-info-circle me-1"></i>Sudah di-approve<?= !empty($header->approved_at) ? ' pada ' . date('d M Y H:i', strtotime($header->approved_at)) : ''; ?>, data tidak bisa diedit lagi.
+          <i class="bi bi-info-circle me-1"></i>
+          <?= translate('ket_approved') . (!empty($header->approved_at) ? ' ' . translate('pada') . ' ' . date('d M Y H:i', strtotime($header->approved_at)) : '') ?>, <?= translate('info_penawaran'); ?>
         </div>
       <?php endif; ?>
     </div>
     <div class="d-flex gap-2 flex-wrap">
       <?php if (!$approved): ?>
         <a href="<?= site_url('penawaran/edit/' . (int) $header->id); ?>" class="btn btn-warning">
-          <i class="bi bi-pencil-square me-1"></i> Edit
+          <i class="bi bi-pencil-square me-1"></i> <?= translate('update') ?>
         </a>
         <?= form_open('penawaran/approve/' . (int) $header->id, [
-              'class'    => 'd-inline',
-              'onsubmit' => "return confirm('Approve penawaran ini? Setelah di-approve, data tidak bisa diedit lagi.');"
-            ]); ?>
-          <button type="submit" class="btn btn-success">
-            <i class="bi bi-check2-circle me-1"></i> Approve
-          </button>
+          'class'    => 'd-inline',
+          'onsubmit' => "return confirm('Approve penawaran ini? Setelah di-approve, data tidak bisa diedit lagi.');"
+        ]); ?>
+        <button type="submit" class="btn btn-success">
+          <i class="bi bi-check2-circle me-1"></i> <?= translate('setuju') ?>
+        </button>
         <?= form_close(); ?>
         <?= form_open('penawaran/delete/' . (int) $header->id, [
-              'class'    => 'd-inline',
-              'onsubmit' => "return confirm('Hapus penawaran " . html_escape($header->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
-            ]); ?>
-          <button type="submit" class="btn btn-outline-danger">
-            <i class="bi bi-trash me-1"></i> Hapus
-          </button>
+          'class'    => 'd-inline',
+          'onsubmit' => "return confirm('Hapus penawaran " . html_escape($header->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+        ]); ?>
+        <button type="submit" class="btn btn-outline-danger">
+          <i class="bi bi-trash me-1"></i> <?= translate('hapus') ?>
+        </button>
         <?= form_close(); ?>
       <?php endif; ?>
       <div class="btn-group">
         <button type="button" class="btn btn-brand dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-          <i class="bi bi-printer me-1"></i> Cetak PDF
+          <i class="bi bi-printer me-1"></i> <?= translate('cetak') ?>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
-          <li><h6 class="dropdown-header">Termin pembayaran (S&amp;K)</h6></li>
+          <li>
+            <h6 class="dropdown-header"><?= translate('termin_pembayran') ?>(S&amp;K)</h6>
+          </li>
           <li>
             <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id . '?termin=50_50'); ?>">
-              50% saat memesan + 50% sebelum kirim
+             <?= translate('lbl_50%') ?>
             </a>
           </li>
           <li>
             <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id . '?termin=100'); ?>">
-              100% saat memesan
+             <?= translate('lbl_100%') ?>
             </a>
           </li>
         </ul>
       </div>
       <a href="<?= site_url('penawaran'); ?>" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i> Kembali
+        <i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?>
       </a>
     </div>
   </div>
@@ -136,25 +200,25 @@
   <div class="info-card">
     <div class="row">
       <div class="col-md-3">
-        <div class="info-label">No. Surat</div>
+        <div class="info-label"><?= translate('no_penawaran') ?></div>
         <div class="info-value"><?= html_escape($header->no_surat); ?></div>
       </div>
       <div class="col-md-3">
-        <div class="info-label">Tanggal</div>
+        <div class="info-label"><?= translate('tanggal') ?></div>
         <div class="info-value"><?= date('d M Y', strtotime($header->tanggal)); ?></div>
       </div>
       <div class="col-md-3">
-        <div class="info-label">Customer</div>
+        <div class="info-label"><?= translate('pelanggan') ?></div>
         <div class="info-value"><?= html_escape($header->customer ?? '-'); ?></div>
       </div>
       <div class="col-md-3">
-        <div class="info-label">Dibuat Oleh</div>
+        <div class="info-label"><?= translate('lbl_dbuat') ?></div>
         <div class="info-value"><?= html_escape($header->dibuat_oleh ?? '-'); ?></div>
       </div>
     </div>
     <?php if (!empty($header->catatan)): ?>
       <div class="mt-2">
-        <div class="info-label">Catatan</div>
+        <div class="info-label"><?= translate('catatan') ?></div>
         <div class="text-muted small"><?= nl2br(html_escape($header->catatan)); ?></div>
       </div>
     <?php endif; ?>
@@ -166,13 +230,13 @@
       <table class="table mb-0">
         <thead>
           <tr>
-            <th style="width:3%">No</th>
-            <th style="width:32%">Deskripsi Item</th>
-            <th style="width:12%">Ukuran (mm)</th>
-            <th style="width:8%" class="text-center">Luas m²</th>
-            <th style="width:6%" class="text-center">Qty</th>
-            <th style="width:12%" class="text-end">Harga/Unit</th>
-            <th style="width:12%" class="text-end">Total</th>
+            <th style="width:3%"><?= translate('no') ?></th>
+            <th style="width:32%"><?= translate('lbl_deskripsi') ?></th>
+            <th style="width:12%"><?= translate('ukuran') ?> (mm)</th>
+            <th style="width:8%" class="text-center"><?= translate('luas') ?> m²</th>
+            <th style="width:6%" class="text-center"><?= translate('qty') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('harga') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('total') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -237,7 +301,7 @@
             <?php endforeach; ?>
           <?php else: ?>
             <tr>
-              <td colspan="7" class="text-center text-muted py-4">Belum ada item pada penawaran ini.</td>
+              <td colspan="7" class="text-center text-muted py-4"><?= translate('info_detail_penawaran') ?></td>
             </tr>
           <?php endif; ?>
         </tbody>
@@ -248,31 +312,31 @@
   <!-- Ringkasan Nilai -->
   <div class="summary-card">
     <div class="summary-row">
-      <span>Subtotal</span>
+      <span><?= translate('subtotal') ?></span>
       <span><?= $rp($subtotal); ?></span>
     </div>
     <?php if ((float) ($header->biaya_pasang ?? 0) > 0): ?>
       <div class="summary-row">
-        <span>Biaya Pemasangan</span>
+        <span><?= translate('rp_pasang') ?></span>
         <span><?= $rp($header->biaya_pasang); ?></span>
       </div>
     <?php endif; ?>
     <?php if ((float) ($header->biaya_ongkir ?? 0) > 0): ?>
       <div class="summary-row">
-        <span>Biaya Pengiriman</span>
+        <span><?= translate('rp_pengiriman') ?></span>
         <span><?= $rp($header->biaya_ongkir); ?></span>
       </div>
     <?php endif; ?>
     <div class="summary-row">
-      <span>PPN <?= isset($header->ppn_persen) ? rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.') : '11'; ?>%</span>
+      <span><?= translate('ppn') ?> <?= isset($header->ppn_persen) ? rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.') : '11'; ?>%</span>
       <span><?= $rp($ppn); ?></span>
     </div>
     <div class="summary-row">
-      <span>PPh <?= isset($header->pph_persen) ? rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.') : '2.5'; ?>%</span>
+      <span><?= translate('pph') ?><?= isset($header->pph_persen) ? rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.') : '2.5'; ?>%</span>
       <span><?= $rp($pph); ?></span>
     </div>
     <div class="summary-row total">
-      <span>Grand Total</span>
+      <span><?= translate('grand_total') ?></span>
       <span><?= $rp($grand); ?></span>
     </div>
   </div>

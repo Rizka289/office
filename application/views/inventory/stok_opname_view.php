@@ -269,11 +269,13 @@
 
                 <div class="so-form-group">
                     <label class="so-label"><i class="fas fa-ruler-combined"></i><?= translate('ukuran') ?></label>
-                    <textarea name="ukuran" class="form-control so-control" rows="3" placeholder="<?= translate('p_uk') ?>"></textarea>
+                    <input type="text" name="ukuran" id="soUkuran" maxlength="100" autocomplete="off"
+                        class="form-control so-control" placeholder="<?= translate('p_uk') ?>">
+                    <div class="so-info">Ukuran yang berbeda dihitung sebagai stok terpisah. Tidak berlaku untuk aksesoris.</div>
                 </div>
 
                 <div class="so-form-group">
-                    <label class="so-label"><i class="fas fa-comment-dots"></i><?= translate('keterangan') ?></label>
+                    <label class="so-label"><i class="fas fa-comment-dots"></i><?= translate('deskripsi') ?></label>
                     <textarea name="keterangan" class="form-control so-control" rows="3" placeholder="<?= translate('p_ket_so') ?>"></textarea>
                 </div>
 
@@ -465,6 +467,18 @@
         }
         selMode.addEventListener('change', updateMode);
         updateMode();
+
+        // Ukuran: dinonaktifkan untuk opsi aksesoris (aksesoris tidak punya ukuran)
+        var selOpsi = document.getElementById('soOpsi');
+        var inpUkuran = document.getElementById('soUkuran');
+
+        function updateUkuran() {
+            var aks = selOpsi.value === 'aksesoris';
+            inpUkuran.disabled = aks;   // disabled tidak ikut terkirim; controller mengisi ''
+            if (aks) inpUkuran.value = '';
+        }
+        selOpsi.addEventListener('change', updateUkuran);
+        updateUkuran();
 
         // Pastikan barang benar-benar dipilih dari daftar (bukan hanya diketik)
         form.addEventListener('submit', function(e) {

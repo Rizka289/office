@@ -13,8 +13,8 @@
 
   <div class="so-hero mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-      <h5 class="mb-1"><i class="bi bi-cart-check me-2"></i>Buat Sales Order</h5>
-      <small>Item, harga, dan pajak diambil dari penawaran yang sudah di-approve dan tidak bisa diubah di sini.</small>
+      <h5 class="mb-1"><i class="bi bi-cart-check me-2"></i><?= translate('lbl_buat_so') ?></h5>
+      <small><?= translate('info_so') ?></small>
     </div>
     <div class="fs-5 fw-semibold">No. SO: <span id="no_so_label"><?= html_escape($no_so) ?></span></div>
   </div>
@@ -28,11 +28,11 @@
 
     <!-- 1. Sumber penawaran -->
     <div class="card so-card mb-3">
-      <div class="card-header"><i class="bi bi-file-earmark-text me-2"></i>Penawaran</div>
+      <div class="card-header"><i class="bi bi-file-earmark-text me-2"></i><?= translate('pesanan_penjualan') ?></div>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-6">
-            <label class="form-label">Pilih penawaran (sudah di-approve) <span class="text-danger">*</span></label>
+            <label class="form-label"><?= translate('info_pilih_penawaran') ?><span class="text-danger">*</span></label>
             <input type="text" id="cari_penawaran" class="form-control" list="dl_penawaran"
                    placeholder="Ketik no. surat / nama customer, lalu pilih dari daftar" autocomplete="off" required>
             <input type="hidden" name="id_penawaran" id="id_penawaran" value="">
@@ -42,15 +42,15 @@
               <?php endforeach; ?>
             </datalist>
             <?php if (empty($penawaran_list)): ?>
-              <div class="form-text text-warning">Belum ada penawaran yang di-approve dan belum jadi SO.</div>
+              <div class="form-text text-warning"><?= translate('ket_search_penawaran') ?></div>
             <?php endif; ?>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Customer</label>
+            <label class="form-label"><?= translate('pelanggan') ?></label>
             <input type="text" id="v_customer" class="form-control so-locked" readonly>
           </div>
           <div class="col-md-3">
-            <label class="form-label">Tanggal penawaran</label>
+            <label class="form-label"><?= translate('tanggal_penawaran') ?></label>
             <input type="text" id="v_tgl_penawaran" class="form-control so-locked" readonly>
           </div>
         </div>
@@ -59,28 +59,28 @@
 
     <!-- 2. Data order -->
     <div class="card so-card mb-3">
-      <div class="card-header"><i class="bi bi-info-circle me-2"></i>Data Order</div>
+      <div class="card-header"><i class="bi bi-info-circle me-2"></i><?= translate('info_data_order') ?></div>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-3">
-            <label class="form-label">Tanggal SO <span class="text-danger">*</span></label>
+            <label class="form-label"><?= translate('tanggal') ?> <span class="text-danger">*</span></label>
             <input type="date" name="tanggal" id="tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
           </div>
           <div class="col-md-3">
-            <label class="form-label">No. PO customer</label>
+            <label class="form-label"><?= translate('no_po_pelanggan') ?></label>
             <input type="text" name="no_po_customer" class="form-control" maxlength="50" placeholder="Jika customer kirim PO">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Tanggal kirim / target selesai</label>
+            <label class="form-label"><?= translate('target_kirim') ?></label>
             <input type="date" name="tgl_kirim" class="form-control">
           </div>
           <div class="col-md-3">
-            <label class="form-label">Termin pembayaran <span class="text-danger">*</span></label>
+            <label class="form-label"><?= translate('termin_pembayran') ?> <span class="text-danger">*</span></label>
             <select name="termin" id="termin" class="form-select" required>
-              <option value="100">100% (lunas)</option>
-              <option value="50-50">DP 50% / pelunasan 50%</option>
-              <option value="30-70">DP 30% / pelunasan 70%</option>
-              <option value="custom">Custom</option>
+              <option value="100"><?= translate('100%') ?></option>
+              <option value="50-50"><?= translate('dp_50') ?></option>
+              <option value="30-70"><?= translate('dp_30') ?></option>
+              <option value="custom"><?= translate('custom') ?></option>
             </select>
           </div>
           <div class="col-md-3 d-none" id="wrap_dp">
@@ -88,11 +88,11 @@
             <input type="number" name="dp_persen" id="dp_persen" class="form-control" min="0" max="100" step="0.01" value="0">
           </div>
           <div class="col-md-6">
-            <label class="form-label">Alamat pengiriman / pemasangan</label>
+            <label class="form-label"><?= translate('almt_kirim') ?></label>
             <textarea name="alamat_kirim" id="alamat_kirim" class="form-control" rows="2" placeholder="Diisi otomatis dari alamat customer, boleh diubah"></textarea>
           </div>
           <div class="col-md-6">
-            <label class="form-label">Catatan (opsional)</label>
+            <label class="form-label"><?= translate('catatan') ?></label>
             <textarea name="catatan" class="form-control" rows="2" placeholder="Mis. akses lokasi, jam kerja, permintaan khusus"></textarea>
           </div>
         </div>
@@ -102,21 +102,21 @@
     <!-- 3. Item (read-only dari penawaran) -->
     <div class="card so-card mb-3">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-list-ul me-2"></i>Item Order</span>
-        <span class="badge text-bg-secondary"><i class="bi bi-lock me-1"></i>Terkunci dari penawaran</span>
+        <span><i class="bi bi-list-ul me-2"></i><?= translate('item_list') ?></span>
+        <span class="badge text-bg-secondary"><i class="bi bi-lock me-1"></i><?= translate('info_status_penawaran') ?></span>
       </div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th style="width:40px">#</th>
-              <th>Barang</th>
-              <th>Warna / Finishing</th>
-              <th class="text-end">L x T (mm)</th>
-              <th class="text-end">Luas (m²)</th>
-              <th class="text-end">Qty</th>
-              <th class="text-end">Harga satuan</th>
-              <th class="text-end">Subtotal</th>
+              <th style="width:40px"><?= translate('no') ?></th>
+              <th><?= translate('nama') ?></th>
+              <th><?= translate('warna') ?></th>
+              <th class="text-end"><?= translate('ukuran')?> (mm)</th>
+              <th class="text-end"><?= translate('luas') ?>(m²)</th>
+              <th class="text-end"><?= translate('qty') ?></th>
+              <th class="text-end"><?= translate('harga') ?></th>
+              <th class="text-end"><?= translate('subtotal') ?></th>
             </tr>
           </thead>
           <tbody id="tbody_item">

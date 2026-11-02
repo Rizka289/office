@@ -81,7 +81,8 @@ class Sales_order extends MY_Controller
 
     public function tambah()
     {
-        $data['title']          = 'Buat Sales Order';
+        $data['title']       = translate('pesanan_penjualan');
+        $data['page_title']  = translate('pesanan_penjualan');
         $data['active_menu']    = 'sales_order';
         $data['penawaran_list'] = $this->Sales_order_model->get_penawaran_siap();
         $data['no_so']          = $this->Sales_order_model->generate_no(date('Y-m-d'))['no_so'];
@@ -245,5 +246,17 @@ class Sales_order extends MY_Controller
             }
         }
         return null;
+    }
+    // Cetak invoice berkop surat (buka di tab baru)
+    public function cetak($id = 0)
+    {
+        $so = $this->Sales_order_model->get_so_lengkap($id);
+        if (!$so) {
+            show_404();
+        }
+        $so['pembayaran']    = $this->Sales_order_model->get_pembayaran($id);
+        $so['total_dibayar'] = $this->Sales_order_model->total_dibayar($id);
+
+        $this->load->view('penjualan/sales_order_invoice', array('so' => $so));
     }
 }

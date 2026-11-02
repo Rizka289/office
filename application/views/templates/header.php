@@ -347,7 +347,7 @@
                 ],
                 [
                     'key'   => 'sales_order',
-                    'label' => function_exists('translate') ? translate('pesanan_penjualan') : 'Pesanan Penjualan',
+                    'label' => translate('pesanan_penjualan'),
                     'icon'  => 'bi-box',
                     'url'   => 'sales_order',
                     'roles' => ['super_admin', 'staff_purchasing'],

@@ -47,9 +47,9 @@ $dp_persen = (float) $h->dp_persen;
 $dp_nilai  = round((float) $h->grand_total * $dp_persen / 100);
 $sisa      = (float) $h->grand_total - $dp_nilai;
 if ($h->termin === '100' || $dp_persen <= 0) {
-  $termin_teks = 'Lunas 100%';
+  $termin_teks = translate('100%');
 } else {
-  $termin_teks = 'DP ' . $num($dp_persen, 2) . '% / pelunasan ' . $num(100 - $dp_persen, 2) . '%';
+  $termin_teks = 'DP ' . $num($dp_persen, 2) . '% / ' . translate('pelunasan') . $num(100 - $dp_persen, 2) . '%';
 }
 
 // Ringkasan pengiriman
@@ -389,7 +389,9 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
           <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-x-circle me-1"></i><?= translate('btn_batal') ?></button>
           <?= form_close() ?>
         <?php endif; ?>
-        <button type="button" class="btn btn-outline-light btn-sm" onclick="window.print()"><i class="bi bi-printer me-1"></i><?= translate('cetak') ?></button>
+        <a href="<?= site_url('sales_order/cetak/' . (int) $h->id) ?>" target="_blank" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-printer me-1"></i><?= translate('cetak') ?>
+        </a>
       </div>
     </div>
   </div>
@@ -407,7 +409,7 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               <dl class="kv">
                 <dt><?= translate('pelanggan') ?></dt>
                 <dd><?= html_escape($h->nama_customer) ?></dd>
-                <dt><?= translate('no_po') ?></dt>
+                <dt><?= translate('no_po_pelanggan') ?></dt>
                 <dd><?= $isi($h->no_po_customer) ? html_escape($h->no_po_customer) : '<span class="text-muted">Tidak ada</span>' ?></dd>
                 <dt><?= translate('dari_penawaran') ?></dt>
                 <dd><a href="<?= site_url('penawaran/edit/' . (int) $h->id_penawaran) ?>"><?= translate('a_penawaran') ?></a></dd>
@@ -522,11 +524,11 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
                 </div>
               <?php endif; ?>
               <?php if ($isi($it->keterangan)): ?>
-              <div class="spec">
-                <div class="lbl"><?= translate('deskripsi') ?></div>
-                <div class="val"><?= $multi($it->keterangan) ?></div>
-              </div>
-            <?php endif; ?>
+                <div class="spec">
+                  <div class="lbl"><?= translate('deskripsi') ?></div>
+                  <div class="val"><?= $multi($it->keterangan) ?></div>
+                </div>
+              <?php endif; ?>
               <?php if ($isi($it->komponen_kusen)): ?>
                 <div class="spec">
                   <div class="lbl"><?= translate('kusen') ?></div>
@@ -541,7 +543,7 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               <?php endif; ?>
             </div>
 
-            
+
 
             <?php if ($ada_motor): ?>
               <div class="block">
@@ -685,13 +687,13 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               <div class="sum-row"><span><?= translate('rp_pasang') ?></span><span><?= $rp($h->biaya_pasang) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->biaya_ongkir > 0): ?>
-              <div class="sum-row"><span></span><span><?= translate('rp_pengiriman') . ' '. $rp($h->biaya_ongkir) ?></span></div>
+              <div class="sum-row"><span></span><span><?= translate('rp_pengiriman') . ' ' . $rp($h->biaya_ongkir) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->ppn_persen > 0): ?>
               <div class="sum-row"><span><?= translate('ppn') . ' ' . $num($h->ppn_persen, 2) ?>%</span><span><?= $rp($h->ppn_nominal) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->pph_persen > 0): ?>
-              <div class="sum-row"><span><?= translate('pph'). ' ' . $num($h->pph_persen, 2) ?>%</span><span><?= $rp($h->pph_nominal) ?></span></div>
+              <div class="sum-row"><span><?= translate('pph') . ' ' . $num($h->pph_persen, 2) ?>%</span><span><?= $rp($h->pph_nominal) ?></span></div>
             <?php endif; ?>
             <div class="sum-grand">
               <div class="small text-muted"><?= translate('grand_total') ?></div>
@@ -702,7 +704,7 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
         </div>
 
         <div class="panel mb-3">
-          <div class="panel-title"><i class="bi bi-wallet2"></i>Pembayaran</div>
+          <div class="panel-title"><i class="bi bi-wallet2"></i><?= translate('pembayaran') ?></div>
           <div class="panel-body">
             <div class="fw-semibold mb-2"><?= $termin_teks ?></div>
             <?php if ($dp_persen > 0): ?>
@@ -712,25 +714,25 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
               </div>
               <div class="pay-legend">
                 <div><span class="dot" style="background:#2f7a57"></span>DP<br><strong><?= $rp($dp_nilai) ?></strong></div>
-                <div class="text-end"><span class="dot" style="background:#9fc9b4"></span>Pelunasan<br><strong><?= $rp($sisa) ?></strong></div>
+                <div class="text-end"><span class="dot" style="background:#9fc9b4"></span><?= translate('pelunasan') ?><br><strong><?= $rp($sisa) ?></strong></div>
               </div>
             <?php endif; ?>
 
             <div class="block">
-              <div class="sum-row"><span>Total dibayar</span><strong><?= $rp($total_bayar) ?></strong></div>
-              <div class="sum-row"><span>Sisa tagihan</span><span><?= $rp($sisa_tagih) ?></span></div>
+              <div class="sum-row"><span><?= translate('t_dbayr') ?></span><strong><?= $rp($total_bayar) ?></strong></div>
+              <div class="sum-row"><span><?= translate('lbl_tagihan') ?></span><span><?= $rp($sisa_tagih) ?></span></div>
               <?php if ($h->status === 'draft'): ?>
                 <?php if ($kurang_dp > 0): ?>
-                  <div class="note mt-2"><i class="bi bi-exclamation-circle me-1"></i>DP belum cukup, kurang <strong><?= $rp($kurang_dp) ?></strong>. SO belum bisa dikonfirmasi.</div>
+                  <div class="note mt-2"><i class="bi bi-exclamation-circle me-1"></i><?= translate('info_dp') ?> <strong><?= $rp($kurang_dp) ?></strong>. SO belum bisa dikonfirmasi.</div>
                 <?php else: ?>
-                  <div class="note mt-2"><i class="bi bi-check-circle me-1"></i>DP terpenuhi. SO siap dikonfirmasi.</div>
+                  <div class="note mt-2"><i class="bi bi-check-circle me-1"></i><?= translate('info_pelunasan_so') ?></div>
                 <?php endif; ?>
               <?php endif; ?>
             </div>
 
             <?php if (!empty($bayar_list)): ?>
               <div class="block">
-                <div class="block-title">Riwayat pembayaran</div>
+                <div class="block-title"><?= translate('lbl_riwayat_pembayaran') ?></div>
                 <table class="mini-table">
                   <?php foreach ($bayar_list as $b): ?>
                     <tr>
@@ -755,41 +757,41 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
             <?php if ($bisa_bayar): ?>
               <div class="block no-print">
                 <button class="btn btn-sm btn-success w-100" type="button" data-bs-toggle="collapse" data-bs-target="#form_bayar">
-                  <i class="bi bi-plus-lg me-1"></i>Catat pembayaran
+                  <i class="bi bi-plus-lg me-1"></i><?= translate('btn_ctat_pembyaran') ?>
                 </button>
                 <div class="collapse mt-3" id="form_bayar">
                   <?= form_open('sales_order/bayar/' . (int) $h->id) ?>
                   <div class="row g-2">
                     <div class="col-6">
-                      <label class="form-label small mb-1">Tanggal</label>
+                      <label class="form-label small mb-1"><?= translate('tanggal') ?></label>
                       <input type="date" name="tanggal" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
                     </div>
                     <div class="col-6">
-                      <label class="form-label small mb-1">Jenis</label>
+                      <label class="form-label small mb-1"><?= translate('jenis') ?></label>
                       <select name="jenis" class="form-select form-select-sm">
                         <option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option>
-                        <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>>Pelunasan</option>
-                        <option value="lainnya">Lainnya</option>
+                        <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>><?= translate('pelunasan') ?></option>
+                        <option value="lainnya"><?= translate('lainnya') ?></option>
                       </select>
                     </div>
                     <div class="col-12">
-                      <label class="form-label small mb-1">Nominal (Rp)</label>
+                      <label class="form-label small mb-1"><?= translate('nominal(rp)') ?></label>
                       <input type="number" name="nominal" class="form-control form-control-sm" min="1" step="0.01"
                         value="<?= $kurang_dp > 0 ? (float) $kurang_dp : (float) $sisa_tagih ?>" required>
                     </div>
                     <div class="col-6">
-                      <label class="form-label small mb-1">Metode</label>
+                      <label class="form-label small mb-1"><?= translate('metode') ?></label>
                       <input type="text" name="metode" class="form-control form-control-sm" maxlength="50" placeholder="Transfer / Tunai">
                     </div>
                     <div class="col-6">
-                      <label class="form-label small mb-1">No. referensi</label>
+                      <label class="form-label small mb-1"><?= translate('no.referensi') ?></label>
                       <input type="text" name="no_referensi" class="form-control form-control-sm" maxlength="100">
                     </div>
                     <div class="col-12">
-                      <input type="text" name="catatan" class="form-control form-control-sm" maxlength="255" placeholder="Catatan (opsional)">
+                      <input type="text" name="catatan" class="form-control form-control-sm" maxlength="255" placeholder=<?= translate('catatan') ?>>
                     </div>
                     <div class="col-12 d-grid">
-                      <button type="submit" class="btn btn-sm btn-success">Simpan pembayaran</button>
+                      <button type="submit" class="btn btn-sm btn-success"><?= translate('button_save') ?></button>
                     </div>
                   </div>
                   <?= form_close() ?>

@@ -236,7 +236,7 @@ $approved = (($header->status ?? 'draft') === 'approved');
             <th style="width:8%" class="text-center"><?= translate('luas') ?> m²</th>
             <th style="width:6%" class="text-center"><?= translate('qty') ?></th>
             <th style="width:12%" class="text-end"><?= translate('harga') ?></th>
-            <th style="width:12%" class="text-end"><?= translate('total') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('subtotal') ?></th>
           </tr>
         </thead>
         <tbody>

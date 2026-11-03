@@ -237,7 +237,7 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
             <th style="width:12%"><?= translate('ukuran') ?> (mm)</th>
             <th style="width:8%" class="text-center"><?= translate('luas') ?> m²</th>
             <th style="width:6%" class="text-center"><?= translate('qty') ?></th>
-            <th style="width:12%" class="text-end"><?= translate('harga') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('harga') ?><?= $is_manual ? ' / m²' : ''; ?></th>
             <th style="width:12%" class="text-end"><?= translate('subtotal') ?></th>
           </tr>
         </thead>
@@ -298,6 +298,11 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
                     <?php foreach ($it->aksesoris as $ak): ?>
                       <span class="spek-line">
                         &bull; <?= html_escape($ak->nama); ?> (<?= (int) $ak->qty; ?> &times; <?= $rp($ak->harga); ?> = <?= $rp(isset($ak->total_harga) ? $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?>)
+                        <?php if (!empty($ak->foto)): ?>
+                          <a href="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" target="_blank">
+                            <img src="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" alt="" class="img-thumbnail ms-1 align-middle" style="max-height:48px">
+                          </a>
+                        <?php endif; ?>
                       </span>
                     <?php endforeach; ?>
                   <?php endif; ?>
@@ -305,8 +310,14 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
                     <div class="keterangan-box"><?= nl2br(html_escape($it->keterangan)); ?></div>
                   <?php endif; ?>
                 </td>
-                <td><?= $is_manual ? html_escape(($it->ukuran_teks ?? '') !== '' ? $it->ukuran_teks : '-') : ((int) $it->lebar_mm . ' x ' . (int) $it->tinggi_mm); ?></td>
-                <td class="text-center"><?= $is_manual ? '-' : $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
+                <td>
+                  <?php if ($is_manual && (int) $it->lebar_mm <= 0 && (int) $it->tinggi_mm <= 0): ?>
+                    <?= html_escape(($it->ukuran_teks ?? '') !== '' ? $it->ukuran_teks : '-'); ?>
+                  <?php else: ?>
+                    <?= (int) $it->lebar_mm . ' x ' . (int) $it->tinggi_mm; ?>
+                  <?php endif; ?>
+                </td>
+                <td class="text-center"><?= ($is_manual && (float) ($it->luas_m2 ?? 0) <= 0) ? '-' : $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
                 <td class="text-center"><?= ((int) $it->qty > 0) ? (int) $it->qty : '-'; ?></td>
                 <td class="text-end"><?= $rp($it->harga_unit); ?></td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>

@@ -310,28 +310,28 @@
                 ],
             ],
         ],
-        [
-            'key'   => 'purchasing',
-            'label' => function_exists('translate') ? translate('purchasing') : 'Purchasing',
-            'icon'  => 'bi bi-basket2',
-            'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
-            'items' => [
-                [
-                    'key'   => 'purchase_order',
-                    'label' => function_exists('translate') ? translate('app_purchasing') : 'Pesanan Pembelian',
-                    'icon'  => 'bi-box',
-                    'url'   => 'purchase_order',
-                    'roles' => ['super_admin', 'staff_purchasing'],
-                ],
-                 [
-                    'key'   => 'penerimaan_barang',
-                    'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
-                    'icon'  => 'bi bi-card-checklist',
-                    'url'   => 'penerimaan_barang',
-                    'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
-                ],
-            ],
-        ],
+        // [
+        //     'key'   => 'purchasing',
+        //     'label' => function_exists('translate') ? translate('purchasing') : 'Purchasing',
+        //     'icon'  => 'bi bi-basket2',
+        //     'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
+        //     'items' => [
+        //         [
+        //             'key'   => 'purchase_order',
+        //             'label' => function_exists('translate') ? translate('app_purchasing') : 'Pesanan Pembelian',
+        //             'icon'  => 'bi-box',
+        //             'url'   => 'purchase_order',
+        //             'roles' => ['super_admin', 'staff_purchasing'],
+        //         ],
+        //          [
+        //             'key'   => 'penerimaan_barang',
+        //             'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
+        //             'icon'  => 'bi bi-card-checklist',
+        //             'url'   => 'penerimaan_barang',
+        //             'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
+        //         ],
+        //     ],
+        // ],
         [
             'key'   => 'penjualan',
             'label' => function_exists('translate') ? translate('penjualan') : 'Penjualan',

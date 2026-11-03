@@ -57,7 +57,6 @@ if ($is_edit && !empty($items_edit)) {
       'aksesoris'          => $it['aksesoris'] ?? [],
       'kaca'               => $it['kaca'] ?? [],
       'foto'               => $it['foto'] ?? '',
-      'ukuran_teks'        => $it['ukuran_teks'] ?? '',
     ];
   }
 }
@@ -462,248 +461,267 @@ if ($is_edit && !empty($items_edit)) {
 </div>
 
 <?php if ($is_manual): ?>
-<template id="templateItem">
-  <div class="item-card">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <span class="item-title">Item <span class="item-no">1</span></span>
-      <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
-    </div>
-    <div class="row g-2">
-      <!-- Penampung nilai untuk JS hitung (tidak ikut dikirim) -->
-      <input type="hidden" class="it-id-barang" value="">
-      <input type="hidden" class="it-lebar" value="0">
-      <input type="hidden" class="it-tinggi" value="0">
-      <input type="hidden" class="it-luas" value="0">
+  <template id="templateItem">
+    <div class="item-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="item-title">Item <span class="item-no">1</span></span>
+        <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+      </div>
+      <div class="row g-2">
+        <!-- Penampung kategori rumus (kosong di mode manual, tidak ikut dikirim) -->
+        <input type="hidden" class="it-id-barang" value="">
 
-      <div class="col-md-6">
-        <label class="form-label">Nama Barang</label>
-        <input type="text" name="jenis_item[]" class="form-control it-jenis" autocomplete="off"
-          placeholder="Ketik nama barang (boleh kosong jika hanya aksesoris)">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label"><?= translate('warna') ?></label>
-        <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Finishing</label>
-        <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Mis. Powder Coating">
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label">Ukuran</label>
-        <input type="text" name="ukuran_teks[]" class="form-control it-ukuran" placeholder="Mis. 900 x 2100 mm">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Qty</label>
-        <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Harga Satuan (Rp)</label>
-        <input type="number" name="harga_unit[]" min="0" step="any" class="form-control it-harga" placeholder="0">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Komponen</label>
-        <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Opsional">
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label">Foto</label>
-        <input type="file" name="foto[]" accept="image/jpeg,image/png" class="form-control it-foto">
-        <input type="hidden" name="foto_lama[]" class="it-foto-lama" value="">
-        <div class="foto-preview mt-2"></div>
-        <div class="form-text">JPG / PNG, maks. 3 MB. Kosongkan untuk tanpa foto (saat edit: kosongkan untuk tetap memakai foto lama).</div>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label"><?= translate('catatan') ?></label>
-        <textarea name="keterangan[]" class="form-control it-keterangan" rows="4" placeholder="Spesifikasi, catatan khusus, dll."></textarea>
-      </div>
-
-      <!-- Biaya untuk kaca (Luas x Harga per m²) -->
-      <div class="col-12 mt-2 wrap-kaca-container">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
+        <div class="col-md-6">
+          <label class="form-label">Nama Barang</label>
+          <input type="text" name="jenis_item[]" class="form-control it-jenis" autocomplete="off"
+            placeholder="Ketik nama barang (boleh kosong jika hanya aksesoris)">
         </div>
-        <div class="list-kaca"></div>
-      </div>
-
-      <!-- Aksesoris Tambahan -->
-      <div class="col-12 mt-2 wrap-aksesoris-container">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
+        <div class="col-md-3">
+          <label class="form-label"><?= translate('warna') ?></label>
+          <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
         </div>
-        <div class="list-aksesoris"></div>
-      </div>
+        <div class="col-md-3">
+          <label class="form-label">Finishing</label>
+          <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Mis. Powder Coating">
+        </div>
 
-      <div class="col-12 text-end">
-        <label class="form-label d-block"><?= translate('subtotal') ?></label>
-        <span class="item-subtotal">Rp 0</span>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Lebar (mm)</label>
+          <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Tinggi (mm)</label>
+          <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Luas (m²)</label>
+          <input type="text" class="form-control it-luas" value="0.0000" readonly>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Qty</label>
+          <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Harga / m² (Rp)</label>
+          <input type="number" name="harga_unit[]" min="0" step="any" class="form-control it-harga" placeholder="0">
+        </div>
+        
+        <div class="col-md-3">
+          <label class="form-label">Komponen</label>
+          <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Opsional">
+        </div>
+        
+        <div class="col-md-2">
+          <label class="form-label">Kusen (mm)</label>
+          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Daun (mm)</label>
+          <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+
+        <div class="col-12">
+          <div class="form-text mt-0">Luas = Lebar × Tinggi (otomatis). Total barang = <strong>Luas × Qty × Harga / m²</strong>. Jika lebar/tinggi dikosongkan, total = Qty × Harga.</div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Foto Barang</label>
+          <input type="file" name="foto[]" accept="image/jpeg,image/png" class="form-control it-foto">
+          <input type="hidden" name="foto_lama[]" class="it-foto-lama" value="">
+          <div class="foto-preview mt-2"></div>
+          <div class="form-text">JPG / PNG, maks. 3 MB. Kosongkan untuk tanpa foto (saat edit: kosongkan untuk tetap memakai foto lama).</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label"><?= translate('catatan') ?></label>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="4" placeholder="Spesifikasi, catatan khusus, dll."></textarea>
+        </div>
+
+        <!-- Biaya untuk kaca (Luas x Harga per m²) -->
+        <div class="col-12 mt-2 wrap-kaca-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
+          </div>
+          <div class="list-kaca"></div>
+        </div>
+
+        <!-- Aksesoris Tambahan -->
+        <div class="col-12 mt-2 wrap-aksesoris-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
+          </div>
+          <div class="list-aksesoris"></div>
+        </div>
+
+        <div class="col-12 text-end">
+          <label class="form-label d-block"><?= translate('subtotal') ?></label>
+          <span class="item-subtotal">Rp 0</span>
+        </div>
       </div>
     </div>
-  </div>
-</template>
+  </template>
 <?php else: ?>
-<template id="templateItem">
-  <div class="item-card">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <span class="item-title">Item <span class="item-no">1</span></span>
-      <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+  <template id="templateItem">
+    <div class="item-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="item-title">Item <span class="item-no">1</span></span>
+        <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label"><?= translate('pilih_barang') ?><span class="text-danger">*</span></label>
+          <div class="barang-picker">
+            <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
+            <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
+              placeholder="<?= translate('cari') ?>" autocomplete="off" required>
+            <div class="barang-dropdown-list d-none"></div>
+          </div>
+          <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
+            <i class="bi bi-arrow-repeat me-1"></i><?= translate('ganti_barang') ?>
+          </button>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label"><?= translate('warna') ?></label>
+          <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Finishing</label>
+          <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Powder Coating / 粉末涂料">
+        </div>
+
+        <div class="col-6 col-md-2">
+          <label class="form-label">Lebar (mm)</label>
+          <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Tinggi (mm)</label>
+          <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Luas (m²)</label>
+          <input type="text" class="form-control it-luas" value="0.0000" readonly>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Qty <span class="text-danger">*</span></label>
+          <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
+          <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Komponen</label>
+          <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Kusen (mm)</label>
+          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Daun (mm)</label>
+          <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Tipe Motor</label>
+          <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="Mis. Electra 600">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Input Power</label>
+          <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="Mis. 250 W">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Voltage</label>
+          <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Books Penutup</label>
+          <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup"></textarea>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Kelengkapan</label>
+          <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label"><?= translate('catatan') ?></label>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
+        </div>
+
+        <!-- Books Penutup (khusus rolling door) -->
+        <div class="col-12 books-blok d-none">
+          <div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div>
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Lebar (mm)</label>
+          <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Tinggi (mm)</label>
+          <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="Mis. 600">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Luas (m²)</label>
+          <input type="text" class="form-control it-books-luas" value="0.0000" readonly tabindex="-1">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Qty</label>
+          <input type="number" min="0" step="1" name="qty_books[]" class="form-control it-books-qty" placeholder="Mis. 1">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Harga (Rp / m²)</label>
+          <input type="number" min="0" step="any" name="harga_m2_books[]" class="form-control it-books-harga" placeholder="Mis. 500000">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Total Books</label>
+          <input type="text" class="form-control it-books-total" value="Rp 0" readonly tabindex="-1">
+        </div>
+
+        <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
+        <div class="col-12 instalasi-blok d-none">
+          <div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div>
+        </div>
+        <div class="col-md-4 instalasi-blok d-none">
+          <label class="form-label">Qty Instalasi</label>
+          <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
+        </div>
+        <div class="col-md-4 instalasi-blok d-none">
+          <label class="form-label">Tarif Pasang (Rp / m²)</label>
+          <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="Mis. 50000">
+        </div>
+        <div class="col-md-4 instalasi-blok d-none">
+          <label class="form-label">Total Biaya Instalasi</label>
+          <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
+        </div>
+
+        <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
+        <div class="col-12 mt-2 wrap-kaca-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
+          </div>
+          <div class="list-kaca"></div>
+        </div>
+
+        <!-- Aksesoris Tambahan -->
+        <div class="col-12 mt-2 wrap-aksesoris-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
+          </div>
+          <div class="list-aksesoris"></div>
+        </div>
+
+
+
+        <div class="col-12 text-end">
+          <label class="form-label d-block"><?= translate('subtotal') ?></label>
+          <span class="item-subtotal">Rp 0</span>
+        </div>
+      </div>
     </div>
-    <div class="row g-2">
-      <div class="col-md-4">
-        <label class="form-label"><?= translate('pilih_barang') ?><span class="text-danger">*</span></label>
-        <div class="barang-picker">
-          <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
-          <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
-            placeholder="<?= translate('cari') ?>" autocomplete="off" required>
-          <div class="barang-dropdown-list d-none"></div>
-        </div>
-        <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
-          <i class="bi bi-arrow-repeat me-1"></i><?= translate('ganti_barang') ?>
-        </button>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label"><?= translate('warna') ?></label>
-        <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Finishing</label>
-        <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Powder Coating / 粉末涂料">
-      </div>
-
-      <div class="col-6 col-md-2">
-        <label class="form-label">Lebar (mm)</label>
-        <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Tinggi (mm)</label>
-        <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Luas (m²)</label>
-        <input type="text" class="form-control it-luas" value="0.0000" readonly>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Qty <span class="text-danger">*</span></label>
-        <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty" required>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
-        <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Komponen</label>
-        <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang">
-      </div>
-
-      <div class="col-md-2">
-        <label class="form-label">Kusen (mm)</label>
-        <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Daun (mm)</label>
-        <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Tipe Motor</label>
-        <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="Mis. Electra 600">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Input Power</label>
-        <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="Mis. 250 W">
-      </div>
-
-      <div class="col-md-2">
-        <label class="form-label">Voltage</label>
-        <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Books Penutup</label>
-        <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup"></textarea>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Kelengkapan</label>
-        <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
-      </div>
-      <div class="col-12">
-        <label class="form-label"><?= translate('catatan') ?></label>
-        <textarea name="keterangan[]" class="form-control it-keterangan" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
-      </div>
-
-      <!-- Books Penutup (khusus rolling door) -->
-      <div class="col-12 books-blok d-none">
-        <div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div>
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Lebar (mm)</label>
-        <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Tinggi (mm)</label>
-        <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="Mis. 600">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Luas (m²)</label>
-        <input type="text" class="form-control it-books-luas" value="0.0000" readonly tabindex="-1">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Qty</label>
-        <input type="number" min="0" step="1" name="qty_books[]" class="form-control it-books-qty" placeholder="Mis. 1">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Harga (Rp / m²)</label>
-        <input type="number" min="0" step="any" name="harga_m2_books[]" class="form-control it-books-harga" placeholder="Mis. 500000">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Total Books</label>
-        <input type="text" class="form-control it-books-total" value="Rp 0" readonly tabindex="-1">
-      </div>
-
-      <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
-      <div class="col-12 instalasi-blok d-none">
-        <div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div>
-      </div>
-      <div class="col-md-4 instalasi-blok d-none">
-        <label class="form-label">Qty Instalasi</label>
-        <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
-      </div>
-      <div class="col-md-4 instalasi-blok d-none">
-        <label class="form-label">Tarif Pasang (Rp / m²)</label>
-        <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="Mis. 50000">
-      </div>
-      <div class="col-md-4 instalasi-blok d-none">
-        <label class="form-label">Total Biaya Instalasi</label>
-        <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
-      </div>
-
-      <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
-      <div class="col-12 mt-2 wrap-kaca-container">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
-        </div>
-        <div class="list-kaca"></div>
-      </div>
-
-      <!-- Aksesoris Tambahan -->
-      <div class="col-12 mt-2 wrap-aksesoris-container">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
-        </div>
-        <div class="list-aksesoris"></div>
-      </div>
-
-
-
-      <div class="col-12 text-end">
-        <label class="form-label d-block"><?= translate('subtotal') ?></label>
-        <span class="item-subtotal">Rp 0</span>
-      </div>
-    </div>
-  </div>
-</template>
+  </template>
 <?php endif; ?>
 
 <script>
@@ -752,39 +770,69 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     function templateBarisAksoris(itemIndex) {
+      // Mode manual: setiap aksesoris boleh diberi foto (JPG/PNG, maks. 3 MB)
+      var kolFoto = IS_MANUAL ? `
+        <div class="col-md-4">
+          <label class="form-label small text-muted mb-0">Foto</label>
+          <input type="file" name="aks_foto[${itemIndex}][]" accept="image/jpeg,image/png" class="form-control form-control-sm aks-foto">
+          <input type="hidden" name="aks_foto_lama[${itemIndex}][]" class="aks-foto-lama" value="">
+          <div class="aks-foto-preview mt-1"></div>
+        </div>` : '';
+      var cNama  = IS_MANUAL ? 'col-md-3' : 'col-md-5';
+      var cQty   = 'col-md-2';
+      var cHarga = IS_MANUAL ? 'col-md-2' : 'col-md-4';
+      var cHapus = 'col-md-1';
       return `
-      <div class="row g-2 align-items-center mb-1 baris-aksesoris">
-        <div class="col-md-5">
+      <div class="row g-2 align-items-start mb-1 baris-aksesoris">
+        <div class="${cNama}">
+          <label class="form-label small text-muted mb-0">Nama</label>
           <input type="text" name="aks_nama[${itemIndex}][]" class="form-control form-control-sm aks-nama" placeholder="Nama Aksesoris">
         </div>
-        <div class="col-md-2">
+        <div class="${cQty}">
+          <label class="form-label small text-muted mb-0">Qty</label>
           <input type="number" name="aks_qty[${itemIndex}][]" min="1" value="1" class="form-control form-control-sm aks-qty" placeholder="Qty">
         </div>
-        <div class="col-md-4">
+        <div class="${cHarga}">
+          <label class="form-label small text-muted mb-0">Harga (Rp)</label>
           <input type="number" name="aks_harga[${itemIndex}][]" min="0" step="1" value="0" class="form-control form-control-sm aks-harga" placeholder="Harga">
-        </div>
-        <div class="col-md-1 text-end">
+        </div>${kolFoto}
+        <div class="${cHapus} text-end pt-4">
           <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-aksesoris"><i class="bi bi-x-circle"></i></button>
         </div>
       </div>`;
     }
 
+    // Tampilkan thumbnail foto di elemen preview (dipakai foto item & foto aksesoris)
+    function tampilThumb(pv, src, tinggi) {
+      if (!pv) return;
+      pv.innerHTML = '';
+      var im = document.createElement('img');
+      im.src = src;
+      im.className = 'img-thumbnail';
+      im.style.maxHeight = (tinggi || 90) + 'px';
+      pv.appendChild(im);
+    }
+
     function templateBarisKaca(itemIndex) {
       return `
-      <div class="row g-2 align-items-center mb-1 baris-kaca">
+      <div class="row g-2 align-items-start mb-1 baris-kaca">
         <div class="col-md-4">
+          <label class="form-label small text-muted mb-0">Nama</label>
           <input type="text" name="kaca_nama[${itemIndex}][]" class="form-control form-control-sm kaca-nama" placeholder="Nama Detail Kaca">
         </div>
         <div class="col-md-2">
+          <label class="form-label small text-muted mb-0">Luas (m²)</label>
           <input type="text" inputmode="decimal" name="kaca_luas[${itemIndex}][]" value="1" class="form-control form-control-sm kaca-luas" placeholder="Luas m² (mis. 1,25)">
         </div>
         <div class="col-md-3">
+          <label class="form-label small text-muted mb-0">Harga / m² (Rp)</label>
           <input type="number" name="kaca_harga[${itemIndex}][]" min="0" step="any" value="0" class="form-control form-control-sm kaca-harga" placeholder="Harga / m²">
         </div>
         <div class="col-md-2">
+          <label class="form-label small text-muted mb-0">Total</label>
           <input type="text" class="form-control form-control-sm kaca-total" value="Rp 0" readonly tabindex="-1">
         </div>
-        <div class="col-md-1 text-end">
+        <div class="col-md-1 text-end pt-4">
           <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-kaca"><i class="bi bi-x-circle"></i></button>
         </div>
       </div>`;
@@ -824,7 +872,6 @@ if ($is_edit && !empty($items_edit)) {
       set('.it-instalasi-qty', (parseFloat(d.qty_instalasi) || ''));
       set('.it-instalasi-harga', (parseFloat(d.harga_m2_instalasi) || ''));
       set('[name="kelengkapan[]"]', d.kelengkapan);
-      set('.it-ukuran', d.ukuran_teks);
       set('.it-foto-lama', d.foto);
       if (d.foto) {
         var pv = card.querySelector('.foto-preview');
@@ -856,6 +903,10 @@ if ($is_edit && !empty($items_edit)) {
           lastRow.querySelector('.aks-nama').value = ak.nama || '';
           lastRow.querySelector('.aks-qty').value = ak.qty || 1;
           lastRow.querySelector('.aks-harga').value = ak.harga || 0;
+          if (IS_MANUAL && ak.foto) {
+            lastRow.querySelector('.aks-foto-lama').value = ak.foto;
+            tampilThumb(lastRow.querySelector('.aks-foto-preview'), FOLDER_FOTO + encodeURIComponent(ak.foto), 60);
+          }
         });
       }
 
@@ -877,6 +928,10 @@ if ($is_edit && !empty($items_edit)) {
           row.querySelector('.aks-nama').name = `aks_nama[${idx}][]`;
           row.querySelector('.aks-qty').name = `aks_qty[${idx}][]`;
           row.querySelector('.aks-harga').name = `aks_harga[${idx}][]`;
+          var inpFoto = row.querySelector('.aks-foto');
+          if (inpFoto) inpFoto.name = `aks_foto[${idx}][]`;
+          var inpFotoLama = row.querySelector('.aks-foto-lama');
+          if (inpFotoLama) inpFotoLama.name = `aks_foto_lama[${idx}][]`;
         });
       });
     }
@@ -1021,6 +1076,8 @@ if ($is_edit && !empty($items_edit)) {
       var kategori = kategoriBaris(card);
       var luasRiil = Math.round((lebar / 1000) * (tinggi / 1000) * 10000) / 10000;
       var luas = luasBilling(kategori, luasRiil, lebar, tinggi);
+      // Mode manual: tanpa luas minimum / aturan kategori, luas = lebar x tinggi apa adanya
+      if (IS_MANUAL) luas = luasRiil;
 
       var inpLuas = card.querySelector('.it-luas');
       if (inpLuas) inpLuas.value = luas.toFixed(4);
@@ -1077,7 +1134,14 @@ if ($is_edit && !empty($items_edit)) {
         if (elInstTotal) elInstTotal.value = rupiah(totalInstalasi);
       }
 
-      var total = ((kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga)) + totalAksesoris + totalKaca + totalBooks + totalInstalasi;
+      var totalBarang;
+      if (IS_MANUAL) {
+        // Luas x Qty x Harga/m². Kalau ukuran kosong (luas 0) -> Qty x Harga
+        totalBarang = (luas > 0 ? luas : 1) * qty * harga;
+      } else {
+        totalBarang = (kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga);
+      }
+      var total = totalBarang + totalAksesoris + totalKaca + totalBooks + totalInstalasi;
       card.querySelector('.item-subtotal').textContent = rupiah(total);
 
       return total;
@@ -1184,10 +1248,14 @@ if ($is_edit && !empty($items_edit)) {
       }
     });
 
-    // Preview foto saat memilih file (penawaran manual)
+    // Preview foto saat memilih file (penawaran manual): foto barang & foto aksesoris
     wrap.addEventListener('change', function(e) {
-      if (!e.target.classList.contains('it-foto')) return;
-      var pv = e.target.closest('.item-card').querySelector('.foto-preview');
+      var isItem = e.target.classList.contains('it-foto');
+      var isAks = e.target.classList.contains('aks-foto');
+      if (!isItem && !isAks) return;
+      var pv = isItem ?
+        e.target.closest('.item-card').querySelector('.foto-preview') :
+        e.target.closest('.baris-aksesoris').querySelector('.aks-foto-preview');
       var f = e.target.files && e.target.files[0];
       if (!pv || !f) return;
       if (f.size > 3 * 1024 * 1024) {
@@ -1197,12 +1265,7 @@ if ($is_edit && !empty($items_edit)) {
       }
       var rd = new FileReader();
       rd.onload = function(ev) {
-        pv.innerHTML = '';
-        var im = document.createElement('img');
-        im.src = ev.target.result;
-        im.className = 'img-thumbnail';
-        im.style.maxHeight = '90px';
-        pv.appendChild(im);
+        tampilThumb(pv, ev.target.result, isItem ? 90 : 60);
       };
       rd.readAsDataURL(f);
     });

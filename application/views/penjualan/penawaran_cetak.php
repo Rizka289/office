@@ -80,6 +80,24 @@ foreach ($items as $it) {
 
 $folder_gambar_barang = 'uploads/barang/';
 
+// ---- Penawaran MANUAL: foto hanya dianggap ada kalau file benar-benar ada di server.
+// Kolom GAMBAR hanya dicetak kalau minimal ada 1 foto (item / aksesoris); kalau tidak,
+// tabel langsung dimulai dari Deskripsi. Baris tanpa foto dibiarkan kosong (tanpa ikon).
+$is_manual_cetak = (($header->tipe ?? 'rumus') === 'manual');
+$foto_ada = function ($nama) {
+  $nama = trim((string) $nama);
+  return $nama !== '' && preg_match('/^[A-Za-z0-9_.-]+$/', $nama) && is_file(FCPATH . 'uploads/penawaran/' . $nama);
+};
+$ada_foto_manual = false;
+if ($is_manual_cetak) {
+  foreach ($items as $it_f) {
+    if ($foto_ada($it_f->foto ?? '')) { $ada_foto_manual = true; break; }
+    foreach (($it_f->aksesoris ?? []) as $ak_f) {
+      if ($foto_ada($ak_f->foto ?? '')) { $ada_foto_manual = true; break 2; }
+    }
+  }
+}
+
 // Baris spesifikasi yang tampil per kategori rumus (urutan = urutan tampil).
 // Kunci baris: nama (Tipe/Jenis), warna, finishing, dimensi, komponen, kusen_daun.
 // Kategori yang tidak terdaftar memakai 'default' (tampilan lama).
@@ -463,6 +481,10 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       margin: 0 auto;
     }
 
+    .gambar-cell.aks img {
+      max-width: 70px;
+    }
+
     .gambar-kosong {
       width: 90px;
       height: 90px;
@@ -676,18 +698,132 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     <table class="item-table">
       <thead>
         <tr>
-          <th>GAMBAR<br><span class="cn">图片</span></th>
+          <?php if (!$is_manual_cetak || $ada_foto_manual): ?>
+            <th>GAMBAR<br><span class="cn">图片</span></th>
+          <?php endif; ?>
           <th>Deskripsi<br><span class="cn">描述</span></th>
           <th>Lebar (mm)<br><span class="cn">宽 (mm)</span></th>
           <th>Tinggi (mm)<br><span class="cn">高 (mm)</span></th>
-          <th>Total Luas (m²)<br><span class="cn">总面积 (m²)</span></th>
+          <th><?= $is_manual_cetak ? 'Luas (m²)' : 'Total Luas (m²)'; ?><br><span class="cn">总面积 (m²)</span></th>
           <th>Qty<br><span class="cn">数量</span></th>
-          <th>Harga / Unit</th>
+          <th><?= $is_manual_cetak ? 'Harga / m²' : 'Harga / Unit'; ?></th>
           <th>Total Harga<br><span class="cn">总计</span></th>
         </tr>
       </thead>
       <tbody>
         <?php $jumlah_unit = 0; ?>
+        <?php if ($is_manual_cetak): ?>
+          <?php
+          // Baris aksesoris: [foto] | nama | - | - | - | qty | harga | total
+          $baris_aks_manual = function ($ak) use ($ada_foto_manual, $foto_ada, $fmt_luas) {
+            ?>
+            <tr class="aksesoris-row">
+              <?php if ($ada_foto_manual): ?>
+                <td class="gambar-cell aks">
+                  <?php if ($foto_ada($ak->foto ?? '')): ?>
+                    <img src="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" alt="<?= html_escape($ak->nama); ?>">
+                  <?php endif; ?>
+                </td>
+              <?php endif; ?>
+              <td class="deskripsi-cell">
+                <strong>Aksesoris<span class="cn">/ 配件</span>:</strong>
+                <?= html_escape($ak->nama); ?>
+              </td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"><?= (int) $ak->qty; ?></td>
+              <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format(isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga, 0, ',', '.'); ?></td>
+            </tr>
+            <?php
+          };
+
+          // Baris detail kaca: [kosong] | nama | - | - | luas | - | harga/m² | total
+          $baris_kaca_manual = function ($kc) use ($ada_foto_manual, $fmt_luas) {
+            ?>
+            <tr class="kaca-row">
+              <?php if ($ada_foto_manual): ?><td class="gambar-cell aks"></td><?php endif; ?>
+              <td class="deskripsi-cell"><?= html_escape($kc->nama); ?></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"><?= $fmt_luas($kc->luas); ?></td>
+              <td class="num"></td>
+              <td class="money">Rp <?= number_format((float) $kc->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format(isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga, 0, ',', '.'); ?></td>
+            </tr>
+            <?php
+          };
+          $spek_manual = $spek_tampil['default'];
+          ?>
+
+          <?php foreach ($kelompok as $grp): ?>
+            <?php
+            $jumlah_baris = count($grp['baris']);
+            $aks_grp = [];
+            $kc_grp  = [];
+            foreach ($grp['baris'] as $b_g) {
+              foreach (($b_g->aksesoris ?? []) as $a_g) $aks_grp[] = $a_g;
+              foreach (($b_g->kaca ?? []) as $k_g) $kc_grp[] = $k_g;
+            }
+            $baris_pertama = TRUE;
+            ?>
+            <?php foreach ($grp['baris'] as $it): $jumlah_unit += (int) $it->qty; ?>
+              <?php
+              $lebar_it = (int) $it->lebar_mm;
+              $tinggi_it = (int) $it->tinggi_mm;
+              $luas_it = (float) ($it->luas_m2 ?? 0);
+
+              // total_harga di database = barang + aksesoris + kaca; baris barang
+              // hanya menampilkan bagian barangnya (aksesoris & kaca punya baris sendiri).
+              $total_lain = 0;
+              foreach (($it->aksesoris ?? []) as $a_t) {
+                $total_lain += isset($a_t->total_harga) ? (float) $a_t->total_harga : (int) $a_t->qty * (float) $a_t->harga;
+              }
+              foreach (($it->kaca ?? []) as $k_t) {
+                $total_lain += isset($k_t->total_harga) ? (float) $k_t->total_harga : (float) $k_t->luas * (float) $k_t->harga;
+              }
+              $total_barang_it = max(0, (float) $it->total_harga - $total_lain);
+              ?>
+              <tr>
+                <?php if ($baris_pertama): ?>
+                  <?php if ($ada_foto_manual): ?>
+                    <td class="gambar-cell" rowspan="<?= $jumlah_baris; ?>">
+                      <?php if ($foto_ada($grp['foto'] ?? '')): ?>
+                        <img src="<?= base_url('uploads/penawaran/' . rawurlencode($grp['foto'])); ?>" alt="<?= html_escape($grp['jenis_item']); ?>">
+                      <?php endif; ?>
+                    </td>
+                  <?php endif; ?>
+                  <td class="deskripsi-cell" rowspan="<?= $jumlah_baris; ?>">
+                    <?php $render_spek($spek_manual, $grp, 'Jenis', TRUE); ?>
+                  </td>
+                <?php endif; ?>
+                <?php if ($lebar_it <= 0 && $tinggi_it <= 0 && trim((string) ($it->ukuran_teks ?? '')) !== ''): ?>
+                  <?php /* Data lama (sebelum ada input lebar x tinggi): tampilkan ukuran teks apa adanya */ ?>
+                  <td class="num" colspan="3"><?= html_escape($it->ukuran_teks); ?></td>
+                <?php else: ?>
+                  <td class="num"><?= $lebar_it > 0 ? $lebar_it : ''; ?></td>
+                  <td class="num"><?= $tinggi_it > 0 ? $tinggi_it : ''; ?></td>
+                  <td class="num"><?= $luas_it > 0 ? $fmt_luas($luas_it) : ''; ?></td>
+                <?php endif; ?>
+                <td class="num"><?= (int) $it->qty; ?></td>
+                <td class="money">Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
+                <td class="money">Rp <?= number_format($total_barang_it, 0, ',', '.'); ?></td>
+              </tr>
+              <?php $baris_pertama = FALSE; ?>
+            <?php endforeach; ?>
+
+            <?php foreach ($aks_grp as $ak) $baris_aks_manual($ak); ?>
+            <?php foreach ($kc_grp as $kc) $baris_kaca_manual($kc); ?>
+          <?php endforeach; ?>
+
+          <?php /* Item tanpa barang (hanya aksesoris / kaca) */ ?>
+          <?php foreach ($items_aks_saja as $ik): ?>
+            <?php foreach (($ik->aksesoris ?? []) as $ak) $baris_aks_manual($ak); ?>
+            <?php foreach (($ik->kaca ?? []) as $kc) $baris_kaca_manual($kc); ?>
+          <?php endforeach; ?>
+
+        <?php else: ?>
         <?php foreach ($kelompok as $grp): ?>
           <?php
           $jumlah_baris  = count($grp['baris']);
@@ -745,7 +881,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 'luas'      => (float) $kaca_row->luas,
                 'qty'       => null,
                 'harga'     => (float) $kaca_row->harga,
-                'total'     => isset($kaca_row->total_harga) ? (float) $kaca_row->total_harga : (float) $kaca_row->luas * (float) $ak_row->harga,
+                'total'     => isset($kaca_row->total_harga) ? (float) $kaca_row->total_harga : (float) $kaca_row->luas * (float) $kaca_row->harga,
               ];
             }
           }
@@ -810,6 +946,10 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               $total_aks_it += (float) ($it->luas_m2_books ?? 0) * (int) ($it->qty_books ?? 0) * (float) ($it->harga_m2_books ?? 0);
               // Biaya instalasi juga sudah termasuk di total_harga; tampil di baris sendiri
               $total_aks_it += (float) ($it->luas_billing_m2 ?? $it->luas_m2 ?? 0) * (float) ($it->qty_instalasi ?? 0) * (float) ($it->harga_m2_instalasi ?? 0);
+              // Detail kaca juga sudah termasuk di total_harga; tampil di baris sendiri
+              foreach (($it->kaca ?? []) as $kc_it) {
+                $total_aks_it += isset($kc_it->total_harga) ? (float) $kc_it->total_harga : (float) $kc_it->luas * (float) $kc_it->harga;
+              }
               $total_barang_it = max(0, (float) $it->total_harga - $total_aks_it);
               ?>
               <td class="money">Rp <?= number_format($total_barang_it, 0, ',', '.'); ?></td>
@@ -947,6 +1087,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             </tr>
           <?php endforeach; ?>
         <?php endforeach; ?>
+        <?php endif; ?>
       </tbody>
     </table>
 

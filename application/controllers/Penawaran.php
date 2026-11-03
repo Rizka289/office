@@ -362,28 +362,36 @@ class Penawaran extends MY_Controller
     }
 
     // ------------------------------------------------------------------
-    // MODE MANUAL: semua isian diketik langsung (tanpa master barang & rumus luas).
+    // MODE MANUAL: semua isian diketik langsung (tanpa master barang).
     // - Nama barang boleh kosong; item tetap disimpan kalau ada aksesoris / detail kaca.
-    // - Total item = qty x harga satuan (kalau ada barang) + aksesoris + detail kaca.
-    // - Foto per item (input file foto[]), foto lama dibawa lewat foto_lama[].
+    // - Ukuran diinput Lebar x Tinggi (mm) -> Luas (m2) dihitung otomatis.
+    // - Total barang = Luas x Qty x Harga per m2.
+    //   (Kalau lebar/tinggi dikosongkan sehingga luas = 0, total = Qty x Harga.)
+    // - Total item = total barang + aksesoris + detail kaca.
+    // - Foto per item (foto[]) dan foto per aksesoris (aks_foto[i][]).
+    //   Foto lama dibawa lewat foto_lama[] dan aks_foto_lama[i][].
     // ------------------------------------------------------------------
     private function _kumpulkan_item_manual()
     {
-        $jenis_item  = $this->input->post('jenis_item', TRUE)  ?: [];
-        $warna       = $this->input->post('warna', TRUE)       ?: [];
-        $finishing   = $this->input->post('finishing', TRUE)   ?: [];
-        $komponen    = $this->input->post('komponen', TRUE)    ?: [];
-        $ukuran_teks = $this->input->post('ukuran_teks', TRUE) ?: [];
-        $qty         = $this->input->post('qty', TRUE)         ?: [];
-        $harga_unit  = $this->input->post('harga_unit', TRUE)  ?: [];
-        $keterangan  = $this->input->post('keterangan', TRUE)  ?: [];
-        $foto_lama   = $this->input->post('foto_lama', TRUE)   ?: [];
-        $aks_nama    = $this->input->post('aks_nama', TRUE)    ?: [];
-        $aks_qty     = $this->input->post('aks_qty', TRUE)     ?: [];
-        $aks_harga   = $this->input->post('aks_harga', TRUE)   ?: [];
-        $kaca_nama   = $this->input->post('kaca_nama', TRUE)   ?: [];
-        $kaca_luas   = $this->input->post('kaca_luas', TRUE)   ?: [];
-        $kaca_harga  = $this->input->post('kaca_harga', TRUE)  ?: [];
+        $jenis_item    = $this->input->post('jenis_item', TRUE)    ?: [];
+        $warna         = $this->input->post('warna', TRUE)         ?: [];
+        $finishing     = $this->input->post('finishing', TRUE)     ?: [];
+        $komponen      = $this->input->post('komponen', TRUE)      ?: [];
+        $lebar_mm      = $this->input->post('lebar_mm', TRUE)      ?: [];
+        $tinggi_mm     = $this->input->post('tinggi_mm', TRUE)     ?: [];
+        $qty           = $this->input->post('qty', TRUE)           ?: [];
+        $harga_unit    = $this->input->post('harga_unit', TRUE)    ?: [];
+        $komponen_kusen    = $this->input->post('komponen_kusen', TRUE)    ?: [];
+        $komponen_daun    = $this->input->post('komponen_daun', TRUE)    ?: [];
+        $keterangan    = $this->input->post('keterangan', TRUE)    ?: [];
+        $foto_lama     = $this->input->post('foto_lama', TRUE)     ?: [];
+        $aks_nama      = $this->input->post('aks_nama', TRUE)      ?: [];
+        $aks_qty       = $this->input->post('aks_qty', TRUE)       ?: [];
+        $aks_harga     = $this->input->post('aks_harga', TRUE)     ?: [];
+        $aks_foto_lama = $this->input->post('aks_foto_lama', TRUE) ?: [];
+        $kaca_nama     = $this->input->post('kaca_nama', TRUE)     ?: [];
+        $kaca_luas     = $this->input->post('kaca_luas', TRUE)     ?: [];
+        $kaca_harga    = $this->input->post('kaca_harga', TRUE)    ?: [];
 
         $items    = [];
         $subtotal = 0;
@@ -392,8 +400,11 @@ class Penawaran extends MY_Controller
             $jenis = trim((string) $jenis);
             $h     = max(0, (float) ($harga_unit[$i] ?? 0));
             $q     = max(1, (int) ($qty[$i] ?? 1));
+            $l     = max(0, (int) ($lebar_mm[$i] ?? 0));
+            $t     = max(0, (int) ($tinggi_mm[$i] ?? 0));
+            $luas  = round(($l / 1000) * ($t / 1000), 4);
 
-            // Aksesoris
+            // Aksesoris (+ foto per aksesoris)
             $aks_list  = [];
             $total_aks = 0;
             $aks_nama_item = $aks_nama[$i] ?? [];
@@ -403,11 +414,19 @@ class Penawaran extends MY_Controller
                     if ($nm === '') continue;
                     $aq = max(1, (int) ($aks_qty[$i][$k] ?? 1));
                     $ah = max(0, (float) ($aks_harga[$i][$k] ?? 0));
+
+                    // Foto aksesoris: upload baru > foto lama (saat edit) > kosong
+                    $aks_foto = $this->_upload_foto_aks($i, $k);
+                    if ($aks_foto === null) {
+                        $aks_foto = $this->_foto_valid($aks_foto_lama[$i][$k] ?? '');
+                    }
+
                     $aks_list[] = [
                         'nama'        => $nm,
                         'qty'         => $aq,
                         'harga'       => $ah,
                         'total_harga' => round($aq * $ah, 2),
+                        'foto'        => $aks_foto,
                     ];
                     $total_aks += $aq * $ah;
                 }
@@ -440,15 +459,21 @@ class Penawaran extends MY_Controller
             }
 
             // "Ada barang" = nama diisi atau harga diisi. Kalau tidak, item ini
-            // hanya membawa aksesoris/kaca (qty & harga barang = 0).
+            // hanya membawa aksesoris/kaca (qty, ukuran & harga barang = 0).
             $ada_barang = ($jenis !== '' || $h > 0);
             if ($jenis === '' && $h > 0) {
                 $jenis = 'Item';
             }
 
-            $total = ($ada_barang ? $q * $h : 0) + $total_aks + $total_kaca;
+            // Rumus barang manual: Luas x Qty x Harga/m².
+            // Kalau ukuran tidak diisi (luas 0), pakai Qty x Harga supaya total tidak 0.
+            $total_barang = 0;
+            if ($ada_barang) {
+                $total_barang = ($luas > 0) ? ($luas * $q * $h) : ($q * $h);
+            }
+            $total = round($total_barang, 2) + $total_aks + $total_kaca;
 
-            // Foto: upload baru > foto lama (saat edit) > kosong
+            // Foto item: upload baru > foto lama (saat edit) > kosong
             $foto = null;
             if ($ada_barang) {
                 $foto = $this->_upload_foto($i);
@@ -463,13 +488,12 @@ class Penawaran extends MY_Controller
                 'warna'              => trim($warna[$i] ?? ''),
                 'komponen'           => trim($komponen[$i] ?? ''),
                 'finishing'          => trim($finishing[$i] ?? ''),
-                'komponen_kusen'     => '',
-                'komponen_daun'      => '',
-                'ukuran_teks'        => trim($ukuran_teks[$i] ?? ''),
-                'lebar_mm'           => 0,
-                'tinggi_mm'          => 0,
-                'luas_m2'            => 0,
-                'luas_billing_m2'    => 0,
+                'komponen_kusen'     =>  trim($komponen_kusen[$i] ?? ''),
+                'komponen_daun'      =>  trim($komponen_daun[$i] ?? ''),
+                'lebar_mm'           => $ada_barang ? $l : 0,
+                'tinggi_mm'          => $ada_barang ? $t : 0,
+                'luas_m2'            => $ada_barang ? $luas : 0,
+                'luas_billing_m2'    => $ada_barang ? $luas : 0,
                 'qty'                => $ada_barang ? $q : 0,
                 'harga_unit'         => $ada_barang ? $h : 0,
                 'total_harga'        => round($total, 2),
@@ -500,10 +524,38 @@ class Penawaran extends MY_Controller
     // Upload foto untuk item ke-$i (input file bernama foto[]). Return nama file atau null.
     private function _upload_foto($i)
     {
-        if (
-            empty($_FILES['foto']['name'][$i]) ||
-            (int) ($_FILES['foto']['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
-        ) {
+        if (!isset($_FILES['foto']['name'][$i])) {
+            return null;
+        }
+        return $this->_simpan_upload([
+            'name'     => $_FILES['foto']['name'][$i],
+            'type'     => $_FILES['foto']['type'][$i] ?? '',
+            'tmp_name' => $_FILES['foto']['tmp_name'][$i] ?? '',
+            'error'    => $_FILES['foto']['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $_FILES['foto']['size'][$i] ?? 0,
+        ], 'Foto item ' . ($i + 1));
+    }
+
+    // Upload foto aksesoris ke-$k milik item ke-$i (input file aks_foto[i][]).
+    private function _upload_foto_aks($i, $k)
+    {
+        if (!isset($_FILES['aks_foto']['name'][$i][$k])) {
+            return null;
+        }
+        return $this->_simpan_upload([
+            'name'     => $_FILES['aks_foto']['name'][$i][$k],
+            'type'     => $_FILES['aks_foto']['type'][$i][$k] ?? '',
+            'tmp_name' => $_FILES['aks_foto']['tmp_name'][$i][$k] ?? '',
+            'error'    => $_FILES['aks_foto']['error'][$i][$k] ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $_FILES['aks_foto']['size'][$i][$k] ?? 0,
+        ], 'Foto aksesoris ' . ($k + 1) . ' (item ' . ($i + 1) . ')');
+    }
+
+    // Proses 1 file upload. CI Upload hanya membaca $_FILES[field] tunggal,
+    // jadi entri file disalin dulu ke $_FILES['foto_upload'].
+    private function _simpan_upload(array $file, $label)
+    {
+        if (empty($file['name']) || (int) $file['error'] !== UPLOAD_ERR_OK) {
             return null;
         }
 
@@ -512,14 +564,7 @@ class Penawaran extends MY_Controller
             @mkdir($folder, 0755, true);
         }
 
-        // CI Upload hanya membaca $_FILES[field] tunggal, jadi salin entri ke-$i
-        $_FILES['foto_item'] = [
-            'name'     => $_FILES['foto']['name'][$i],
-            'type'     => $_FILES['foto']['type'][$i],
-            'tmp_name' => $_FILES['foto']['tmp_name'][$i],
-            'error'    => $_FILES['foto']['error'][$i],
-            'size'     => $_FILES['foto']['size'][$i],
-        ];
+        $_FILES['foto_upload'] = $file;
 
         $this->load->library('upload');
         $this->upload->initialize([
@@ -529,11 +574,11 @@ class Penawaran extends MY_Controller
             'encrypt_name'  => TRUE,
         ], TRUE);
 
-        if ($this->upload->do_upload('foto_item')) {
+        if ($this->upload->do_upload('foto_upload')) {
             return $this->upload->data('file_name');
         }
 
-        $this->foto_errors[] = 'Foto item ' . ($i + 1) . ': ' . strip_tags($this->upload->display_errors('', ''));
+        $this->foto_errors[] = $label . ': ' . strip_tags($this->upload->display_errors('', ''));
         return null;
     }
 
@@ -760,6 +805,13 @@ class Penawaran extends MY_Controller
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
             // Hapus file foto yang tidak dipakai lagi (diganti / item dihapus)
             $foto_baru = array_filter(array_column($items, 'foto'));
+            foreach ($items as $it_baru) {
+                foreach (($it_baru['aksesoris'] ?? []) as $ak_baru) {
+                    if (!empty($ak_baru['foto'])) {
+                        $foto_baru[] = $ak_baru['foto'];
+                    }
+                }
+            }
             $this->_hapus_file_foto(array_diff($foto_sebelum, $foto_baru));
             if (!empty($this->foto_errors)) {
                 $this->session->set_flashdata('error', implode(' ', $this->foto_errors));

@@ -236,18 +236,32 @@ class Penawaran_model extends CI_Model
         return $map;
     }
 
-    // Daftar nama file foto item (penawaran manual) milik 1 penawaran.
+    // Daftar nama file foto (foto item + foto aksesoris, penawaran manual) milik 1 penawaran.
     public function get_foto_list($id_penawaran)
     {
-        if (!$this->db->field_exists('foto', 'penawaran_detail')) {
-            return [];
+        $daftar = [];
+
+        if ($this->db->field_exists('foto', 'penawaran_detail')) {
+            $rows = $this->db->select('foto')
+                ->where('id_penawaran', (int) $id_penawaran)
+                ->where("foto IS NOT NULL AND foto <> ''", null, false)
+                ->get('penawaran_detail')
+                ->result();
+            $daftar = array_merge($daftar, array_column($rows, 'foto'));
         }
-        $rows = $this->db->select('foto')
-            ->where('id_penawaran', (int) $id_penawaran)
-            ->where("foto IS NOT NULL AND foto <> ''", null, false)
-            ->get('penawaran_detail')
-            ->result();
-        return array_column($rows, 'foto');
+
+        if ($this->db->field_exists('foto', 'penawaran_detail_aksesoris')) {
+            $rows = $this->db->query(
+                "SELECT a.foto
+                 FROM penawaran_detail_aksesoris a
+                 JOIN penawaran_detail d ON d.id = a.id_penawaran_detail
+                 WHERE d.id_penawaran = ? AND a.foto IS NOT NULL AND a.foto <> ''",
+                [(int) $id_penawaran]
+            )->result();
+            $daftar = array_merge($daftar, array_column($rows, 'foto'));
+        }
+
+        return array_values(array_unique($daftar));
     }
 
     // Hapus semua aksesoris milik detail-detail dari 1 penawaran.
@@ -300,6 +314,9 @@ class Penawaran_model extends CI_Model
 
             foreach ($aksesoris_list as $aks) {
                 $aks['id_penawaran_detail'] = $id_detail;
+                if (!empty($aks['foto']) && !in_array('foto', $kolom_aks, true)) {
+                    log_message('error', 'penawaran_detail_aksesoris: kolom foto belum ada, foto aksesoris tidak tersimpan.');
+                }
                 $aks = array_intersect_key($aks, array_flip($kolom_aks));
                 $this->db->insert('penawaran_detail_aksesoris', $aks);
             }

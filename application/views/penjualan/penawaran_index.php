@@ -223,9 +223,15 @@
       <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-funnel"></i></button>
     </div>
     <div class="col-12 col-md-2 d-grid">
-      <a href="<?= site_url('penawaran/tambah'); ?>" class="btn btn-brand">
-        <i class="bi bi-plus-lg me-1"></i><?= translate('add') ?>
-      </a>
+      <div class="dropdown d-grid">
+        <button type="button" class="btn btn-brand dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-plus-lg me-1"></i><?= translate('add') ?>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="<?= site_url('penawaran/tambah'); ?>">Penawaran (pakai rumus)</a></li>
+          <li><a class="dropdown-item" href="<?= site_url('penawaran/tambah?tipe=manual'); ?>">Penawaran Manual</a></li>
+        </ul>
+      </div>
     </div>
     <?php echo form_close(); ?>
   </div>
@@ -252,7 +258,7 @@
             <?php foreach ($penawaran_list as $row): ?>
               <tr>
                 <td><?= $no++; ?></td>
-                <td class="fw-semibold"><?= html_escape($row->no_surat); ?></td>
+                <td class="fw-semibold"><?= html_escape($row->no_surat); ?><?php if (($row->tipe ?? 'rumus') === 'manual'): ?> <span class="badge bg-info text-dark">Manual</span><?php endif; ?></td>
                 <td><?= date('d M Y', strtotime($row->tanggal)); ?></td>
                 <td><?= html_escape($row->customer); ?></td>
                 <td class="text-center"><?= (int) $row->total_item; ?></td>

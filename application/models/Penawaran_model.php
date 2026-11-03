@@ -93,6 +93,7 @@ class Penawaran_model extends CI_Model
             pen.tanggal,
             pen.grand_total,
             pen.status,
+            pen.tipe,
             cus.nama AS customer,
             (
                 SELECT COALESCE(SUM(pd.qty), 0)
@@ -233,6 +234,20 @@ class Penawaran_model extends CI_Model
             $map[(int) $r['id']] = $r;
         }
         return $map;
+    }
+
+    // Daftar nama file foto item (penawaran manual) milik 1 penawaran.
+    public function get_foto_list($id_penawaran)
+    {
+        if (!$this->db->field_exists('foto', 'penawaran_detail')) {
+            return [];
+        }
+        $rows = $this->db->select('foto')
+            ->where('id_penawaran', (int) $id_penawaran)
+            ->where("foto IS NOT NULL AND foto <> ''", null, false)
+            ->get('penawaran_detail')
+            ->result();
+        return array_column($rows, 'foto');
     }
 
     // Hapus semua aksesoris milik detail-detail dari 1 penawaran.

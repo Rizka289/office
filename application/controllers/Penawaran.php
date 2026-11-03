@@ -11,6 +11,12 @@ class Penawaran extends MY_Controller
     const DEFAULT_KELENGKAPAN_ROLLING = "3 Bh Remote hand / 3 Bh Remote hand / 3个手持遥控器\n1 Bh Remote dinding / 1个壁挂遥控器\nRantai Emergency / 紧急链条";
     const DEFAULT_BOOKS_PENUTUP_ROLLING = "Hollow 30 x 30 x 1.0 mm / 角钢 30 x 30 x 1.0 毫米\nPlat besi galvanis 0.5 mm / 镀锌铁板 0.5 毫米";
 
+    // Folder foto item penawaran manual (relatif terhadap FCPATH & base_url)
+    const FOLDER_FOTO = 'uploads/penawaran/';
+
+    // Pesan error upload foto (ditampilkan setelah redirect)
+    private $foto_errors = [];
+
     public function __construct()
     {
         parent::__construct();
@@ -145,14 +151,19 @@ class Penawaran extends MY_Controller
         $data['list_barang']   = $this->Penawaran_model->get_all_barang();
         $data['tarif_ppn']     = self::TARIF_PPN;
         $data['tarif_pph']     = self::TARIF_PPH;
+        $data['tipe']          = ($this->input->get('tipe') === 'manual') ? 'manual' : 'rumus';
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/add_penawaran', $data);
         $this->load->view('templates/footer', $data);
     }
 
-    private function _kumpulkan_item()
+    private function _kumpulkan_item($tipe = 'rumus')
     {
+        if ($tipe === 'manual') {
+            return $this->_kumpulkan_item_manual();
+        }
+
         $id_barang      = $this->input->post('id_barang', TRUE)      ?: [];
         $jenis_item     = $this->input->post('jenis_item', TRUE)     ?: [];
         $warna          = $this->input->post('warna', TRUE)          ?: [];
@@ -350,6 +361,202 @@ class Penawaran extends MY_Controller
         return [$items, $subtotal];
     }
 
+    // ------------------------------------------------------------------
+    // MODE MANUAL: semua isian diketik langsung (tanpa master barang & rumus luas).
+    // - Nama barang boleh kosong; item tetap disimpan kalau ada aksesoris / detail kaca.
+    // - Total item = qty x harga satuan (kalau ada barang) + aksesoris + detail kaca.
+    // - Foto per item (input file foto[]), foto lama dibawa lewat foto_lama[].
+    // ------------------------------------------------------------------
+    private function _kumpulkan_item_manual()
+    {
+        $jenis_item  = $this->input->post('jenis_item', TRUE)  ?: [];
+        $warna       = $this->input->post('warna', TRUE)       ?: [];
+        $finishing   = $this->input->post('finishing', TRUE)   ?: [];
+        $komponen    = $this->input->post('komponen', TRUE)    ?: [];
+        $ukuran_teks = $this->input->post('ukuran_teks', TRUE) ?: [];
+        $qty         = $this->input->post('qty', TRUE)         ?: [];
+        $harga_unit  = $this->input->post('harga_unit', TRUE)  ?: [];
+        $keterangan  = $this->input->post('keterangan', TRUE)  ?: [];
+        $foto_lama   = $this->input->post('foto_lama', TRUE)   ?: [];
+        $aks_nama    = $this->input->post('aks_nama', TRUE)    ?: [];
+        $aks_qty     = $this->input->post('aks_qty', TRUE)     ?: [];
+        $aks_harga   = $this->input->post('aks_harga', TRUE)   ?: [];
+        $kaca_nama   = $this->input->post('kaca_nama', TRUE)   ?: [];
+        $kaca_luas   = $this->input->post('kaca_luas', TRUE)   ?: [];
+        $kaca_harga  = $this->input->post('kaca_harga', TRUE)  ?: [];
+
+        $items    = [];
+        $subtotal = 0;
+
+        foreach ($jenis_item as $i => $jenis) {
+            $jenis = trim((string) $jenis);
+            $h     = max(0, (float) ($harga_unit[$i] ?? 0));
+            $q     = max(1, (int) ($qty[$i] ?? 1));
+
+            // Aksesoris
+            $aks_list  = [];
+            $total_aks = 0;
+            $aks_nama_item = $aks_nama[$i] ?? [];
+            if (is_array($aks_nama_item)) {
+                foreach ($aks_nama_item as $k => $nm) {
+                    $nm = trim((string) $nm);
+                    if ($nm === '') continue;
+                    $aq = max(1, (int) ($aks_qty[$i][$k] ?? 1));
+                    $ah = max(0, (float) ($aks_harga[$i][$k] ?? 0));
+                    $aks_list[] = [
+                        'nama'        => $nm,
+                        'qty'         => $aq,
+                        'harga'       => $ah,
+                        'total_harga' => round($aq * $ah, 2),
+                    ];
+                    $total_aks += $aq * $ah;
+                }
+            }
+
+            // Detail kaca: luas x harga per m²
+            $kaca_list  = [];
+            $total_kaca = 0;
+            $kaca_nama_item = $kaca_nama[$i] ?? [];
+            if (is_array($kaca_nama_item)) {
+                foreach ($kaca_nama_item as $k => $nm) {
+                    $nm = trim((string) $nm);
+                    if ($nm === '') continue;
+                    $kl = max(0, $this->_ke_angka($kaca_luas[$i][$k] ?? 0));
+                    $kh = max(0, (float) ($kaca_harga[$i][$k] ?? 0));
+                    $kt = round($kl * $kh, 2);
+                    $kaca_list[] = [
+                        'nama'        => $nm,
+                        'luas'        => round($kl, 4),
+                        'harga'       => $kh,
+                        'total_harga' => $kt,
+                    ];
+                    $total_kaca += $kt;
+                }
+            }
+
+            // Item kosong (tanpa barang, tanpa aksesoris, tanpa kaca) dilewati
+            if ($jenis === '' && $h <= 0 && empty($aks_list) && empty($kaca_list)) {
+                continue;
+            }
+
+            // "Ada barang" = nama diisi atau harga diisi. Kalau tidak, item ini
+            // hanya membawa aksesoris/kaca (qty & harga barang = 0).
+            $ada_barang = ($jenis !== '' || $h > 0);
+            if ($jenis === '' && $h > 0) {
+                $jenis = 'Item';
+            }
+
+            $total = ($ada_barang ? $q * $h : 0) + $total_aks + $total_kaca;
+
+            // Foto: upload baru > foto lama (saat edit) > kosong
+            $foto = null;
+            if ($ada_barang) {
+                $foto = $this->_upload_foto($i);
+                if ($foto === null) {
+                    $foto = $this->_foto_valid($foto_lama[$i] ?? '');
+                }
+            }
+
+            $items[] = [
+                'id_barang'          => null,
+                'jenis_item'         => $jenis,
+                'warna'              => trim($warna[$i] ?? ''),
+                'komponen'           => trim($komponen[$i] ?? ''),
+                'finishing'          => trim($finishing[$i] ?? ''),
+                'komponen_kusen'     => '',
+                'komponen_daun'      => '',
+                'ukuran_teks'        => trim($ukuran_teks[$i] ?? ''),
+                'lebar_mm'           => 0,
+                'tinggi_mm'          => 0,
+                'luas_m2'            => 0,
+                'luas_billing_m2'    => 0,
+                'qty'                => $ada_barang ? $q : 0,
+                'harga_unit'         => $ada_barang ? $h : 0,
+                'total_harga'        => round($total, 2),
+                'keterangan'         => trim($keterangan[$i] ?? ''),
+                'tipe_motor'         => '',
+                'input_power'        => '',
+                'voltage'            => '',
+                'books_penutup'      => '',
+                'lebar_m2_books'     => 0,
+                'tinggi_m2_books'    => 0,
+                'luas_m2_books'      => 0,
+                'qty_books'          => 0,
+                'harga_m2_books'     => 0,
+                'harga_m2_instalasi' => 0,
+                'qty_instalasi'      => 0,
+                'kelengkapan'        => '',
+                'foto'               => $foto,
+                'aksesoris'          => $aks_list,
+                'kaca'               => $kaca_list,
+            ];
+
+            $subtotal += $total;
+        }
+
+        return [$items, $subtotal];
+    }
+
+    // Upload foto untuk item ke-$i (input file bernama foto[]). Return nama file atau null.
+    private function _upload_foto($i)
+    {
+        if (
+            empty($_FILES['foto']['name'][$i]) ||
+            (int) ($_FILES['foto']['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK
+        ) {
+            return null;
+        }
+
+        $folder = FCPATH . self::FOLDER_FOTO;
+        if (!is_dir($folder)) {
+            @mkdir($folder, 0755, true);
+        }
+
+        // CI Upload hanya membaca $_FILES[field] tunggal, jadi salin entri ke-$i
+        $_FILES['foto_item'] = [
+            'name'     => $_FILES['foto']['name'][$i],
+            'type'     => $_FILES['foto']['type'][$i],
+            'tmp_name' => $_FILES['foto']['tmp_name'][$i],
+            'error'    => $_FILES['foto']['error'][$i],
+            'size'     => $_FILES['foto']['size'][$i],
+        ];
+
+        $this->load->library('upload');
+        $this->upload->initialize([
+            'upload_path'   => $folder,
+            'allowed_types' => 'jpg|jpeg|png',
+            'max_size'      => 3072, // KB
+            'encrypt_name'  => TRUE,
+        ], TRUE);
+
+        if ($this->upload->do_upload('foto_item')) {
+            return $this->upload->data('file_name');
+        }
+
+        $this->foto_errors[] = 'Foto item ' . ($i + 1) . ': ' . strip_tags($this->upload->display_errors('', ''));
+        return null;
+    }
+
+    // Nama file foto lama yang valid (format aman & file benar-benar ada), selain itu null
+    private function _foto_valid($nama)
+    {
+        $nama = trim((string) $nama);
+        if ($nama === '' || !preg_match('/^[A-Za-z0-9_.-]+$/', $nama)) {
+            return null;
+        }
+        return is_file(FCPATH . self::FOLDER_FOTO . $nama) ? $nama : null;
+    }
+
+    private function _hapus_file_foto(array $daftar)
+    {
+        foreach ($daftar as $nama) {
+            $nama = $this->_foto_valid($nama);
+            if ($nama !== null) {
+                @unlink(FCPATH . self::FOLDER_FOTO . $nama);
+            }
+        }
+    }
+
     // Ubah "1,25" / "1.25" / "1.234,5" menjadi float
     private function _ke_angka($v)
     {
@@ -442,17 +649,19 @@ class Penawaran extends MY_Controller
         $tanggal     = $this->input->post('tanggal', TRUE);
         $id_customer = (int)$this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
+        $tipe        = ($this->input->post('tipe') === 'manual') ? 'manual' : 'rumus';
+        $balik       = 'penawaran/tambah' . ($tipe === 'manual' ? '?tipe=manual' : '');
 
         if (empty($tanggal) || $id_customer <= 0) {
             $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
-            redirect('penawaran/tambah');
+            redirect($balik);
         }
 
-        list($items, $subtotal) = $this->_kumpulkan_item();
+        list($items, $subtotal) = $this->_kumpulkan_item($tipe);
 
         if (empty($items)) {
             $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
-            redirect('penawaran/tambah');
+            redirect($balik);
         }
 
         $header = array_merge([
@@ -460,18 +669,23 @@ class Penawaran extends MY_Controller
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
+            'tipe'        => $tipe,
             'status'      => 'draft',
             'id_user'     => $this->session->userdata('user_id') ?? 0,
         ], $this->_hitung_total($subtotal));
 
         $id_penawaran = $this->Penawaran_model->simpan_penawaran($header, $items);
 
+        if (!empty($this->foto_errors)) {
+            $this->session->set_flashdata('error', implode(' ', $this->foto_errors));
+        }
+
         if ($id_penawaran) {
             $this->session->set_flashdata('success', 'Penawaran ' . $header['no_surat'] . ' berhasil disimpan.');
             redirect('penawaran/detail/' . $id_penawaran);
         } else {
             $this->session->set_flashdata('error', 'Gagal menyimpan penawaran. Silakan coba lagi.');
-            redirect('penawaran/tambah');
+            redirect($balik);
         }
     }
 
@@ -501,6 +715,7 @@ class Penawaran extends MY_Controller
         $data['list_barang']    = $this->Penawaran_model->get_all_barang();
         $data['tarif_ppn']      = self::TARIF_PPN;
         $data['tarif_pph']      = self::TARIF_PPH;
+        $data['tipe']           = (($penawaran['header']->tipe ?? 'rumus') === 'manual') ? 'manual' : 'rumus';
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/add_penawaran', $data);
@@ -526,7 +741,10 @@ class Penawaran extends MY_Controller
         $id_customer = (int) $this->input->post('id_customer') ?: $penawaran['header']->id_customer;
         $catatan     = $this->input->post('catatan', TRUE);
 
-        list($items, $subtotal) = $this->_kumpulkan_item();
+        $tipe          = (($penawaran['header']->tipe ?? 'rumus') === 'manual') ? 'manual' : 'rumus';
+        $foto_sebelum  = $this->Penawaran_model->get_foto_list($id);
+
+        list($items, $subtotal) = $this->_kumpulkan_item($tipe);
 
         if (empty($items)) {
             $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
@@ -540,6 +758,12 @@ class Penawaran extends MY_Controller
         ], $this->_hitung_total($subtotal));
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
+            // Hapus file foto yang tidak dipakai lagi (diganti / item dihapus)
+            $foto_baru = array_filter(array_column($items, 'foto'));
+            $this->_hapus_file_foto(array_diff($foto_sebelum, $foto_baru));
+            if (!empty($this->foto_errors)) {
+                $this->session->set_flashdata('error', implode(' ', $this->foto_errors));
+            }
             $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil diperbarui.');
             redirect('penawaran/detail/' . $id);
         }
@@ -567,7 +791,10 @@ class Penawaran extends MY_Controller
             redirect('penawaran/detail/' . $id);
         }
 
+        $foto_list = $this->Penawaran_model->get_foto_list($id);
+
         if ($this->Penawaran_model->hapus_penawaran($id)) {
+            $this->_hapus_file_foto($foto_list);
             $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil dihapus.');
             redirect('penawaran');
         }

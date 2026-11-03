@@ -113,6 +113,7 @@ $rp = function ($v) {
   return 'Rp ' . number_format((float) $v, 0, ',', '.');
 };
 $approved = (($header->status ?? 'draft') === 'approved');
+$is_manual = (($header->tipe ?? 'rumus') === 'manual');
 ?>
 
 <div class="pnw-detail-page">
@@ -134,6 +135,7 @@ $approved = (($header->status ?? 'draft') === 'approved');
     <div>
       <h5 class="mb-0">
         <?= html_escape($header->no_surat); ?>
+        <?php if ($is_manual): ?><span class="badge bg-info text-dark ms-2 align-middle">Manual</span><?php endif; ?>
         <?php if ($approved): ?>
           <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
         <?php else: ?>
@@ -245,7 +247,18 @@ $approved = (($header->status ?? 'draft') === 'approved');
               <tr>
                 <td><?= $no++; ?></td>
                 <td>
-                  <strong><?= html_escape($it->jenis_item); ?></strong>
+                  <?php if (!empty($it->foto)): ?>
+                    <div class="mb-1">
+                      <a href="<?= base_url('uploads/penawaran/' . $it->foto); ?>" target="_blank">
+                        <img src="<?= base_url('uploads/penawaran/' . $it->foto); ?>" alt="" class="img-thumbnail" style="max-height:80px">
+                      </a>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (trim((string) $it->jenis_item) !== ''): ?>
+                    <strong><?= html_escape($it->jenis_item); ?></strong>
+                  <?php else: ?>
+                    <strong class="text-muted">Aksesoris</strong>
+                  <?php endif; ?>
                   <?php if (!empty($it->warna)): ?>
                     <span class="spek-line">Warna: <?= html_escape($it->warna); ?></span>
                   <?php endif; ?>
@@ -292,9 +305,9 @@ $approved = (($header->status ?? 'draft') === 'approved');
                     <div class="keterangan-box"><?= nl2br(html_escape($it->keterangan)); ?></div>
                   <?php endif; ?>
                 </td>
-                <td><?= (int) $it->lebar_mm; ?> x <?= (int) $it->tinggi_mm; ?></td>
-                <td class="text-center"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
-                <td class="text-center"><?= (int) $it->qty; ?></td>
+                <td><?= $is_manual ? html_escape(($it->ukuran_teks ?? '') !== '' ? $it->ukuran_teks : '-') : ((int) $it->lebar_mm . ' x ' . (int) $it->tinggi_mm); ?></td>
+                <td class="text-center"><?= $is_manual ? '-' : $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
+                <td class="text-center"><?= ((int) $it->qty > 0) ? (int) $it->qty : '-'; ?></td>
                 <td class="text-end"><?= $rp($it->harga_unit); ?></td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>
               </tr>

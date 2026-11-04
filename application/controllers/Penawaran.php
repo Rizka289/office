@@ -638,9 +638,11 @@ class Penawaran extends MY_Controller
             case 'pintu_baja':
             case 'pintu_kayu':
             case 'pintu_alumunium':
+            case 'pintu_tahan_api':
                 return max($luas_riil, 2.0);
             case 'pintu_baja_double':
             case 'pintu_alumunium_double':
+            case 'pintu_tahan_api_double':
                 return max($luas_riil, 3.9);
             case 'rolling_door_tahan_api':
             case 'rolling_door_baja':

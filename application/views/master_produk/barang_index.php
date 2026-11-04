@@ -132,6 +132,7 @@
                             <option value="jendela_mati">Jendela Mati</option>
                             <option value="pintu_baja">Pintu Baja</option>
                             <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_tahan_api_double">Pintu Tahan Api Double</option>
                             <option value="pintu_kayu">Pintu Kayu</option>
                             <option value="pintu_alumunium">Pintu Alumunium</option>
                             <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>
@@ -265,6 +266,7 @@
                             <option value="jendela_mati">Jendela Mati</option>
                             <option value="pintu_baja">Pintu Baja</option>
                             <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_tahan_api_double">Pintu Tahan Api Double</option>
                             <option value="pintu_kayu">Pintu Kayu</option>
                             <option value="pintu_alumunium">Pintu Alumunium</option>
                             <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>

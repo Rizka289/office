@@ -505,12 +505,12 @@ if ($is_edit && !empty($items_edit)) {
           <label class="form-label">Harga / m² (Rp)</label>
           <input type="number" name="harga_unit[]" min="0" step="any" class="form-control it-harga" placeholder="0">
         </div>
-        
+
         <div class="col-md-3">
           <label class="form-label">Komponen</label>
           <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Opsional">
         </div>
-        
+
         <div class="col-md-2">
           <label class="form-label">Kusen (mm)</label>
           <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
@@ -778,8 +778,8 @@ if ($is_edit && !empty($items_edit)) {
           <input type="hidden" name="aks_foto_lama[${itemIndex}][]" class="aks-foto-lama" value="">
           <div class="aks-foto-preview mt-1"></div>
         </div>` : '';
-      var cNama  = IS_MANUAL ? 'col-md-3' : 'col-md-5';
-      var cQty   = 'col-md-2';
+      var cNama = IS_MANUAL ? 'col-md-3' : 'col-md-5';
+      var cQty = 'col-md-2';
       var cHarga = IS_MANUAL ? 'col-md-2' : 'col-md-4';
       var cHapus = 'col-md-1';
       return `
@@ -1156,7 +1156,16 @@ if ($is_edit && !empty($items_edit)) {
         card.querySelector('.item-no').textContent = i + 1;
         card.querySelector('.btn-remove-item').disabled = (rows.length === 1);
         subtotal += hitungBaris(card);
+
+        // 1. Tambah qty utama item
         totalQty += Math.max(0, parseInt(card.querySelector('.it-qty').value, 10) || 0);
+
+        // 2. Tambah qty dari masing-masing aksesoris di dalam item ini
+        card.querySelectorAll('.baris-aksesoris').forEach(function(rowAks) {
+          totalQty += Math.max(0, parseInt(rowAks.querySelector('.aks-qty').value, 10) || 0);
+        });
+
+        // (Detail kaca sengaja dilewati / tidak ditambahkan ke totalQty)
       });
 
       var pasang = nominalBiaya(chkPasang, inpPasang);

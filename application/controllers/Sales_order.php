@@ -17,9 +17,9 @@ class Sales_order extends MY_Controller
         $data['active_menu'] = 'sales_order';
 
         $filter = array(
-            'q'      => trim($this->input->get('q', true)),
-            'dari'   => trim($this->input->get('dari', true)),
-            'sampai' => trim($this->input->get('sampai', true)),
+            'q'      => trim((string) $this->input->get('q', true)),
+            'dari'   => trim((string) $this->input->get('dari', true)),
+            'sampai' => trim((string) $this->input->get('sampai', true)),
         );
 
         $data['sales_order_list'] = $this->Sales_order_model->get_all_sales_order($filter);
@@ -62,6 +62,7 @@ class Sales_order extends MY_Controller
 
     public function detail($id = 0)
     {
+        $id = (int) $id;
         $so = $this->Sales_order_model->get_so_lengkap($id);
         if (!$so) {
             show_404();
@@ -81,11 +82,12 @@ class Sales_order extends MY_Controller
 
     public function tambah()
     {
-        $data['title']       = translate('pesanan_penjualan');
-        $data['page_title']  = translate('pesanan_penjualan');
+        $data['title']          = translate('pesanan_penjualan');
+        $data['page_title']     = translate('pesanan_penjualan');
         $data['active_menu']    = 'sales_order';
         $data['penawaran_list'] = $this->Sales_order_model->get_penawaran_siap();
-        $data['no_so']          = $this->Sales_order_model->generate_no(date('Y-m-d'))['no_so'];
+        $no                     = $this->Sales_order_model->generate_no(date('Y-m-d'));
+        $data['no_so']          = $no['no_so'];
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/sales_order_add', $data);
@@ -95,12 +97,12 @@ class Sales_order extends MY_Controller
     // AJAX: data penawaran untuk ditampilkan di form (read-only)
     public function get_penawaran($id = 0)
     {
-        $res = $this->Sales_order_model->get_penawaran_lengkap($id);
+        $res = $this->Sales_order_model->get_penawaran_lengkap((int) $id);
         if ($res && $res['header']->status !== 'approved') {
             $res = null;
         }
         $this->output->set_content_type('application/json')
-            ->set_output(json_encode($res ? $res : array('error' => 'Penawaran tidak ditemukan')));
+            ->set_output(json_encode($res ? $res : array('error' => 'Penawaran tidak ditemukan atau belum di-approve')));
     }
 
     // AJAX: preview nomor SO saat tanggal diubah
@@ -142,14 +144,25 @@ class Sales_order extends MY_Controller
             return;
         }
 
+        // tgl_kirim opsional: kosong atau tanggal valid (Y-m-d)
+        $tgl_kirim = trim((string) $this->input->post('tgl_kirim', true));
+        if ($tgl_kirim !== '') {
+            if (!strtotime($tgl_kirim)) {
+                $this->session->set_flashdata('error', 'Tanggal target kirim tidak valid.');
+                redirect('sales_order/tambah');
+                return;
+            }
+            $tgl_kirim = date('Y-m-d', strtotime($tgl_kirim));
+        }
+
         $input = array(
             'tanggal'        => date('Y-m-d', strtotime($tanggal)),
-            'no_po_customer' => trim($this->input->post('no_po_customer', true)),
-            'tgl_kirim'      => trim($this->input->post('tgl_kirim', true)),
-            'alamat_kirim'   => trim($this->input->post('alamat_kirim', true)),
+            'no_po_customer' => mb_substr(trim((string) $this->input->post('no_po_customer', true)), 0, 50),
+            'tgl_kirim'      => $tgl_kirim,
+            'alamat_kirim'   => trim((string) $this->input->post('alamat_kirim', true)),
             'termin'         => $termin,
             'dp_persen'      => $dp,
-            'catatan'        => trim($this->input->post('catatan', true)),
+            'catatan'        => trim((string) $this->input->post('catatan', true)),
         );
 
         list($ok, $pesan) = $this->Sales_order_model->simpan_dari_penawaran(
@@ -171,30 +184,33 @@ class Sales_order extends MY_Controller
     public function konfirmasi($id = 0)
     {
         $this->_wajib_post();
+        $id = (int) $id;
         if (!$this->Sales_order_model->get_so_lengkap($id)) {
             show_404();
         }
         list($ok, $pesan) = $this->Sales_order_model->konfirmasi($id);
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
-        redirect('sales_order/detail/' . (int) $id);
+        redirect('sales_order/detail/' . $id);
     }
 
     // Batal: hanya jika belum ada barang yang terkirim
     public function batal($id = 0)
     {
         $this->_wajib_post();
+        $id = (int) $id;
         if (!$this->Sales_order_model->get_so_lengkap($id)) {
             show_404();
         }
         list($ok, $pesan) = $this->Sales_order_model->batalkan($id);
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
-        redirect('sales_order/detail/' . (int) $id);
+        redirect('sales_order/detail/' . $id);
     }
 
     // Catat pembayaran (DP / pelunasan) dari halaman detail
     public function bayar($id = 0)
     {
         $this->_wajib_post();
+        $id = (int) $id;
         if (!$this->Sales_order_model->get_so_lengkap($id)) {
             show_404();
         }
@@ -204,7 +220,7 @@ class Sales_order extends MY_Controller
 
         if (!$tanggal || !strtotime($tanggal) || !in_array($jenis, array('dp', 'pelunasan', 'lainnya'), true) || $nominal <= 0) {
             $this->session->set_flashdata('error', 'Tanggal, jenis, dan nominal pembayaran wajib diisi dengan benar.');
-            redirect('sales_order/detail/' . (int) $id);
+            redirect('sales_order/detail/' . $id);
             return;
         }
 
@@ -212,21 +228,35 @@ class Sales_order extends MY_Controller
             'tanggal'      => date('Y-m-d', strtotime($tanggal)),
             'jenis'        => $jenis,
             'nominal'      => $nominal,
-            'metode'       => trim($this->input->post('metode', true)),
-            'no_referensi' => trim($this->input->post('no_referensi', true)),
-            'catatan'      => trim($this->input->post('catatan', true)),
+            'metode'       => trim((string) $this->input->post('metode', true)),
+            'no_referensi' => trim((string) $this->input->post('no_referensi', true)),
+            'catatan'      => trim((string) $this->input->post('catatan', true)),
         ), $this->_id_user());
 
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
-        redirect('sales_order/detail/' . (int) $id);
+        redirect('sales_order/detail/' . $id);
     }
 
     public function hapus_bayar($id_bayar = 0)
     {
         $this->_wajib_post();
-        list($ok, $pesan, $id_so) = $this->Sales_order_model->hapus_pembayaran($id_bayar);
+        list($ok, $pesan, $id_so) = $this->Sales_order_model->hapus_pembayaran((int) $id_bayar);
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
         redirect($id_so ? 'sales_order/detail/' . $id_so : 'sales_order');
+    }
+
+    // Cetak invoice berkop surat (buka di tab baru)
+    public function cetak($id = 0)
+    {
+        $id = (int) $id;
+        $so = $this->Sales_order_model->get_so_lengkap($id);
+        if (!$so) {
+            show_404();
+        }
+        $so['pembayaran']    = $this->Sales_order_model->get_pembayaran($id);
+        $so['total_dibayar'] = $this->Sales_order_model->total_dibayar($id);
+
+        $this->load->view('penjualan/sales_order_invoice', array('so' => $so));
     }
 
     private function _wajib_post()
@@ -246,17 +276,5 @@ class Sales_order extends MY_Controller
             }
         }
         return null;
-    }
-    // Cetak invoice berkop surat (buka di tab baru)
-    public function cetak($id = 0)
-    {
-        $so = $this->Sales_order_model->get_so_lengkap($id);
-        if (!$so) {
-            show_404();
-        }
-        $so['pembayaran']    = $this->Sales_order_model->get_pembayaran($id);
-        $so['total_dibayar'] = $this->Sales_order_model->total_dibayar($id);
-
-        $this->load->view('penjualan/sales_order_invoice', array('so' => $so));
     }
 }

@@ -133,6 +133,8 @@
           <div class="card-header"><i class="bi bi-receipt me-2"></i>Ringkasan</div>
           <div class="card-body">
             <div class="d-flex justify-content-between mb-1"><span>Subtotal</span><span id="r_subtotal">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1" id="wrap_pasang" style="display:none!important"><span>Biaya pasang</span><span id="r_pasang">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1" id="wrap_ongkir" style="display:none!important"><span>Biaya ongkir</span><span id="r_ongkir">Rp 0</span></div>
             <div class="d-flex justify-content-between mb-1"><span id="l_ppn">PPN</span><span id="r_ppn">Rp 0</span></div>
             <div class="d-flex justify-content-between mb-3"><span id="l_pph">PPh</span><span id="r_pph">Rp 0</span></div>
             <div class="so-total">
@@ -168,14 +170,19 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function num(n, d) { return new Intl.NumberFormat('id-ID', {maximumFractionDigits: d}).format(Number(n) || 0); }
+  function tampil(id, ya) { document.getElementById(id).style.setProperty('display', ya ? 'flex' : 'none', 'important'); }
 
   // alamat ikut customer penawaran, kecuali user sudah mengetik sendiri
   var alamatDiubah = false;
-  document.getElementById('alamat_kirim').addEventListener('input', function () { alamatDiubah = true; });
+  var alamatEl = document.getElementById('alamat_kirim');
+  alamatEl.addEventListener('input', function () { alamatDiubah = true; });
 
   var sel  = document.getElementById('id_penawaran');   // hidden, berisi id
   var cari = document.getElementById('cari_penawaran');  // kotak ketik
-  var peta = {}, lastId = '';
+  var btn  = document.getElementById('btn_simpan');
+  var form = document.getElementById('form_so');
+  var peta = {}, lastId = '', reqSeq = 0, sedangKirim = false;
+
   document.querySelectorAll('#dl_penawaran option').forEach(function (o) {
     peta[o.value] = o.getAttribute('data-id');
   });
@@ -186,56 +193,91 @@
     sel.value = id;
     loadPenawaran(id);
   });
-  document.getElementById('form_so').addEventListener('submit', function (e) {
-    if (!sel.value) { e.preventDefault(); alert('Pilih penawaran dari daftar yang muncul.'); cari.focus(); }
+
+  form.addEventListener('submit', function (e) {
+    if (sedangKirim) { e.preventDefault(); return; }            // cegah klik ganda
+    if (!sel.value) { e.preventDefault(); alert('Pilih penawaran dari daftar yang muncul.'); cari.focus(); return; }
+    sedangKirim = true;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
   });
-  var btn = document.getElementById('btn_simpan');
 
   function loadPenawaran(id) {
     btn.disabled = true;
     if (!id) { reset(); return; }
-    fetch(urlGet + id).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.error) { alert(d.error); reset(); return; }
-      var h = d.header;
-      document.getElementById('v_customer').value = h.nama_customer || '';
-      document.getElementById('v_tgl_penawaran').value = h.tanggal || '';
-      var alamat = document.getElementById('alamat_kirim');
-      if (!alamatDiubah) { alamat.value = h.alamat_customer || ''; }
+    var seq = ++reqSeq;   // abaikan respon lama kalau user keburu ganti pilihan
+    fetch(urlGet + encodeURIComponent(id), {credentials: 'same-origin'})
+      .then(function (r) {
+        if (!r.ok) { throw new Error('HTTP ' + r.status); }
+        return r.json();
+      })
+      .then(function (d) {
+        if (seq !== reqSeq) { return; }
+        if (d.error) { alert(d.error); reset(); return; }
+        var h = d.header;
+        document.getElementById('v_customer').value = h.nama_customer || '';
+        document.getElementById('v_tgl_penawaran').value = h.tanggal || '';
+        if (!alamatDiubah) { alamatEl.value = h.alamat_customer || ''; }
 
-      var rows = '';
-      d.items.forEach(function (it, i) {
-        rows += '<tr>' +
-          '<td>' + (i + 1) + '</td>' +
-          '<td>' + esc(it.jenis_item) +
-            (it.keterangan ? '<div class="small text-muted">' + esc(it.keterangan) + '</div>' : '') + '</td>' +
-          '<td>' + esc(it.warna) + '<div class="small text-muted">' + esc(it.finishing) + '</div></td>' +
-          '<td class="text-end">' + num(it.lebar_mm, 0) + ' x ' + num(it.tinggi_mm, 0) + '</td>' +
-          '<td class="text-end">' + num(it.luas_m2, 4) + '</td>' +
-          '<td class="text-end">' + num(it.qty, 2) + '</td>' +
-          '<td class="text-end">' + rp(it.harga_unit) + '</td>' +
-          '<td class="text-end">' + rp(it.total_harga) + '</td></tr>';
+        var rows = '';
+        d.items.forEach(function (it, i) {
+          var tambahan = '';
+          if (it.aksesoris && it.aksesoris.length) {
+            tambahan += '<div class="small text-muted">Aksesoris: ' +
+              it.aksesoris.map(function (a) { return esc(a.nama) + ' (' + num(a.qty, 2) + ')'; }).join(', ') + '</div>';
+          }
+          if (it.kaca && it.kaca.length) {
+            tambahan += '<div class="small text-muted">Kaca: ' +
+              it.kaca.map(function (k) { return esc(k.nama); }).join(', ') + '</div>';
+          }
+          rows += '<tr>' +
+            '<td>' + (i + 1) + '</td>' +
+            '<td>' + esc(it.jenis_item) +
+              (it.keterangan ? '<div class="small text-muted">' + esc(it.keterangan) + '</div>' : '') +
+              tambahan + '</td>' +
+            '<td>' + esc(it.warna) + '<div class="small text-muted">' + esc(it.finishing) + '</div></td>' +
+            '<td class="text-end">' + num(it.lebar_mm, 0) + ' x ' + num(it.tinggi_mm, 0) + '</td>' +
+            '<td class="text-end">' + num(it.luas_m2, 4) + '</td>' +
+            '<td class="text-end">' + num(it.qty, 2) + '</td>' +
+            '<td class="text-end">' + rp(it.harga_unit) + '</td>' +
+            '<td class="text-end">' + rp(it.total_harga) + '</td></tr>';
+        });
+        document.getElementById('tbody_item').innerHTML = rows ||
+          '<tr><td colspan="8" class="text-center text-muted py-4">Penawaran ini belum punya item.</td></tr>';
+
+        document.getElementById('r_subtotal').textContent = rp(h.subtotal);
+        document.getElementById('r_pasang').textContent = rp(h.biaya_pasang);
+        document.getElementById('r_ongkir').textContent = rp(h.biaya_ongkir);
+        tampil('wrap_pasang', Number(h.biaya_pasang) > 0);
+        tampil('wrap_ongkir', Number(h.biaya_ongkir) > 0);
+        document.getElementById('l_ppn').textContent = 'PPN ' + num(h.ppn_persen, 2) + '%';
+        document.getElementById('r_ppn').textContent = rp(h.ppn_nominal);
+        document.getElementById('l_pph').textContent = 'PPh ' + num(h.pph_persen, 2) + '%';
+        document.getElementById('r_pph').textContent = rp(h.pph_nominal);
+        document.getElementById('r_grand').textContent = rp(h.grand_total);
+        grand = Number(h.grand_total) || 0;
+        updateDp();
+        btn.disabled = !d.items.length;
+      })
+      .catch(function () {
+        if (seq !== reqSeq) { return; }
+        alert('Gagal mengambil data penawaran.');
+        reset();
       });
-      document.getElementById('tbody_item').innerHTML = rows ||
-        '<tr><td colspan="8" class="text-center text-muted py-4">Penawaran ini belum punya item.</td></tr>';
-
-      document.getElementById('r_subtotal').textContent = rp(h.subtotal);
-      document.getElementById('l_ppn').textContent = 'PPN ' + num(h.ppn_persen, 2) + '%';
-      document.getElementById('r_ppn').textContent = rp(h.ppn_nominal);
-      document.getElementById('l_pph').textContent = 'PPh ' + num(h.pph_persen, 2) + '%';
-      document.getElementById('r_pph').textContent = rp(h.pph_nominal);
-      document.getElementById('r_grand').textContent = rp(h.grand_total);
-      grand = Number(h.grand_total) || 0;
-      updateDp();
-      btn.disabled = !d.items.length;
-    }).catch(function () { alert('Gagal mengambil data penawaran.'); reset(); });
   }
 
   function reset() {
     ['v_customer', 'v_tgl_penawaran'].forEach(function (i) { document.getElementById(i).value = ''; });
+    if (!alamatDiubah) { alamatEl.value = ''; }
     document.getElementById('tbody_item').innerHTML =
       '<tr><td colspan="8" class="text-center text-muted py-4">Pilih penawaran untuk menampilkan item.</td></tr>';
-    ['r_subtotal', 'r_ppn', 'r_pph', 'r_grand'].forEach(function (i) { document.getElementById(i).textContent = 'Rp 0'; });
+    ['r_subtotal', 'r_pasang', 'r_ongkir', 'r_ppn', 'r_pph', 'r_grand'].forEach(function (i) {
+      document.getElementById(i).textContent = 'Rp 0';
+    });
+    tampil('wrap_pasang', false);
+    tampil('wrap_ongkir', false);
     grand = 0; updateDp();
+    btn.disabled = true;
   }
 
   // Termin & DP
@@ -244,27 +286,29 @@
   function dpPersen() {
     if (termin.value === '50-50') return 50;
     if (termin.value === '30-70') return 30;
-    if (termin.value === 'custom') return Number(dp.value) || 0;
+    if (termin.value === 'custom') return Math.min(100, Math.max(0, Number(dp.value) || 0));
     return 0;
   }
   function updateDp() {
     document.getElementById('wrap_dp').classList.toggle('d-none', termin.value !== 'custom');
-    var info = document.getElementById('wrap_dp_info');
     var p = dpPersen();
     if (p > 0 && grand > 0) {
-      info.style.setProperty('display', 'flex', 'important');
+      tampil('wrap_dp_info', true);
       document.getElementById('r_dp').textContent = num(p, 2) + '% = ' + rp(grand * p / 100);
     } else {
-      info.style.setProperty('display', 'none', 'important');
+      tampil('wrap_dp_info', false);
     }
   }
   termin.addEventListener('change', updateDp);
   dp.addEventListener('input', updateDp);
+  updateDp();
 
   // Preview nomor SO saat tanggal diganti
   document.getElementById('tanggal').addEventListener('change', function () {
-    fetch(urlNo + '?tanggal=' + encodeURIComponent(this.value)).then(function (r) { return r.json(); })
-      .then(function (d) { document.getElementById('no_so_label').textContent = d.no_so; });
+    fetch(urlNo + '?tanggal=' + encodeURIComponent(this.value), {credentials: 'same-origin'})
+      .then(function (r) { return r.json(); })
+      .then(function (d) { document.getElementById('no_so_label').textContent = d.no_so; })
+      .catch(function () { /* preview saja, nomor final dibuat saat simpan */ });
   });
 })();
 </script>

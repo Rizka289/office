@@ -33,17 +33,22 @@
         <div class="row g-3">
           <div class="col-md-6">
             <label class="form-label"><?= translate('info_pilih_penawaran') ?><span class="text-danger">*</span></label>
-            <input type="text" id="cari_penawaran" class="form-control" list="dl_penawaran"
-                   placeholder="Ketik no. surat / nama customer, lalu pilih dari daftar" autocomplete="off" required>
-            <input type="hidden" name="id_penawaran" id="id_penawaran" value="">
-            <datalist id="dl_penawaran">
+            <?php /* Dropdown biasa (bukan datalist): pasti terpilih id-nya di semua browser */ ?>
+            <input type="text" id="filter_penawaran" class="form-control form-control-sm mb-1"
+                   placeholder="Cari no. surat / nama customer..." autocomplete="off" <?= empty($penawaran_list) ? 'disabled' : '' ?>>
+            <select name="id_penawaran" id="id_penawaran" class="form-select" required <?= empty($penawaran_list) ? 'disabled' : '' ?>>
+              <option value="">-- Pilih penawaran (<?= count($penawaran_list) ?>) --</option>
               <?php foreach ($penawaran_list as $p): ?>
-                <option value="<?= html_escape($p->no_surat . ' - ' . $p->nama_customer) ?>" data-id="<?= (int) $p->id ?>"></option>
+                <option value="<?= (int) $p->id ?>"><?= html_escape($p->no_surat . ' - ' . $p->nama_customer) ?></option>
               <?php endforeach; ?>
-            </datalist>
+            </select>
             <?php if (empty($penawaran_list)): ?>
-              <div class="form-text text-warning"><?= translate('ket_search_penawaran') ?></div>
+              <div class="form-text text-warning">
+                <?= translate('ket_search_penawaran') ?><br>
+                Hanya penawaran berstatus <b>approved</b> yang belum dibuatkan SO yang muncul di sini.
+              </div>
             <?php endif; ?>
+            <div class="form-text text-danger d-none" id="info_error"></div>
           </div>
           <div class="col-md-3">
             <label class="form-label"><?= translate('pelanggan') ?></label>
@@ -136,7 +141,8 @@
             <div class="d-flex justify-content-between mb-1" id="wrap_pasang" style="display:none!important"><span>Biaya pasang</span><span id="r_pasang">Rp 0</span></div>
             <div class="d-flex justify-content-between mb-1" id="wrap_ongkir" style="display:none!important"><span>Biaya ongkir</span><span id="r_ongkir">Rp 0</span></div>
             <div class="d-flex justify-content-between mb-1"><span id="l_ppn">PPN</span><span id="r_ppn">Rp 0</span></div>
-            <div class="d-flex justify-content-between mb-3"><span id="l_pph">PPh</span><span id="r_pph">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1" id="wrap_pph" style="display:none!important"><span id="l_pph">PPh</span><span id="r_pph">Rp 0</span></div>
+            <div class="mb-3"></div>
             <div class="so-total">
               <div class="small text-muted">Grand total</div>
               <div class="fs-4 fw-bold" id="r_grand">Rp 0</div>
@@ -177,26 +183,36 @@
   var alamatEl = document.getElementById('alamat_kirim');
   alamatEl.addEventListener('input', function () { alamatDiubah = true; });
 
-  var sel  = document.getElementById('id_penawaran');   // hidden, berisi id
-  var cari = document.getElementById('cari_penawaran');  // kotak ketik
+  var sel  = document.getElementById('id_penawaran');      // dropdown penawaran
+  var cari = document.getElementById('filter_penawaran');  // kotak filter dropdown
   var btn  = document.getElementById('btn_simpan');
   var form = document.getElementById('form_so');
-  var peta = {}, lastId = '', reqSeq = 0, sedangKirim = false;
+  var infoErr = document.getElementById('info_error');
+  var reqSeq = 0, sedangKirim = false;
 
-  document.querySelectorAll('#dl_penawaran option').forEach(function (o) {
-    peta[o.value] = o.getAttribute('data-id');
-  });
+  function tampilError(msg) {
+    infoErr.textContent = msg || '';
+    infoErr.classList.toggle('d-none', !msg);
+  }
+
+  // Filter isi dropdown sesuai teks yang diketik
   cari.addEventListener('input', function () {
-    var id = peta[this.value] || '';
-    if (id === lastId) { return; }
-    lastId = id;
-    sel.value = id;
-    loadPenawaran(id);
+    var q = this.value.toLowerCase().trim(), pertama = null;
+    Array.prototype.forEach.call(sel.options, function (o) {
+      if (!o.value) { return; }
+      var cocok = o.text.toLowerCase().indexOf(q) !== -1;
+      o.hidden = !cocok;
+      if (cocok && !pertama) { pertama = o; }
+    });
+    if (q && pertama && sel.selectedOptions[0] && sel.selectedOptions[0].hidden) {
+      sel.value = pertama.value; loadPenawaran(sel.value);
+    }
   });
+  sel.addEventListener('change', function () { loadPenawaran(this.value); });
 
   form.addEventListener('submit', function (e) {
     if (sedangKirim) { e.preventDefault(); return; }            // cegah klik ganda
-    if (!sel.value) { e.preventDefault(); alert('Pilih penawaran dari daftar yang muncul.'); cari.focus(); return; }
+    if (!sel.value) { e.preventDefault(); alert('Pilih penawaran dulu.'); sel.focus(); return; }
     sedangKirim = true;
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
@@ -204,16 +220,23 @@
 
   function loadPenawaran(id) {
     btn.disabled = true;
+    tampilError('');
     if (!id) { reset(); return; }
     var seq = ++reqSeq;   // abaikan respon lama kalau user keburu ganti pilihan
-    fetch(urlGet + encodeURIComponent(id), {credentials: 'same-origin'})
+    fetch(urlGet + encodeURIComponent(id), {credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'}})
       .then(function (r) {
-        if (!r.ok) { throw new Error('HTTP ' + r.status); }
-        return r.json();
+        return r.text().then(function (t) {
+          if (!r.ok) { throw new Error('Server error HTTP ' + r.status); }
+          try { return JSON.parse(t); }
+          catch (e) {
+            // Biasanya karena ada PHP error/warning atau sesi login habis (redirect ke halaman login)
+            throw new Error('Respon server bukan JSON. Cek log PHP / coba login ulang.');
+          }
+        });
       })
       .then(function (d) {
         if (seq !== reqSeq) { return; }
-        if (d.error) { alert(d.error); reset(); return; }
+        if (d.error) { tampilError(d.error); reset(); return; }
         var h = d.header;
         document.getElementById('v_customer').value = h.nama_customer || '';
         document.getElementById('v_tgl_penawaran').value = h.tanggal || '';
@@ -252,16 +275,18 @@
         tampil('wrap_ongkir', Number(h.biaya_ongkir) > 0);
         document.getElementById('l_ppn').textContent = 'PPN ' + num(h.ppn_persen, 2) + '%';
         document.getElementById('r_ppn').textContent = rp(h.ppn_nominal);
-        document.getElementById('l_pph').textContent = 'PPh ' + num(h.pph_persen, 2) + '%';
-        document.getElementById('r_pph').textContent = rp(h.pph_nominal);
+        // PPh sudah dipotong di penawaran (grand total = dasar + PPN - PPh), hanya ditampilkan
+        document.getElementById('l_pph').textContent = 'PPh ' + num(h.pph_persen, 2) + '% (dipotong customer)';
+        document.getElementById('r_pph').textContent = '- ' + rp(h.pph_nominal);
+        tampil('wrap_pph', Number(h.pph_nominal) > 0);
         document.getElementById('r_grand').textContent = rp(h.grand_total);
         grand = Number(h.grand_total) || 0;
         updateDp();
-        btn.disabled = !d.items.length;
+        btn.disabled = !(d.items && d.items.length);
       })
-      .catch(function () {
+      .catch(function (err) {
         if (seq !== reqSeq) { return; }
-        alert('Gagal mengambil data penawaran.');
+        tampilError('Gagal mengambil data penawaran: ' + err.message);
         reset();
       });
   }
@@ -276,6 +301,7 @@
     });
     tampil('wrap_pasang', false);
     tampil('wrap_ongkir', false);
+    tampil('wrap_pph', false);
     grand = 0; updateDp();
     btn.disabled = true;
   }

@@ -1,83 +1,130 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
+/**
+ * Tabel supplier: id, nama, kontak, alamat, deskripsi (+ created_at / aktif bila ada)
+ */
 class Supplier_model extends CI_Model
 {
-    public function __construct()
+    private $table = 'supplier';
+
+    // ---------- Untuk modul lain (Proses Pesanan / PO) ----------
+
+    public function get_all()
     {
-        parent::__construct();
-        $this->load->database();
+        return $this->db->order_by('nama', 'ASC')->get($this->table)->result();
     }
-    // Mengambil semua data dari tabel 'supplier'
-    public function get_all_supplier()
+
+    // Untuk dropdown supplier: hanya yang aktif (kalau kolom aktif ada)
+    public function get_aktif()
     {
-        $query = $this->db->get('supplier');
-        return $query->result_array();
+        if ($this->db->field_exists('aktif', $this->table)) {
+            $this->db->where('aktif', 1);
+        }
+        return $this->db->order_by('nama', 'ASC')->get($this->table)->result();
     }
-    // Terapkan filter search ke query builder (dipakai bareng oleh get & count)
-    private function applySearchFilter($search)
+
+    public function get($id)
     {
-        if (!empty($search)) {
+        return $this->get_by_id($id);
+    }
+
+    // ---------- Halaman master supplier ----------
+
+    private function _filter($search)
+    {
+        if ($search !== '') {
             $this->db->group_start()
                 ->like('nama', $search)
                 ->or_like('kontak', $search)
-                ->or_like('deskripsi', $search)
                 ->or_like('alamat', $search)
+                ->or_like('deskripsi', $search)
                 ->group_end();
         }
+        // supplier nonaktif (sudah dipakai lalu "dihapus") tidak ditampilkan
+        if ($this->db->field_exists('aktif', $this->table)) {
+            $this->db->where('aktif', 1);
+        }
     }
-    // Mengambil data supplier dengan pagination & search (untuk grid)
+
     public function get_supplier_paginated($search = '', $limit = 5, $offset = 0)
     {
-        $this->applySearchFilter($search);
-        $this->db->order_by('id', 'DESC');
-        $this->db->limit($limit, $offset);
-
-        return $this->db->get('supplier')->result_array();
+        $this->db->select('id, nama, kontak, alamat, deskripsi');
+        $this->_filter((string) $search);
+        return $this->db->order_by('nama', 'ASC')->limit((int) $limit, (int) $offset)->get($this->table)->result();
     }
 
-    // Hitung total data supplier (dengan search yang sama) untuk pagination
     public function count_supplier($search = '')
     {
-        $this->applySearchFilter($search);
-        return $this->db->count_all_results('supplier');
-    }
-
-    public function get_by_user($nama)
-    {
-        $this->db->where('nama', $nama);
-        $query = $this->db->get('supplier');
-        return $query->row();
+        $this->_filter((string) $search);
+        return $this->db->count_all_results($this->table);
     }
 
     public function get_by_id($id)
     {
-        return $this->db->get_where('supplier', ['id' => $id])->row();
+        return $this->db->select('id, nama, kontak, alamat, deskripsi')
+            ->get_where($this->table, array('id' => (int) $id))->row();
     }
-    // Simpan data supplier baru
+
+    // Cek nama kembar (abaikan id sendiri saat edit)
+    public function nama_dipakai($nama, $kecuali_id = 0)
+    {
+        $this->db->where('nama', $nama);
+        if ((int) $kecuali_id > 0) {
+            $this->db->where('id <>', (int) $kecuali_id);
+        }
+        if ($this->db->field_exists('aktif', $this->table)) {
+            $this->db->where('aktif', 1);
+        }
+        return $this->db->count_all_results($this->table) > 0;
+    }
+
     public function insert_supplier($data)
     {
-        return $this->db->insert('supplier', $data);
+        return $this->db->insert($this->table, $this->_saring($data));
     }
+
     public function update_supplier($id, $data)
     {
-        $this->db->where('id', $id);
-        return $this->db->update('supplier', $data);
+        return $this->db->where('id', (int) $id)->update($this->table, $this->_saring($data));
     }
 
-    // Hapus supplier. Mengembalikan array ['success' => bool, 'error' => ['code' => .., 'message' => ..]]
-    public function delete_supplier($id)
+    // Hanya kolom yang benar-benar ada di tabel
+    private function _saring($data)
     {
-        // Matikan sementara db_debug supaya error DB (mis. FK constraint)
-        // tidak memunculkan halaman error 500 dari CodeIgniter
-        $debug = $this->db->db_debug;
-        $this->db->db_debug = FALSE;
+        return array_intersect_key($data, array_flip($this->db->list_fields($this->table)));
+    }
 
-        $this->db->where('id', $id);
-        $ok    = $this->db->delete('supplier');
-        $error = $this->db->error(); // ['code' => ..., 'message' => ...]
+    // Sudah dipakai di PO / item SO?
+    public function dipakai($id)
+    {
+        $pakai = 0;
+        if ($this->db->table_exists('pm_po')) {
+            $pakai += $this->db->where('id_supplier', (int) $id)->count_all_results('pm_po');
+        }
+        if ($this->db->field_exists('id_supplier', 'sales_order_detail')) {
+            $pakai += $this->db->where('id_supplier', (int) $id)->count_all_results('sales_order_detail');
+        }
+        return $pakai > 0;
+    }
 
-        $this->db->db_debug = $debug;
-
-        return ['success' => (bool) $ok, 'error' => $error];
+    // Supplier yang sudah dipakai tidak dihapus (PO lama tetap butuh datanya), hanya dinonaktifkan
+    public function hapus($id)
+    {
+        if (!$this->get_by_id($id)) {
+            return array(false, 'Data tidak ditemukan!');
+        }
+        if ($this->dipakai($id)) {
+            if ($this->db->field_exists('aktif', $this->table)) {
+                $this->db->where('id', (int) $id)->update($this->table, array('aktif' => 0));
+                return array(true, 'Supplier sudah dipakai di PO / SO, jadi dinonaktifkan (tidak dihapus).');
+            }
+            return array(false, 'Supplier sudah dipakai di PO / SO, tidak bisa dihapus.');
+        }
+        if (!$this->db->where('id', (int) $id)->delete($this->table)) {
+            $err = $this->db->error();
+            log_message('error', 'Hapus supplier gagal: ' . $err['message']);
+            return array(false, 'Gagal menghapus data dari database.');
+        }
+        return array(true, 'Supplier dihapus.');
     }
 }

@@ -97,12 +97,35 @@ class Sales_order extends MY_Controller
     // AJAX: data penawaran untuk ditampilkan di form (read-only)
     public function get_penawaran($id = 0)
     {
-        $res = $this->Sales_order_model->get_penawaran_lengkap((int) $id);
-        if ($res && $res['header']->status !== 'approved') {
-            $res = null;
+        $id  = (int) $id;
+        $res = $id > 0 ? $this->Sales_order_model->get_penawaran_lengkap($id) : null;
+
+        if (!$res || empty($res['header'])) {
+            return $this->_json(array('error' => 'Penawaran #' . $id . ' tidak ditemukan.'));
         }
-        $this->output->set_content_type('application/json')
-            ->set_output(json_encode($res ? $res : array('error' => 'Penawaran tidak ditemukan atau belum di-approve')));
+        if (($res['header']->status ?? '') !== 'approved') {
+            return $this->_json(array('error' => 'Penawaran ini belum di-approve (status: ' . ($res['header']->status ?? '-') . ').'));
+        }
+        if (empty($res['items'])) {
+            return $this->_json(array('error' => 'Penawaran ini tidak punya item, SO tidak bisa dibuat.'));
+        }
+        $this->_json($res);
+    }
+
+    // Kirim JSON dengan aman: karakter UTF-8 rusak (mis. teks Mandarin dari DB) diganti,
+    // supaya json_encode tidak menghasilkan FALSE (respon kosong).
+    private function _json($data)
+    {
+        $flags = JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR;
+        if (defined('JSON_INVALID_UTF8_SUBSTITUTE')) {
+            $flags |= JSON_INVALID_UTF8_SUBSTITUTE;
+        }
+        $out = json_encode($data, $flags);
+        if ($out === false) {
+            log_message('error', 'Sales_order JSON gagal: ' . json_last_error_msg());
+            $out = json_encode(array('error' => 'Data penawaran gagal dibaca (' . json_last_error_msg() . ').'));
+        }
+        $this->output->set_content_type('application/json', 'utf-8')->set_output($out);
     }
 
     // AJAX: preview nomor SO saat tanggal diubah
@@ -113,7 +136,7 @@ class Sales_order extends MY_Controller
             $tgl = date('Y-m-d');
         }
         $no = $this->Sales_order_model->generate_no($tgl);
-        $this->output->set_content_type('application/json')->set_output(json_encode(array('no_so' => $no['no_so'])));
+        $this->_json(array('no_so' => $no['no_so']));
     }
 
     public function simpan()
@@ -206,6 +229,34 @@ class Sales_order extends MY_Controller
         redirect('sales_order/detail/' . $id);
     }
 
+    // Ubah No. PO customer, target tanggal kirim & catatan dari halaman detail
+    public function ubah_info($id = 0)
+    {
+        $this->_wajib_post();
+        $id = (int) $id;
+        if (!$this->Sales_order_model->get_so_lengkap($id)) {
+            show_404();
+        }
+
+        $tgl_kirim = trim((string) $this->input->post('tgl_kirim', true));
+        if ($tgl_kirim !== '') {
+            if (!strtotime($tgl_kirim)) {
+                $this->session->set_flashdata('error', 'Tanggal target kirim tidak valid.');
+                redirect('sales_order/detail/' . $id);
+                return;
+            }
+            $tgl_kirim = date('Y-m-d', strtotime($tgl_kirim));
+        }
+
+        list($ok, $pesan) = $this->Sales_order_model->ubah_info($id, array(
+            'no_po_customer' => mb_substr(trim((string) $this->input->post('no_po_customer', true)), 0, 50),
+            'tgl_kirim'      => $tgl_kirim,
+            'catatan'        => trim((string) $this->input->post('catatan', true)),
+        ));
+        $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
+        redirect('sales_order/detail/' . $id);
+    }
+
     // Catat pembayaran (DP / pelunasan) dari halaman detail
     public function bayar($id = 0)
     {
@@ -233,6 +284,12 @@ class Sales_order extends MY_Controller
             'catatan'      => trim((string) $this->input->post('catatan', true)),
         ), $this->_id_user());
 
+        // PPh tidak dicatat sebagai pembayaran: grand_total dari penawaran sudah dikurangi PPh.
+        // SO yang sudah terkirim semua + sekarang lunas -> otomatis jadi "selesai"
+        if ($ok) {
+            $this->load->model('Pemenuhan_model');
+            $this->Pemenuhan_model->sinkron_status_so($id);
+        }
         $this->session->set_flashdata($ok ? 'success' : 'error', $pesan);
         redirect('sales_order/detail/' . $id);
     }

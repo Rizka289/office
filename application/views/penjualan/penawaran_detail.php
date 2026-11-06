@@ -355,10 +355,12 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
       <span><?= translate('ppn') ?> <?= isset($header->ppn_persen) ? rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.') : '11'; ?>%</span>
       <span><?= $rp($ppn); ?></span>
     </div>
-    <div class="summary-row">
-      <span><?= translate('pph') ?><?= isset($header->pph_persen) ? rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.') : '2.5'; ?>%</span>
-      <span><?= $rp($pph); ?></span>
-    </div>
+    <?php if ($pph > 0): ?>
+      <div class="summary-row">
+        <span><?= translate('pph') ?> <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)</span>
+        <span>- <?= $rp($pph); ?></span>
+      </div>
+    <?php endif; ?>
     <div class="summary-row total">
       <span><?= translate('grand_total') ?></span>
       <span><?= $rp($grand); ?></span>

@@ -1116,8 +1116,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       <?php endif; ?>
       <?php if ((float) $header->pph_persen > 0): ?>
         <tr>
-          <td class="tlabel">PPh <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>%</td>
-          <td class="tval">Rp <?= number_format((float) $header->pph_nominal, 0, ',', '.'); ?></td>
+          <td class="tlabel">PPh <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)</td>
+          <td class="tval">- Rp <?= number_format((float) $header->pph_nominal, 0, ',', '.'); ?></td>
         </tr>
       <?php endif; ?>
       <tr class="grand">

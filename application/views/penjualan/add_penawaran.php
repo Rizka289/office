@@ -2,7 +2,7 @@
 
 <?php
 $tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
-$tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
+$tarif_pph = isset($tarif_pph) ? $tarif_pph : 2;
 $list_customer = isset($list_customer) ? (array) $list_customer : [];
 $list_barang   = isset($list_barang) ? (array) $list_barang : [];
 $ada_customer  = !empty($list_customer);
@@ -417,8 +417,9 @@ if ($is_edit && !empty($items_edit)) {
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>%</label>
+            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong customer)</label>
           </div>
+          <div class="form-text" id="infoPph">PPh <?= html_escape($tarif_pph); ?>% hanya bisa dipilih kalau ada biaya pemasangan / instalasi, dihitung dari nilai jasa pemasangan saja, dan mengurangi grand total.</div>
         </div>
       </div>
     </div>
@@ -437,7 +438,7 @@ if ($is_edit && !empty($items_edit)) {
             <span class="text-muted"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>%</span><span id="sumPph">Rp 0</span>
+            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong)</span><span id="sumPph">Rp 0</span>
           </div>
           <div class="total-box mt-3">
             <div class="text-muted small"><?= translate('grand_total') ?></div>
@@ -742,6 +743,8 @@ if ($is_edit && !empty($items_edit)) {
     var TARIF_PPH = <?= (float) $tarif_pph; ?>;
     var IS_MANUAL = <?= $is_manual ? 'true' : 'false'; ?>;
     var FOLDER_FOTO = <?= json_encode($folder_foto); ?>;
+    // Kalau form terkunci (belum ada customer), switch PPh jangan dibuka oleh segarkan()
+    if (chkPph.disabled) chkPph.dataset.kunci = '1';
 
     var ITEMS_EDIT = <?= json_encode($items_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
     var DATA_BARANG = [];
@@ -1133,6 +1136,7 @@ if ($is_edit && !empty($items_edit)) {
         var elInstTotal = card.querySelector('.it-instalasi-total');
         if (elInstTotal) elInstTotal.value = rupiah(totalInstalasi);
       }
+      card.dataset.instalasi = totalInstalasi;
 
       var totalBarang;
       if (IS_MANUAL) {
@@ -1172,14 +1176,27 @@ if ($is_edit && !empty($items_edit)) {
       var ongkir = nominalBiaya(chkOngkir, inpOngkir);
       var dasar = subtotal + pasang + ongkir;
 
+      // PPh hanya boleh kalau ada pemasangan (biaya pasang header atau instalasi rolling door)
+      var totalInstalasiSemua = rows.reduce(function(s, card) {
+        return s + (parseFloat(card.dataset.instalasi) || 0);
+      }, 0);
+      var adaPasang = pasang > 0 || totalInstalasiSemua > 0;
+      if (chkPph.dataset.kunci !== '1') {
+        chkPph.disabled = !adaPasang;
+      }
+      if (!adaPasang) chkPph.checked = false;
+
       var ppn = chkPpn.checked ? Math.round(dasar * TARIF_PPN / 100) : 0;
-      var pph = chkPph.checked ? Math.round(dasar * TARIF_PPH / 100) : 0;
-      var grand = dasar + ppn + pph;
+      // PPh 23 hanya dari nilai jasa pemasangan (biaya pasang + instalasi), bukan seluruh subtotal
+      var dasarJasa = pasang + totalInstalasiSemua;
+      var pph = chkPph.checked ? Math.round(dasarJasa * TARIF_PPH / 100) : 0;
+      // PPh dipotong customer -> mengurangi grand total
+      var grand = dasar + ppn - pph;
 
       document.getElementById('sumJumlahItem').textContent = totalQty;
       document.getElementById('sumSubtotal').textContent = rupiah(subtotal);
       document.getElementById('sumPpn').textContent = rupiah(ppn);
-      document.getElementById('sumPph').textContent = rupiah(pph);
+      document.getElementById('sumPph').textContent = pph > 0 ? '- ' + rupiah(pph) : rupiah(0);
       document.getElementById('sumGrandTotal').textContent = rupiah(grand);
     }
 

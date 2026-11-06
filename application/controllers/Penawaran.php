@@ -4,7 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class Penawaran extends MY_Controller
 {
     const TARIF_PPN = 11;
-    const TARIF_PPH = 2.5;
+    // PPh 23 atas jasa pemasangan: hanya boleh dipakai kalau ada biaya pemasangan,
+    // dan DIPOTONG customer (mengurangi grand total), bukan ditambahkan.
+    const TARIF_PPH = 2;
     const DEFAULT_TIPE_MOTOR_ROLLING  = 'Electra 600';
     const DEFAULT_POWER_ROLLING       = '250 W';
     const DEFAULT_VOLTAGE_ROLLING     = '220 V - 50 Hz';
@@ -20,7 +22,8 @@ class Penawaran extends MY_Controller
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole('super_admin');
+        // purchasing = admin penawaran; atasan ikut melihat & approve penawaran
+        $this->requireRole(['super_admin', 'atasan', 'staff_purchasing']);
         $this->load->model('Penawaran_model');
         $this->load->helper('url');
     }
@@ -660,13 +663,30 @@ class Penawaran extends MY_Controller
         }
     }
 
-    private function _hitung_total($subtotal, $ppn_persen = null, $pph_persen = null)
+    // Nilai JASA pemasangan = biaya pasang di header + biaya instalasi rolling door
+    // di semua item (luas billing x qty instalasi x tarif pasang per m²).
+    // Inilah dasar pengenaan PPh 23 (bukan seluruh subtotal barang).
+    private function _dpp_jasa($biaya_pasang, array $items)
+    {
+        $jasa = max(0, (float) $biaya_pasang);
+        foreach ($items as $it) {
+            $jasa += (float) ($it['luas_billing_m2'] ?? 0)
+                * (float) ($it['qty_instalasi'] ?? 0)
+                * (float) ($it['harga_m2_instalasi'] ?? 0);
+        }
+        return round($jasa, 2);
+    }
+
+    // Ada biaya pemasangan = nilai jasa pemasangan > 0
+    private function _ada_pemasangan($biaya_pasang, array $items)
+    {
+        return $this->_dpp_jasa($biaya_pasang, $items) > 0;
+    }
+
+    private function _hitung_total($subtotal, array $items = [], $ppn_persen = null, $pph_persen = null)
     {
         if ($ppn_persen === null) {
             $ppn_persen = $this->input->post('pakai_ppn') ? self::TARIF_PPN : 0;
-        }
-        if ($pph_persen === null) {
-            $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
         }
 
         $biaya_pasang = $this->input->post('pakai_pasang')
@@ -674,10 +694,20 @@ class Penawaran extends MY_Controller
         $biaya_ongkir = $this->input->post('pakai_ongkir')
             ? max(0, (float) $this->input->post('biaya_ongkir')) : null;
 
+        // PPh hanya boleh kalau ada pemasangan (dicek ulang di server, tidak percaya form)
+        if ($pph_persen === null) {
+            $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
+        }
+        if (!$this->_ada_pemasangan($biaya_pasang, $items)) {
+            $pph_persen = 0;
+        }
+
         $dasar_pajak = $subtotal + (float) $biaya_pasang + (float)$biaya_ongkir;
 
+        // PPN 11% dari seluruh nilai (barang + jasa + ongkir).
+        // PPh 23 (2%) HANYA dari nilai jasa pemasangan/instalasi.
         $ppn_nominal = round($dasar_pajak * $ppn_persen / 100);
-        $pph_nominal = round($dasar_pajak * $pph_persen / 100);
+        $pph_nominal = round($this->_dpp_jasa($biaya_pasang, $items) * $pph_persen / 100);
 
         return [
             'subtotal'     => $subtotal,
@@ -687,7 +717,8 @@ class Penawaran extends MY_Controller
             'ppn_nominal'  => $ppn_nominal,
             'pph_persen'   => $pph_persen,
             'pph_nominal'  => $pph_nominal,
-            'grand_total'  => $dasar_pajak + $ppn_nominal + $pph_nominal,
+            // PPh dipotong customer -> MENGURANGI tagihan
+            'grand_total'  => $dasar_pajak + $ppn_nominal - $pph_nominal,
         ];
     }
 
@@ -719,7 +750,7 @@ class Penawaran extends MY_Controller
             'tipe'        => $tipe,
             'status'      => 'draft',
             'id_user'     => $this->session->userdata('user_id') ?? 0,
-        ], $this->_hitung_total($subtotal));
+        ], $this->_hitung_total($subtotal, $items));
 
         $id_penawaran = $this->Penawaran_model->simpan_penawaran($header, $items);
 
@@ -802,7 +833,7 @@ class Penawaran extends MY_Controller
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
-        ], $this->_hitung_total($subtotal));
+        ], $this->_hitung_total($subtotal, $items));
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
             // Hapus file foto yang tidak dipakai lagi (diganti / item dihapus)

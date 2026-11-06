@@ -1,48 +1,47 @@
-<?php
-defined('BASEPATH') or exit('No direct script access allowed');
+<?php defined('BASEPATH') or exit('No direct script access allowed');
 
-// Lokasi file: application/controllers/Supplier.php
-// URL akses: domain.com/supplier
-
+/**
+ * Master Supplier
+ * Kolom tabel supplier: id, nama, kontak, alamat, deskripsi (+ created_at / aktif bila ada)
+ * Semua aksi lewat AJAX dan mengembalikan JSON (dipakai views/master_data/supplier_index.php)
+ */
 class Supplier extends MY_Controller
 {
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole(['super_admin', 'staff_purchasing']); // hanya role ini yang boleh akses seluruh method di sini
+        // super admin mengelola master; purchasing (admin penawaran) juga butuh menambah supplier baru
+        $this->requireRole(['super_admin', 'staff_purchasing']);
         $this->load->model('Supplier_model');
         $this->load->helper('url');
     }
 
     public function index()
     {
-        $data['title'] = 'Manajemen Supplier';
-        $data['page_title']     =  translate('app_list') . ' ' . translate('list_pemasok');
-        $data['active_menu']   = 'supplier';
+        $data['title']       = 'Supplier';
+        $data['page_title']  = 'Supplier';
+        $data['active_menu'] = 'supplier';
 
         $this->load->view('templates/header', $data);
         $this->load->view('master_data/supplier_index', $data);
         $this->load->view('templates/footer', $data);
     }
 
-    // Endpoint AJAX: ambil data supplier dengan pagination (max 5/halaman) & search
+    // AJAX: data supplier dengan pagination & pencarian
     public function list_data()
     {
-        $search = $this->input->get('search', true);
-        $page   = (int) $this->input->get('page', true);
-        if ($page < 1) {
-            $page = 1;
-        }
+        $search = trim((string) $this->input->get('search', true));
+        $page   = max(1, (int) $this->input->get('page', true));
 
         $perPage = 5;
         $offset  = ($page - 1) * $perPage;
 
         $total = $this->Supplier_model->count_supplier($search);
-        $data  = $this->Supplier_model->get_supplier_paginated($search, $perPage, $offset);
+        $rows  = $this->Supplier_model->get_supplier_paginated($search, $perPage, $offset);
 
         $this->jsonResponse([
             'status'       => true,
-            'data'         => $data,
+            'data'         => $rows,
             'total'        => (int) $total,
             'per_page'     => $perPage,
             'current_page' => $page,
@@ -50,101 +49,101 @@ class Supplier extends MY_Controller
         ]);
     }
 
-    // Method simpan data via AJAX
+    // AJAX: tambah supplier
     public function simpan()
     {
-        $nama      = $this->input->post('nama', true);
-        $kontak    = $this->input->post('kontak', true);
-        $deskripsi = $this->input->post('deskripsi', true);
-        $alamat    = $this->input->post('alamat', true);
-
-        if (empty($nama) || empty($kontak) || empty($deskripsi) || empty($alamat)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
+        if ($this->input->method() !== 'post') {
+            show_404();
+        }
+        list($data, $error) = $this->_ambil_input();
+        if ($error !== '') {
+            $this->jsonResponse(['status' => false, 'message' => $error]);
             return;
         }
+        if ($this->Supplier_model->nama_dipakai($data['nama'])) {
+            $this->jsonResponse(['status' => false, 'message' => 'Supplier "' . $data['nama'] . '" sudah ada.']);
+            return;
+        }
+        $data['created_at'] = date('Y-m-d H:i:s');
 
-        $data = array(
-            'nama'       => $nama,
-            'kontak'     => $kontak,
-            'deskripsi'  => $deskripsi,
-            'alamat'     => $alamat,
-            'created_at' => date('Y-m-d H:i:s')
-        );
-
-        $simpan = $this->Supplier_model->insert_supplier($data);
-
+        $ok = $this->Supplier_model->insert_supplier($data);
         $this->jsonResponse(
-            $simpan
+            $ok
                 ? ['status' => true, 'message' => translate('message_sukses')]
                 : ['status' => false, 'message' => translate('message_gagal')]
         );
     }
 
-    // Ambil data supplier berdasarkan ID (untuk form edit modal)
-    public function get_by_id($id)
+    // AJAX: ambil 1 supplier untuk modal edit
+    public function get_by_id($id = 0)
     {
-        $supplier = $this->Supplier_model->get_by_id($id);
+        $row = $this->Supplier_model->get_by_id((int) $id);
         $this->jsonResponse(
-            $supplier
-                ? ['status' => true, 'data' => $supplier]
+            $row
+                ? ['status' => true, 'data' => $row]
                 : ['status' => false, 'message' => 'Data tidak ditemukan!']
         );
     }
 
-    // Update data supplier via AJAX
+    // AJAX: update supplier
     public function update()
     {
-        $id        = $this->input->post('id', true);
-        $nama      = $this->input->post('nama', true);
-        $deskripsi = $this->input->post('deskripsi', true);
-        $kontak    = $this->input->post('kontak', true);
-        $alamat    = $this->input->post('alamat', true);
-
-        if (empty($id) || empty($nama) || empty($kontak) || empty($alamat) || empty($deskripsi)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Field nama, kontak, deskripsi, dan alamat wajib diisi!']);
+        if ($this->input->method() !== 'post') {
+            show_404();
+        }
+        $id = (int) $this->input->post('id', true);
+        if ($id <= 0 || !$this->Supplier_model->get_by_id($id)) {
+            $this->jsonResponse(['status' => false, 'message' => 'Data tidak ditemukan!']);
+            return;
+        }
+        list($data, $error) = $this->_ambil_input();
+        if ($error !== '') {
+            $this->jsonResponse(['status' => false, 'message' => $error]);
+            return;
+        }
+        if ($this->Supplier_model->nama_dipakai($data['nama'], $id)) {
+            $this->jsonResponse(['status' => false, 'message' => 'Supplier "' . $data['nama'] . '" sudah ada.']);
             return;
         }
 
-        $data = array(
-            'nama'      => $nama,
-            'kontak'    => $kontak,
-            'deskripsi' => $deskripsi,
-            'alamat'    => $alamat
-        );
-
-        $update = $this->Supplier_model->update_supplier($id, $data);
-
+        $ok = $this->Supplier_model->update_supplier($id, $data);
         $this->jsonResponse(
-            $update
-                ? ['status' => true, 'message' =>  translate('message_update')]
-                : ['status' => false, 'message' =>translate('message_update_gagal')]
+            $ok
+                ? ['status' => true, 'message' => translate('message_update')]
+                : ['status' => false, 'message' => translate('message_update_gagal')]
         );
     }
 
-    // Delete data supplier via AJAX
-    public function delete($id = NULL)
+    // AJAX: hapus supplier (yang sudah dipakai di PO / SO tidak dihapus)
+    public function delete($id = 0)
     {
-        if (empty($id)) {
+        if ($this->input->method() !== 'post') {
+            show_404();
+        }
+        if ((int) $id <= 0) {
             $this->jsonResponse(['status' => false, 'message' => 'ID tidak ditemukan!']);
             return;
         }
+        list($ok, $pesan) = $this->Supplier_model->hapus((int) $id);
+        $this->jsonResponse(['status' => $ok, 'message' => $pesan]);
+    }
 
-        $result = $this->Supplier_model->delete_supplier($id);
+    // Ambil & validasi input form (tambah / edit). Return array(data, pesan_error)
+    private function _ambil_input()
+    {
+        $nama      = trim((string) $this->input->post('nama', true));
+        $kontak    = preg_replace('/[^0-9]/', '', (string) $this->input->post('kontak', true));
+        $alamat    = trim((string) $this->input->post('alamat', true));
+        $deskripsi = trim((string) $this->input->post('deskripsi', true));
 
-        if ($result['success']) {
-            $this->jsonResponse(['status' => true, 'message' => 'Data berhasil dihapus']);
-            return;
+        if ($nama === '' || $kontak === '' || $alamat === '' || $deskripsi === '') {
+            return [[], 'Nama, kontak, deskripsi, dan alamat wajib diisi!'];
         }
-
-        $code = (int) $result['error']['code'];
-        log_message('error', 'Delete Supplier gagal: ' . $result['error']['message']);
-
-        if ($code === 1451) { // foreign key constraint
-            $msg = translate('p_supplier_relasi');
-        } else {
-            $msg = 'Gagal menghapus data dari database';
-        }
-
-        $this->jsonResponse(['status' => false, 'message' => $msg]);
+        return [[
+            'nama'      => mb_substr($nama, 0, 150),
+            'kontak'    => mb_substr($kontak, 0, 30),
+            'alamat'    => $alamat,
+            'deskripsi' => $deskripsi,
+        ], ''];
     }
 }

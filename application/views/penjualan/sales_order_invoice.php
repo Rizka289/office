@@ -104,6 +104,26 @@ $dp_persen  = (float) $h->dp_persen;
 $dp_nilai   = round($grand * $dp_persen / 100);
 $sisa_tagih = max(0, $grand - $total_bayar);
 $lunas      = $grand > 0 && $sisa_tagih <= 0.005;
+
+// Pisahkan uang yang benar-benar masuk vs PPh yang dipotong customer (bukti potong)
+$pph_so      = (float) $h->pph_nominal;
+$pph_dicatat = 0;
+foreach ($bayar_list as $b) {
+  if ($b->jenis === 'pph') {
+    $pph_dicatat += (float) $b->nominal;
+  }
+}
+$uang_diterima = $total_bayar - $pph_dicatat;
+$sisa_pph      = max(0, $pph_so - $pph_dicatat);
+// Sisa tagihan tinggal sebesar PPh -> kemungkinan besar customer memotong PPh tapi belum dicatat
+$sisa_hanya_pph = !$lunas && $sisa_pph > 0 && abs($sisa_tagih - $sisa_pph) < 1;
+
+$label_jenis = array(
+  'dp'        => 'DP',
+  'pelunasan' => 'Pelunasan',
+  'pph'       => 'PPh dipotong customer',
+  'lainnya'   => 'Lainnya',
+);
 if ($h->termin === '100' || $dp_persen <= 0) {
   $termin_teks = 'Pembayaran 100%';
 } else {
@@ -466,7 +486,16 @@ $dash = function ($n, $d = 2) use ($num) {
       <?php endforeach; ?>
     </select>
     <button type="button" onclick="window.print()">Cetak</button>
-    <button type="button" onclick="window.close()">Tutup</button>
+    <!-- Dibuka di tab baru -> tutup tab; dibuka dari "Catat PPh & Cetak" (tab yang sama) -> kembali ke detail -->
+    <button type="button" onclick="if (history.length <= 1) { window.close(); } else { location.href = '<?= site_url('sales_order/detail/' . (int) $h->id) ?>'; }">Tutup</button>
+    <?php if ($sisa_hanya_pph): ?>
+      <div style="margin-top:8px;padding:8px 12px;background:#fff3cd;border:1px solid #e0c36a;border-radius:4px;text-align:left;font-size:12px">
+        <strong>Perhatian:</strong> sisa tagihan <?= $rp($sisa_tagih) ?> sama dengan nilai PPh.
+        Kalau customer sudah memotong PPh (ada bukti potong), catat pembayaran jenis <em>PPh</em>
+        di halaman detail SO supaya invoice berstatus <strong>LUNAS</strong>.
+        <a href="<?= site_url('sales_order/detail/' . (int) $h->id) ?>">Buka detail SO</a>
+      </div>
+    <?php endif; ?>
   </div>
 
   <div class="page">
@@ -557,6 +586,16 @@ $dash = function ($n, $d = 2) use ($num) {
           $ada_instal = (int) $it->qty_instalasi > 0 && (float) $it->harga_m2_instalasi > 0;
           $total_books  = (float) $it->luas_m2_books * (int) $it->qty_books * (float) $it->harga_m2_books;
           $total_instal = $luas_bill * (float) $it->harga_m2_instalasi * (int) $it->qty_instalasi;
+
+          // Jumlah baris utama = HANYA barang pokok (luas x qty x harga), sama seperti cetak penawaran.
+          // Aksesoris, kaca, books & instalasi punya jumlah sendiri di baris masing-masing
+          // (total_harga di DB sudah termasuk semuanya, jadi tidak dipakai di sini).
+          // Kalau item tidak berbasis luas (luas = 0) -> qty x harga.
+          $qty_item    = (float) $it->qty;
+          $harga_item  = (float) $it->harga_unit;
+          $jumlah_item = $luas_bill > 0
+            ? $luas_bill * $qty_item * $harga_item
+            : $qty_item * $harga_item;
         ?>
           <tr class="utama">
             <td class="c"><?= $no++ ?></td>
@@ -576,7 +615,7 @@ $dash = function ($n, $d = 2) use ($num) {
             <td class="r"><?= $dash($luas_bill, 2) ?></td>
             <td class="c"><?= $num($it->qty, 2) ?></td>
             <td class="r"><?= $rp($it->harga_unit) ?></td>
-            <td class="r"><?= $rp($it->total_harga) ?></td>
+            <td class="r"><?= $rp($jumlah_item) ?></td>
           </tr>
 
           <?php if ($ada_books): ?>
@@ -698,8 +737,14 @@ $dash = function ($n, $d = 2) use ($num) {
           </tr>
           <tr>
             <td>Pembayaran diterima</td>
-            <td class="r">- <?= $rp($total_bayar) ?></td>
+            <td class="r">- <?= $rp($uang_diterima) ?></td>
           </tr>
+          <?php if ($pph_dicatat > 0): ?>
+            <tr>
+              <td>PPh dipotong customer</td>
+              <td class="r">- <?= $rp($pph_dicatat) ?></td>
+            </tr>
+          <?php endif; ?>
           <tr class="sisa">
             <td>SISA TAGIHAN</td>
             <td class="r"><?= $rp($sisa_tagih) ?></td>
@@ -724,7 +769,7 @@ $dash = function ($n, $d = 2) use ($num) {
               <tr>
                 <td><?= date('d/m/Y', strtotime($b->tanggal)) ?></td>
                 <td>
-                  <?= html_escape(strtoupper($b->jenis)) ?>
+                  <?= html_escape(isset($label_jenis[$b->jenis]) ? $label_jenis[$b->jenis] : strtoupper($b->jenis)) ?>
                   <?= $isi($b->metode) ? ' - ' . html_escape($b->metode) : '' ?>
                   <?= $isi($b->no_referensi) ? ' (' . html_escape($b->no_referensi) . ')' : '' ?>
                 </td>

@@ -38,8 +38,10 @@ if ($is_edit && !empty($items_edit)) {
       'finishing'          => $it['finishing'] ?? '',
       'komponen_kusen'     => $it['komponen_kusen'] ?? '',
       'komponen_daun'      => $it['komponen_daun'] ?? '',
+      'tebal'              => $it['tebal'] ?? '',
       'lebar_mm'           => (int) ($it['lebar_mm'] ?? 0),
       'tinggi_mm'          => (int) ($it['tinggi_mm'] ?? 0),
+      'luas_m2'            => (float) ($it['luas_m2'] ?? 0),
       'qty'                => (int) ($it['qty'] ?? 1),
       'harga_unit'         => (float) ($it['harga_unit'] ?? 0),
       'keterangan'         => $it['keterangan'] ?? '',
@@ -496,7 +498,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label">Luas (m²)</label>
-          <input type="text" class="form-control it-luas" value="0.0000" readonly>
+          <input type="text" inputmode="decimal" name="luas_m2[]" class="form-control it-luas" value="" placeholder="0,00" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label">Qty</label>
@@ -512,6 +514,11 @@ if ($is_edit && !empty($items_edit)) {
           <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Opsional">
         </div>
 
+        <div class="col-md-3">
+          <label class="form-label">Tebal(mm)</label>
+          <input type="text" name="tebal[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+
         <div class="col-md-2">
           <label class="form-label">Kusen (mm)</label>
           <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
@@ -522,7 +529,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
 
         <div class="col-12">
-          <div class="form-text mt-0">Luas = Lebar × Tinggi (otomatis). Total barang = <strong>Luas × Qty × Harga / m²</strong>. Jika lebar/tinggi dikosongkan, total = Qty × Harga.</div>
+          <div class="form-text mt-0">Luas terisi otomatis dari Lebar × Tinggi, tapi boleh diketik sendiri (mis. 1,65). Total barang = <strong>Luas × Qty × Harga / m²</strong>. Jika lebar/tinggi dikosongkan, total = Qty × Harga.</div>
         </div>
 
         <div class="col-md-6">
@@ -601,7 +608,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label">Luas (m²)</label>
-          <input type="text" class="form-control it-luas" value="0.0000" readonly>
+          <input type="text" class="form-control it-luas" value="0.00" readonly>
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label">Qty <span class="text-danger">*</span></label>
@@ -616,6 +623,10 @@ if ($is_edit && !empty($items_edit)) {
           <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang">
         </div>
 
+        <div class="col-md-2">
+          <label class="form-label">Tebal (mm)</label>
+          <input type="text" name="tebal[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
         <div class="col-md-2">
           <label class="form-label">Kusen (mm)</label>
           <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
@@ -637,17 +648,17 @@ if ($is_edit && !empty($items_edit)) {
           <label class="form-label">Voltage</label>
           <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
         </div>
-        <div class="col-md-6">
+        <div class="col-md-3">
           <label class="form-label">Books Penutup</label>
           <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup"></textarea>
         </div>
-        <div class="col-md-6">
+        <div class="col-md-3">
           <label class="form-label">Kelengkapan</label>
           <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
         </div>
-        <div class="col-12">
+        <div class="col-3">
           <label class="form-label"><?= translate('catatan') ?></label>
-          <textarea name="keterangan[]" class="form-control it-keterangan" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="5" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
         </div>
 
         <!-- Books Penutup (khusus rolling door) -->
@@ -664,7 +675,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
         <div class="col-md-3 books-blok d-none">
           <label class="form-label">Luas (m²)</label>
-          <input type="text" class="form-control it-books-luas" value="0.0000" readonly tabindex="-1">
+          <input type="text" class="form-control it-books-luas" value="0.00" readonly tabindex="-1">
         </div>
         <div class="col-md-3 books-blok d-none">
           <label class="form-label">Qty</label>
@@ -857,10 +868,19 @@ if ($is_edit && !empty($items_edit)) {
       set('.it-id-barang', d.id_barang > 0 ? d.id_barang : '');
       set('.it-warna', d.warna);
       set('.it-komponen', d.komponen);
+      set('[name="tebal[]"]', d.tebal);
       set('[name="komponen_kusen[]"]', d.komponen_kusen);
       set('[name="komponen_daun[]"]', d.komponen_daun);
       set('.it-lebar', d.lebar_mm);
       set('.it-tinggi', d.tinggi_mm);
+      if (IS_MANUAL) {
+        var luasSimpan = parseFloat(d.luas_m2) || 0;
+        var luasHitung = Math.round(((parseInt(d.lebar_mm, 10) || 0) * (parseInt(d.tinggi_mm, 10) || 0)) / 10000) / 100;
+        if (luasSimpan > 0 && Math.abs(luasSimpan - luasHitung) > 0.001) {
+          card.dataset.luasManual = '1';
+          set('.it-luas', luasSimpan.toFixed(2));
+        }
+      }
       set('.it-qty', d.qty > 0 ? d.qty : 1);
       set('.it-harga', d.harga_unit);
       set('[name="keterangan[]"]', d.keterangan);
@@ -1055,6 +1075,11 @@ if ($is_edit && !empty($items_edit)) {
       return /^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/.test(String(kategori || ''));
     }
 
+    // Bulatkan luas ke 2 angka di belakang koma (mis. 1,649 -> 1,65)
+    function bulat2(n) {
+      return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
     function luasBilling(kategori, luasRiil, lebarMm, tinggiMm) {
       var luas = luasRiil;
       if (kategori === 'jendela_sliding') {
@@ -1065,9 +1090,9 @@ if ($is_edit && !empty($items_edit)) {
       } else if (kategori === 'pintu_baja') {
         luas = Math.max(luasRiil, 2);
       } else if (isRollingDoor(kategori)) {
-        luas = Math.max(Math.round(((lebarMm + 200) / 1000) * ((tinggiMm + 600) / 1000) * 10000) / 10000, 10);
+        luas = Math.max(Math.round(((lebarMm + 200) * (tinggiMm + 600)) / 10000) / 100, 10);
       }
-      return luas;
+      return bulat2(luas);
     }
 
     function hitungBaris(card) {
@@ -1077,13 +1102,23 @@ if ($is_edit && !empty($items_edit)) {
       var harga = parseFloat(card.querySelector('.it-harga').value) || 0;
 
       var kategori = kategoriBaris(card);
-      var luasRiil = Math.round((lebar / 1000) * (tinggi / 1000) * 10000) / 10000;
+      // Luas dibulatkan 2 angka di belakang koma (dihitung dari mm² langsung, sama dengan server)
+      var luasRiil = Math.round((lebar * tinggi) / 10000) / 100;
       var luas = luasBilling(kategori, luasRiil, lebar, tinggi);
-      // Mode manual: tanpa luas minimum / aturan kategori, luas = lebar x tinggi apa adanya
-      if (IS_MANUAL) luas = luasRiil;
-
       var inpLuas = card.querySelector('.it-luas');
-      if (inpLuas) inpLuas.value = luas.toFixed(4);
+      if (IS_MANUAL) {
+        // Mode manual: tanpa luas minimum / aturan kategori.
+        // Luas diketik sendiri -> pakai ketikan; kalau tidak -> Lebar x Tinggi.
+        if (card.dataset.luasManual === '1') {
+          luas = bulat2(toNum(inpLuas.value));
+        } else {
+          luas = luasRiil;
+          // Jangan timpa isian yang sedang diketik
+          if (inpLuas && document.activeElement !== inpLuas) inpLuas.value = luas > 0 ? luas.toFixed(2) : '';
+        }
+      } else if (inpLuas) {
+        inpLuas.value = luas.toFixed(2);
+      }
 
       var totalAksesoris = 0;
       card.querySelectorAll('.baris-aksesoris').forEach(function(row) {
@@ -1115,10 +1150,10 @@ if ($is_edit && !empty($items_edit)) {
         var bTinggi = parseFloat(card.querySelector('.it-books-tinggi').value) || 0;
         var bQty = parseFloat(card.querySelector('.it-books-qty').value) || 0;
         var bHarga = parseFloat(card.querySelector('.it-books-harga').value) || 0;
-        var bLuas = Math.round((bLebar / 1000) * (bTinggi / 1000) * 10000) / 10000;
+        var bLuas = Math.round((bLebar * bTinggi) / 10000) / 100;
         totalBooks = bLuas * bQty * bHarga;
         var elBLuas = card.querySelector('.it-books-luas');
-        if (elBLuas) elBLuas.value = bLuas.toFixed(4);
+        if (elBLuas) elBLuas.value = bLuas.toFixed(2);
         var elBTotal = card.querySelector('.it-books-total');
         if (elBTotal) elBTotal.value = rupiah(totalBooks);
       }
@@ -1221,7 +1256,29 @@ if ($is_edit && !empty($items_edit)) {
         tampilkanDropdown(e.target.closest('.item-card'), cariBarang(e.target.value));
         return;
       }
-      if (e.target.closest('.item-card')) segarkan();
+      var cardInp = e.target.closest('.item-card');
+      if (IS_MANUAL && cardInp) {
+        if (e.target.classList.contains('it-luas')) {
+          // Luas diketik sendiri; dikosongkan -> kembali otomatis dari Lebar x Tinggi
+          cardInp.dataset.luasManual = e.target.value.trim() !== '' ? '1' : '';
+        } else if (e.target.classList.contains('it-lebar') || e.target.classList.contains('it-tinggi')) {
+          // Ukuran diubah -> luas dihitung ulang otomatis
+          cardInp.dataset.luasManual = '';
+        }
+      }
+      if (cardInp) segarkan();
+    });
+
+    // Mode manual: setelah selesai mengetik luas, rapikan jadi 2 angka di belakang koma
+    wrap.addEventListener('focusout', function(e) {
+      if (!IS_MANUAL || !e.target.classList.contains('it-luas')) return;
+      var card = e.target.closest('.item-card');
+      if (card.dataset.luasManual === '1') {
+        var v = bulat2(toNum(e.target.value));
+        e.target.value = v > 0 ? v.toFixed(2) : '';
+        if (v <= 0) card.dataset.luasManual = '';
+      }
+      segarkan();
     });
 
     wrap.addEventListener('focusin', function(e) {

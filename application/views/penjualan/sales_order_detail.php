@@ -735,7 +735,11 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         </div>
 
         <div class="panel mb-3">
-          <div class="panel-title"><i class="bi bi-wallet2"></i><?= translate('pembayaran') ?></div>
+          <div class="panel-title"><i class="bi bi-wallet2"></i><?= translate('pembayaran') ?>
+            <?php if (!empty($h->id_customer) && in_array((string) $this->session->userdata('role'), array('super_admin', 'atasan', 'finance'), true)): ?>
+              <a href="<?= site_url('piutang/customer/' . (int) $h->id_customer) ?>" class="ms-auto small fw-normal text-decoration-none"><i class="bi bi-person-vcard me-1"></i>Kartu piutang</a>
+            <?php endif; ?>
+          </div>
           <div class="panel-body">
             <div class="fw-semibold mb-2"><?= $termin_teks ?></div>
             <?php if ($dp_persen > 0): ?>

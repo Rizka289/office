@@ -102,12 +102,9 @@ $subtotal = isset($header->subtotal) ? (float) $header->subtotal : 0;
 $ppn      = isset($header->ppn_nominal) ? (float) $header->ppn_nominal : 0;
 $pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
 $grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
-// Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
-// maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+// Luas selalu ditampilkan 2 angka di belakang koma (dibulatkan). Contoh: 1.649 -> 1.65, 10 -> 10.00
 $fmt_luas = function ($v) {
-  $s   = number_format((float) $v, 4, '.', '');
-  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
-  return number_format((float) $v, $dec, '.', '');
+  return number_format(round((float) $v, 2), 2, '.', '');
 };
 $rp = function ($v) {
   return 'Rp ' . number_format((float) $v, 0, ',', '.');
@@ -292,6 +289,9 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
                     <span class="spek-line">
                       Plate Kusen/Daun: <?= html_escape($it->komponen_kusen ?: '-'); ?> / <?= html_escape($it->komponen_daun ?: '-'); ?> mm
                     </span>
+                  <?php endif; ?>
+                  <?php if (!empty($it->tebal)): ?>
+                    <span class="spek-line">Tebal: <?= html_escape($it->tebal); ?> mm</span>
                   <?php endif; ?>
                   <?php if (!empty($it->aksesoris)): ?>
                     <span class="spek-line spek-multi">Aksesoris:</span>

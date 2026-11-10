@@ -388,10 +388,40 @@
             'roles' => ['super_admin', 'atasan', 'finance'],
             'items' => [
                 [
+                    // Piutang = SO belum lunas (DP -> kirim -> pelunasan). Lihat controllers/Piutang.php
+                    'key'   => 'piutang',
+                    'label' => 'Piutang Customer',
+                    'icon'  => 'bi-receipt',
+                    'url'   => 'piutang',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    'key'   => 'piutang_terima',
+                    'label' => 'Penerimaan Pembayaran',
+                    'icon'  => 'bi-wallet2',
+                    'url'   => 'piutang/penerimaan',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
                     'key'   => 'hutang',
                     'label' => 'Hutang Supplier',
                     'icon'  => 'bi-cash-stack',
                     'url'   => 'pemenuhan/hutang',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    // Pengeluaran kantor di luar PO (listrik, gaji, ATK, dll). Lihat controllers/Biaya.php
+                    'key'   => 'biaya',
+                    'label' => 'Biaya Operasional',
+                    'icon'  => 'bi-wallet',
+                    'url'   => 'biaya',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    'key'   => 'biaya_rekap',
+                    'label' => 'Rekap Biaya',
+                    'icon'  => 'bi-bar-chart',
+                    'url'   => 'biaya/rekap',
                     'roles' => ['super_admin', 'atasan', 'finance'],
                 ],
             ],

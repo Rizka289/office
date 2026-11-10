@@ -190,6 +190,7 @@ class Penawaran extends MY_Controller
         $lebar_m2       = $this->input->post('lebar_m2_books', TRUE) ?: [];
         $tinggi_m2      = $this->input->post('tinggi_m2_books', TRUE) ?: [];
         $qty_m2         = $this->input->post('qty_books', TRUE)      ?: [];
+        $tebal         = $this->input->post('tebal', TRUE)      ?: [];
         $harga_books    = $this->input->post('harga_m2_books', TRUE) ?: [];
         $qty_instalasi = $this->input->post('qty_instalasi', TRUE) ?: [];
         $harga_instalasi = $this->input->post('harga_m2_instalasi', TRUE) ?: [];
@@ -227,8 +228,10 @@ class Penawaran extends MY_Controller
                 $kategori_rumus = 'unit_fix';
             }
 
-            $luas_riil = round(($l / 1000) * ($t / 1000), 4);
-            $luas_billing = $this->_luas_billing($kategori_rumus, $luas_riil, $l, $t);
+            // Luas dibulatkan 2 angka di belakang koma (mis. 1,649 -> 1,65),
+            // dihitung dari mm² langsung supaya tidak terjadi pembulatan ganda.
+            $luas_riil    = round(($l * $t) / 1000000, 2);
+            $luas_billing = round($this->_luas_billing($kategori_rumus, $luas_riil, $l, $t), 2);
 
             $total = ($kategori_rumus === 'unit_fix')
                 ? $q * $harga_m2
@@ -289,7 +292,7 @@ class Penawaran extends MY_Controller
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
                 $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));
-                $books_luas  = round(($books_l / 1000) * ($books_t / 1000), 4);
+                $books_luas  = round(($books_l * $books_t) / 1000000, 2);
                 $books_q     = max(0, (int) ($qty_m2[$i] ?? 0));
                 $books_h     = max(0, (float) ($harga_books[$i] ?? 0));
                 $books_total = round($books_luas * $books_q * $books_h, 2);
@@ -334,10 +337,11 @@ class Penawaran extends MY_Controller
                 'finishing'       => $fin_val,
                 'komponen_kusen'  => trim($komponen_kusen[$i] ?? ''),
                 'komponen_daun'   => trim($komponen_daun[$i] ?? ''),
+                'tebal'           => trim($tebal[$i] ?? ''),
                 'lebar_mm'        => $l,
                 'tinggi_mm'       => $t,
-                'luas_m2'         => round($luas_riil, 4),
-                'luas_billing_m2' => round($luas_billing, 4),
+                'luas_m2'         => $luas_riil,
+                'luas_billing_m2' => $luas_billing,
                 'qty'             => $q,
                 'harga_unit'      => $harga_m2,
                 'total_harga'     => round($total, 2),
@@ -367,7 +371,8 @@ class Penawaran extends MY_Controller
     // ------------------------------------------------------------------
     // MODE MANUAL: semua isian diketik langsung (tanpa master barang).
     // - Nama barang boleh kosong; item tetap disimpan kalau ada aksesoris / detail kaca.
-    // - Ukuran diinput Lebar x Tinggi (mm) -> Luas (m2) dihitung otomatis.
+    // - Ukuran diinput Lebar x Tinggi (mm) -> Luas (m2) dihitung otomatis,
+    //   tapi Luas boleh diketik sendiri (luas_m2[]) dan ketikan itu yang dipakai.
     // - Total barang = Luas x Qty x Harga per m2.
     //   (Kalau lebar/tinggi dikosongkan sehingga luas = 0, total = Qty x Harga.)
     // - Total item = total barang + aksesoris + detail kaca.
@@ -382,8 +387,10 @@ class Penawaran extends MY_Controller
         $komponen      = $this->input->post('komponen', TRUE)      ?: [];
         $lebar_mm      = $this->input->post('lebar_mm', TRUE)      ?: [];
         $tinggi_mm     = $this->input->post('tinggi_mm', TRUE)     ?: [];
+        $luas_input    = $this->input->post('luas_m2', TRUE)       ?: [];
         $qty           = $this->input->post('qty', TRUE)           ?: [];
         $harga_unit    = $this->input->post('harga_unit', TRUE)    ?: [];
+        $tebal         = $this->input->post('tebal', TRUE)    ?: [];
         $komponen_kusen    = $this->input->post('komponen_kusen', TRUE)    ?: [];
         $komponen_daun    = $this->input->post('komponen_daun', TRUE)    ?: [];
         $keterangan    = $this->input->post('keterangan', TRUE)    ?: [];
@@ -405,7 +412,10 @@ class Penawaran extends MY_Controller
             $q     = max(1, (int) ($qty[$i] ?? 1));
             $l     = max(0, (int) ($lebar_mm[$i] ?? 0));
             $t     = max(0, (int) ($tinggi_mm[$i] ?? 0));
-            $luas  = round(($l / 1000) * ($t / 1000), 4);
+            // Luas manual boleh diketik sendiri (mis. "1,65"). Kalau kosong / 0,
+            // dihitung dari Lebar x Tinggi. Selalu dibulatkan 2 angka di belakang koma.
+            $luas_ketik = round(max(0, $this->_ke_angka($luas_input[$i] ?? '')), 2);
+            $luas       = ($luas_ketik > 0) ? $luas_ketik : round(($l * $t) / 1000000, 2);
 
             // Aksesoris (+ foto per aksesoris)
             $aks_list  = [];
@@ -491,6 +501,7 @@ class Penawaran extends MY_Controller
                 'warna'              => trim($warna[$i] ?? ''),
                 'komponen'           => trim($komponen[$i] ?? ''),
                 'finishing'          => trim($finishing[$i] ?? ''),
+                'tebal'              =>  trim($tebal[$i] ?? ''),
                 'komponen_kusen'     =>  trim($komponen_kusen[$i] ?? ''),
                 'komponen_daun'      =>  trim($komponen_daun[$i] ?? ''),
                 'lebar_mm'           => $ada_barang ? $l : 0,
@@ -628,6 +639,7 @@ class Penawaran extends MY_Controller
             case 'jendela_sliding':
                 return max($luas_riil, 1.3);
             case 'jendela_swing_b1':
+            case 'jendela_jungkit' :
                 return max($luas_riil, 1.4);
             case 'jendela_swing_b2':
                 $luas = max($luas_riil, 1.4);
@@ -651,13 +663,11 @@ class Penawaran extends MY_Controller
             case 'rolling_door_baja':
             case 'rooling_door_tahan_api':
             case 'rooling_door_baja':
-                $lebar_m  = ($lebar_mm + 200) / 1000;
-                $tinggi_m = ($tinggi_mm + 600) / 1000;
-                $luas = round($lebar_m * $tinggi_m, 4);
+                $luas = round((($lebar_mm + 200) * ($tinggi_mm + 600)) / 1000000, 2);
                 return max($luas, 10.0);
             default:
                 if ($this->_is_rolling_door($kategori)) {
-                    return max(round((($lebar_mm + 200) / 1000) * (($tinggi_mm + 600) / 1000), 4), 10.0);
+                    return max(round((($lebar_mm + 200) * ($tinggi_mm + 600)) / 1000000, 2), 10.0);
                 }
                 return $luas_riil;
         }

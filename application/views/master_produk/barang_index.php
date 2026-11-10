@@ -125,6 +125,7 @@
                         <select name="kategori_rumus" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?> --</option>
                             <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_jungkit">Jendela Jungkit</option>
                             <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>
@@ -259,6 +260,7 @@
                         <select name="kategori_rumus" id="edit_kategori_rumus" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?>--</option>
                             <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_jungkit">Jendela Jungkit</option>
                             <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>

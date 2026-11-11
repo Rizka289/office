@@ -93,6 +93,8 @@ class Penawaran_model extends CI_Model
             pen.tanggal,
             pen.grand_total,
             pen.status,
+            pen.tipe,
+            ' . ($this->db->field_exists('jenis_penjualan', 'penawaran') ? 'pen.jenis_penjualan,' : '') . '
             cus.nama AS customer,
             (
                 SELECT COALESCE(SUM(pd.qty), 0)
@@ -145,7 +147,7 @@ class Penawaran_model extends CI_Model
             b.nama   AS nama_barang,
             b.gambar AS gambar_barang,
             b.kategori_rumus AS rumus,
-            b.keterangan As keterangan
+            b.keterangan AS keterangan_barang
         ');
         $this->db->from('penawaran_detail pd');
         $this->db->join('barang b', 'b.id = pd.id_barang', 'left');
@@ -235,6 +237,34 @@ class Penawaran_model extends CI_Model
         return $map;
     }
 
+    // Daftar nama file foto (foto item + foto aksesoris, penawaran manual) milik 1 penawaran.
+    public function get_foto_list($id_penawaran)
+    {
+        $daftar = [];
+
+        if ($this->db->field_exists('foto', 'penawaran_detail')) {
+            $rows = $this->db->select('foto')
+                ->where('id_penawaran', (int) $id_penawaran)
+                ->where("foto IS NOT NULL AND foto <> ''", null, false)
+                ->get('penawaran_detail')
+                ->result();
+            $daftar = array_merge($daftar, array_column($rows, 'foto'));
+        }
+
+        if ($this->db->field_exists('foto', 'penawaran_detail_aksesoris')) {
+            $rows = $this->db->query(
+                "SELECT a.foto
+                 FROM penawaran_detail_aksesoris a
+                 JOIN penawaran_detail d ON d.id = a.id_penawaran_detail
+                 WHERE d.id_penawaran = ? AND a.foto IS NOT NULL AND a.foto <> ''",
+                [(int) $id_penawaran]
+            )->result();
+            $daftar = array_merge($daftar, array_column($rows, 'foto'));
+        }
+
+        return array_values(array_unique($daftar));
+    }
+
     // Hapus semua aksesoris milik detail-detail dari 1 penawaran.
     private function _hapus_aksesoris_by_penawaran($id_penawaran)
     {
@@ -285,6 +315,9 @@ class Penawaran_model extends CI_Model
 
             foreach ($aksesoris_list as $aks) {
                 $aks['id_penawaran_detail'] = $id_detail;
+                if (!empty($aks['foto']) && !in_array('foto', $kolom_aks, true)) {
+                    log_message('error', 'penawaran_detail_aksesoris: kolom foto belum ada, foto aksesoris tidak tersimpan.');
+                }
                 $aks = array_intersect_key($aks, array_flip($kolom_aks));
                 $this->db->insert('penawaran_detail_aksesoris', $aks);
             }

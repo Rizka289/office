@@ -98,19 +98,19 @@
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama') ?></label>
-                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan nama supplier" required>
+                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="<?= translate('p_nama_sup') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kontak') ?></label>
-                        <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" id="edit_kontak" class="form-control form-control-sm input-numeric-only" placeholder="Masukkan kontak" required>
+                        <input type="text" inputmode="numeric" pattern="[0-9]*" name="kontak" id="edit_kontak" class="form-control form-control-sm input-numeric-only" placeholder="<?= translate('p_kontak') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
-                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan deskripsi" required></textarea>
+                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="<?= translate('p_deskripsi') ?>" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('alamat') ?></label>
-                        <textarea name="alamat" id="edit_alamat" class="form-control form-control-sm" rows="3" placeholder="Masukkan alamat" required></textarea>
+                        <textarea name="alamat" id="edit_alamat" class="form-control form-control-sm" rows="3" placeholder="<?= translate('p_alamat') ?>" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -127,6 +127,9 @@
     $(document).ready(function() {
 
         var currentPage = 1;
+        // teks asli tombol (dikembalikan setelah proses simpan / update)
+        var txtSimpan = $('#btnSimpan').text();
+        var txtUpdate = $('#btnUpdate').text();
         var currentSearch = '';
         var searchTimer = null;
 
@@ -203,8 +206,8 @@
                     '<td>' + no + '</td>' +
                     '<td class="fw-semibold">' + escapeHtml(sup.nama) + '</td>' +
                     '<td>' + escapeHtml(sup.kontak) + '</td>' +
-                    '<td>' + escapeHtml(sup.alamat) + '</td>' +
-                    '<td>' + escapeHtml(sup.deskripsi) + '</td>' +
+                    '<td style="white-space:pre-line">' + escapeHtml(sup.alamat) + '</td>' +
+                    '<td style="white-space:pre-line">' + escapeHtml(sup.deskripsi) + '</td>' +
                     '<td class="text-center">' +
                     '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + sup.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
                     '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + sup.id + '" data-nama="' + escapeHtml(sup.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
@@ -323,12 +326,12 @@
                     } else {
                         alert(response.message);
                     }
-                    $('#btnSimpan').prop('disabled', false).text('Simpan Data');
+                    $('#btnSimpan').prop('disabled', false).text(txtSimpan);
                 },
                 error: function(xhr, status, error) {
                     console.error(error);
                     if (!handleAjaxError(xhr, 'Terjadi kesalahan saat menyimpan data')) {
-                        $('#btnSimpan').prop('disabled', false).text('Simpan Data');
+                        $('#btnSimpan').prop('disabled', false).text(txtSimpan);
                     }
                 }
             });
@@ -381,12 +384,12 @@
                     } else {
                         alert(response.message);
                     }
-                    $('#btnUpdate').prop('disabled', false).text('Update Data');
+                    $('#btnUpdate').prop('disabled', false).text(txtUpdate);
                 },
                 error: function(xhr, status, error) {
                     console.error(error);
                     if (!handleAjaxError(xhr, 'Terjadi kesalahan saat memperbarui data')) {
-                        $('#btnUpdate').prop('disabled', false).text('Update Data');
+                        $('#btnUpdate').prop('disabled', false).text(txtUpdate);
                     }
                 }
             });

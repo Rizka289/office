@@ -102,17 +102,15 @@ $subtotal = isset($header->subtotal) ? (float) $header->subtotal : 0;
 $ppn      = isset($header->ppn_nominal) ? (float) $header->ppn_nominal : 0;
 $pph      = isset($header->pph_nominal) ? (float) $header->pph_nominal : 0;
 $grand    = isset($header->grand_total) ? (float) $header->grand_total : 0;
-// Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
-// maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+// Luas selalu ditampilkan 2 angka di belakang koma (dibulatkan). Contoh: 1.649 -> 1.65, 10 -> 10.00
 $fmt_luas = function ($v) {
-  $s   = number_format((float) $v, 4, '.', '');
-  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
-  return number_format((float) $v, $dec, '.', '');
+  return number_format(round((float) $v, 2), 2, '.', '');
 };
 $rp = function ($v) {
   return 'Rp ' . number_format((float) $v, 0, ',', '.');
 };
 $approved = (($header->status ?? 'draft') === 'approved');
+$is_manual = (($header->tipe ?? 'rumus') === 'manual');
 ?>
 
 <div class="pnw-detail-page">
@@ -134,6 +132,7 @@ $approved = (($header->status ?? 'draft') === 'approved');
     <div>
       <h5 class="mb-0">
         <?= html_escape($header->no_surat); ?>
+        <?php if ($is_manual): ?><span class="badge bg-info text-dark ms-2 align-middle">Manual</span><?php endif; ?>
         <?php if ($approved): ?>
           <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
         <?php else: ?>
@@ -236,7 +235,7 @@ $approved = (($header->status ?? 'draft') === 'approved');
             <th style="width:8%" class="text-center"><?= translate('luas') ?> m²</th>
             <th style="width:6%" class="text-center"><?= translate('qty') ?></th>
             <th style="width:12%" class="text-end"><?= translate('harga') ?></th>
-            <th style="width:12%" class="text-end"><?= translate('total') ?></th>
+            <th style="width:12%" class="text-end"><?= translate('subtotal') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -245,7 +244,18 @@ $approved = (($header->status ?? 'draft') === 'approved');
               <tr>
                 <td><?= $no++; ?></td>
                 <td>
-                  <strong><?= html_escape($it->jenis_item); ?></strong>
+                  <?php if (!empty($it->foto)): ?>
+                    <div class="mb-1">
+                      <a href="<?= base_url('uploads/penawaran/' . $it->foto); ?>" target="_blank">
+                        <img src="<?= base_url('uploads/penawaran/' . $it->foto); ?>" alt="" class="img-thumbnail" style="max-height:80px">
+                      </a>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (trim((string) $it->jenis_item) !== ''): ?>
+                    <strong><?= html_escape($it->jenis_item); ?></strong>
+                  <?php else: ?>
+                    <strong class="text-muted">Aksesoris</strong>
+                  <?php endif; ?>
                   <?php if (!empty($it->warna)): ?>
                     <span class="spek-line">Warna: <?= html_escape($it->warna); ?></span>
                   <?php endif; ?>
@@ -280,11 +290,19 @@ $approved = (($header->status ?? 'draft') === 'approved');
                       Plate Kusen/Daun: <?= html_escape($it->komponen_kusen ?: '-'); ?> / <?= html_escape($it->komponen_daun ?: '-'); ?> mm
                     </span>
                   <?php endif; ?>
+                  <?php if (!empty($it->tebal)): ?>
+                    <span class="spek-line">Tebal: <?= html_escape($it->tebal); ?> mm</span>
+                  <?php endif; ?>
                   <?php if (!empty($it->aksesoris)): ?>
                     <span class="spek-line spek-multi">Aksesoris:</span>
                     <?php foreach ($it->aksesoris as $ak): ?>
                       <span class="spek-line">
                         &bull; <?= html_escape($ak->nama); ?> (<?= (int) $ak->qty; ?> &times; <?= $rp($ak->harga); ?> = <?= $rp(isset($ak->total_harga) ? $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?>)
+                        <?php if (!empty($ak->foto)): ?>
+                          <a href="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" target="_blank">
+                            <img src="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" alt="" class="img-thumbnail ms-1 align-middle" style="max-height:48px">
+                          </a>
+                        <?php endif; ?>
                       </span>
                     <?php endforeach; ?>
                   <?php endif; ?>
@@ -292,10 +310,21 @@ $approved = (($header->status ?? 'draft') === 'approved');
                     <div class="keterangan-box"><?= nl2br(html_escape($it->keterangan)); ?></div>
                   <?php endif; ?>
                 </td>
-                <td><?= (int) $it->lebar_mm; ?> x <?= (int) $it->tinggi_mm; ?></td>
-                <td class="text-center"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
-                <td class="text-center"><?= (int) $it->qty; ?></td>
-                <td class="text-end"><?= $rp($it->harga_unit); ?></td>
+                <td>
+                  <?php if ($is_manual && (int) $it->lebar_mm <= 0 && (int) $it->tinggi_mm <= 0): ?>
+                    <?= html_escape(($it->ukuran_teks ?? '') !== '' ? $it->ukuran_teks : '-'); ?>
+                  <?php else: ?>
+                    <?= (int) $it->lebar_mm . ' x ' . (int) $it->tinggi_mm; ?>
+                  <?php endif; ?>
+                </td>
+                <td class="text-center"><?= ($is_manual && (float) ($it->luas_m2 ?? 0) <= 0) ? '-' : $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
+                <td class="text-center"><?= ((int) $it->qty > 0) ? (int) $it->qty : '-'; ?></td>
+                <td class="text-end">
+                  <?= $rp($it->harga_unit); ?>
+                  <?php if ($is_manual && (float) $it->harga_unit > 0): ?>
+                    <span class="spek-line"><?= (($it->satuan_harga ?? 'm2') === 'unit') ? '/ unit' : '/ m²'; ?></span>
+                  <?php endif; ?>
+                </td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>
               </tr>
             <?php endforeach; ?>
@@ -331,10 +360,12 @@ $approved = (($header->status ?? 'draft') === 'approved');
       <span><?= translate('ppn') ?> <?= isset($header->ppn_persen) ? rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.') : '11'; ?>%</span>
       <span><?= $rp($ppn); ?></span>
     </div>
-    <div class="summary-row">
-      <span><?= translate('pph') ?><?= isset($header->pph_persen) ? rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.') : '2.5'; ?>%</span>
-      <span><?= $rp($pph); ?></span>
-    </div>
+    <?php if ($pph > 0): ?>
+      <div class="summary-row">
+        <span><?= translate('pph') ?> <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)</span>
+        <span>- <?= $rp($pph); ?></span>
+      </div>
+    <?php endif; ?>
     <div class="summary-row total">
       <span><?= translate('grand_total') ?></span>
       <span><?= $rp($grand); ?></span>

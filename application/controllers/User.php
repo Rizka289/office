@@ -4,6 +4,9 @@ defined('BASEPATH') or exit('No direct script access allowed');
 
 class User extends MY_Controller
 {
+    // 5 role sistem (lihat juga Pemenuhan::$izin dan menu di templates/header.php)
+    private $role_valid = ['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'];
+
     public function __construct()
     {
         parent::__construct();
@@ -63,6 +66,10 @@ class User extends MY_Controller
             $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
             return;
         }
+        if (!in_array($role, $this->role_valid, true)) {
+            $this->jsonResponse(['status' => false, 'message' => 'Role tidak valid!']);
+            return;
+        }
 
         $data = array(
             'nama'       => $nama,
@@ -103,6 +110,10 @@ class User extends MY_Controller
 
         if (empty($id) || empty($nama) || empty($username) || empty($role)) {
             $this->jsonResponse(['status' => false, 'message' => 'Field nama, username, dan role wajib diisi!']);
+            return;
+        }
+        if (!in_array($role, $this->role_valid, true)) {
+            $this->jsonResponse(['status' => false, 'message' => 'Role tidak valid!']);
             return;
         }
 

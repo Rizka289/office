@@ -2,7 +2,9 @@
 
 <style>
   .rcv-index-page .toolbar-card { background:#fff; border:1px solid #edf0f1; border-radius:12px; padding:14px 16px; box-shadow:0 2px 10px rgba(15,42,41,.04); margin-bottom:18px; }
-  .rcv-index-page .kpi-card { display:flex; align-items:center; gap:12px; }
+  .rcv-index-page .kpi-card { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #edf0f1; border-radius:12px; padding:14px 16px; box-shadow:0 2px 10px rgba(15,42,41,.04); height:100%; }
+  .rcv-index-page .kpi-icon.bg-terima { background:#e3effb; color:#1f5f9e; }
+  .rcv-index-page .sisa-note { font-size:.72rem; font-weight:400; }
   .rcv-index-page .kpi-icon { width:44px; height:44px; border-radius:10px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:1.15rem; }
   .rcv-index-page .kpi-icon.bg-total { background:var(--brand-light,#eaf4f0); color:var(--brand,#2f7a57); }
   .rcv-index-page .kpi-icon.bg-nilai { background:#dff3e6; color:#1f7a45; }
@@ -17,14 +19,14 @@
 </style>
 
 <?php
-// warna badge per status
+// warna & label badge per status (sama dengan halaman detail SO)
 $status_badge = array(
-    'draft'     => 'bg-secondary',
-    'confirmed' => 'bg-primary',
-    'produksi'  => 'bg-warning text-dark',
-    'terkirim'  => 'bg-info text-dark',
-    'selesai'   => 'bg-success',
-    'batal'     => 'bg-danger',
+    'draft'     => array('bg-secondary',         'Draft'),
+    'confirmed' => array('bg-primary',           'Dikonfirmasi'),
+    'produksi'  => array('bg-warning text-dark', 'Produksi'),
+    'terkirim'  => array('bg-info text-dark',    'Terkirim'),
+    'selesai'   => array('bg-success',           'Selesai'),
+    'batal'     => array('bg-danger',            'Batal'),
 );
 $rp = function ($n) {
     return 'Rp ' . number_format((float) $n, 0, ',', '.');
@@ -48,16 +50,17 @@ $rp = function ($n) {
 
   <!-- KPI Ringkasan -->
   <div class="row g-3 mb-3">
-    <div class="col-12 col-md-4">
+    <div class="col-6 col-lg-3">
       <div class="kpi-card">
         <div class="kpi-icon bg-total"><i class="bi bi-cart-check"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= (int) ($total_so ?? 0); ?></div>
           <div class="kpi-label text-muted small"><?= translate('lbl_t_so') ?></div>
+          <div class="text-muted small"><?= $rp($total_nilai ?? 0); ?></div>
         </div>
       </div>
     </div>
-    <div class="col-12 col-md-4">
+    <div class="col-6 col-lg-3">
       <div class="kpi-card">
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
@@ -66,7 +69,16 @@ $rp = function ($n) {
         </div>
       </div>
     </div>
-    <div class="col-12 col-md-4">
+    <div class="col-6 col-lg-3">
+      <div class="kpi-card">
+        <div class="kpi-icon bg-terima"><i class="bi bi-check2-circle"></i></div>
+        <div>
+          <div class="kpi-value fw-bold fs-5"><?= $rp($total_diterima ?? 0); ?></div>
+          <div class="kpi-label text-muted small">Total diterima</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-lg-3">
       <div class="kpi-card">
         <div class="kpi-icon bg-sisa"><i class="bi bi-wallet2"></i></div>
         <div>
@@ -130,7 +142,11 @@ $rp = function ($n) {
           <?php if (!empty($sales_order_list)): ?>
             <?php $no = 1; ?>
             <?php foreach ($sales_order_list as $row):
-              $st = $row->status ? $row->status : 'draft';
+              $st    = $row->status ? $row->status : 'draft';
+              $badge = isset($status_badge[$st]) ? $status_badge[$st] : array('bg-secondary', ucfirst($st));
+              $grand = (float) $row->grand_total;
+              $sisa  = isset($row->sisa_bayar) ? (float) $row->sisa_bayar : $grand - (float) $row->total_diterima;
+              $lunas = $grand > 0 && $sisa <= 0.005;
             ?>
               <tr>
                 <td><?= $no++; ?></td>
@@ -141,14 +157,26 @@ $rp = function ($n) {
                 <td class="text-center"><?= (int) $row->total_item; ?></td>
                 <td class="text-end fw-semibold"><?= $rp($row->grand_total); ?></td>
                 <td class="text-end"><?= $rp($row->total_dp); ?></td>
-                <td class="text-end fw-semibold"><?= $rp($row->sisa_bayar); ?></td>
-                <td class="text-center">
-                  <span class="badge <?= isset($status_badge[$st]) ? $status_badge[$st] : 'bg-secondary'; ?>"><?= html_escape(ucfirst($st)); ?></span>
+                <td class="text-end fw-semibold">
+                  <?php if ($st === 'batal'): ?>
+                    <span class="text-muted">-</span>
+                  <?php elseif ($lunas): ?>
+                    <span class="badge bg-success">LUNAS</span>
+                  <?php else: ?>
+                    <?= $rp($sisa); ?>
+                  <?php endif; ?>
                 </td>
                 <td class="text-center">
+                  <span class="badge <?= $badge[0]; ?>"><?= html_escape($badge[1]); ?></span>
+                </td>
+                <td class="text-center text-nowrap">
                   <a href="<?= site_url('sales_order/detail/' . (int) $row->id); ?>"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Lihat Detail / Cetak">
+                    class="btn btn-icon-sm btn-outline-secondary" title="Lihat Detail">
                     <i class="bi bi-eye"></i>
+                  </a>
+                  <a href="<?= site_url('sales_order/cetak/' . (int) $row->id); ?>" target="_blank"
+                    class="btn btn-icon-sm btn-outline-secondary" title="Cetak Invoice">
+                    <i class="bi bi-printer"></i>
                   </a>
                 </td>
               </tr>

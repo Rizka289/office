@@ -11,9 +11,10 @@ class Sales_order_model extends CI_Model
 
         $sql = 'SELECT COALESCE(MAX(no_urut), 0) AS maks FROM sales_order WHERE tahun = ?'
             . ($kunci ? ' FOR UPDATE' : '');
-        $row = $this->db->query($sql, array($tahun))->row();
+        $q   = $this->db->query($sql, array($tahun));
+        $row = $q ? $q->row() : null;
 
-        $urut = ((int) $row->maks) + 1;
+        $urut = ($row ? (int) $row->maks : 0) + 1;
         return array(
             'no_urut' => $urut,
             'tahun'   => $tahun,
@@ -28,7 +29,12 @@ class Sales_order_model extends CI_Model
             ->from('penawaran p')
             ->join('customer c', 'c.id = p.id_customer', 'left')
             ->where('p.status', 'approved')
-            ->where("p.id NOT IN (SELECT id_penawaran FROM sales_order WHERE status <> 'batal')", null, false)
+            // NOT EXISTS (bukan NOT IN): kalau ada sales_order.id_penawaran yang NULL,
+            // NOT IN membuat SEMUA penawaran hilang dari daftar.
+            // COALESCE: SO dengan status NULL/kosong tetap dianggap aktif (bukan batal).
+            ->where("NOT EXISTS (SELECT 1 FROM sales_order so
+                                  WHERE so.id_penawaran = p.id
+                                    AND COALESCE(so.status, '') <> 'batal')", null, false)
             ->order_by('p.tanggal', 'DESC')
             ->get()->result();
     }
@@ -71,13 +77,13 @@ class Sales_order_model extends CI_Model
             ->order_by('id', 'ASC')->get('sales_order_detail')->result();
 
         $this->_tempel_anak($items, 'sales_order_detail_aksesoris', 'id_so_detail', 'aksesoris');
-        // FIX: dulu membaca penawaran_detail_kaca memakai id item SO (salah tabel)
         $this->_tempel_anak($items, 'sales_order_detail_kaca', 'id_so_detail', 'kaca');
         return array('header' => $header, 'items' => $items);
     }
 
     // Satu query untuk semua baris anak (aksesoris / kaca), lalu dibagi ke tiap item.
     // $prop = nama properti di item: 'aksesoris' atau 'kaca'
+    // Kalau tabel anak belum ada, halaman tetap jalan (anak dikosongkan).
     private function _tempel_anak(&$items, $tabel, $kolom_fk, $prop)
     {
         $ids  = array();
@@ -88,6 +94,10 @@ class Sales_order_model extends CI_Model
             $peta[(int) $it->id] = $it;
         }
         if (!$ids) {
+            return;
+        }
+        if (!$this->db->table_exists($tabel)) {
+            log_message('error', 'Sales_order_model: tabel ' . $tabel . ' belum ada.');
             return;
         }
         $rows = $this->db->where_in($kolom_fk, $ids)->order_by('id', 'ASC')->get($tabel)->result();
@@ -108,6 +118,8 @@ class Sales_order_model extends CI_Model
                 WHERE sp.id_so = so.id AND sp.jenis = 'dp') AS total_dp,
             (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
                 WHERE sp.id_so = so.id) AS total_diterima,
+            (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+                WHERE sp.id_so = so.id AND sp.jenis = 'pph') AS total_pph,
             (so.grand_total - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
                 WHERE sp.id_so = so.id)) AS sisa_bayar",
             false
@@ -131,17 +143,65 @@ class Sales_order_model extends CI_Model
         return $this->db->order_by('so.tanggal', 'DESC')->order_by('so.id', 'DESC')->get()->result();
     }
 
-    // Salin penawaran (4 tabel) -> sales_order (4 tabel) dalam satu transaksi
+    // ------------------------------------------------------------------
+    // Salin penawaran (4 tabel) -> sales_order (4 tabel) dalam satu transaksi.
+    //
+    // PERBAIKAN:
+    // - Kolom disaring memakai list_fields() (sama seperti Penawaran_model::_insert_items)
+    //   sehingga kolom baru di penawaran (foto, keterangan, dll) yang belum ada
+    //   di tabel SO tidak membuat error "Unknown column".
+    // - db_debug dimatikan selama proses supaya error DB tidak menampilkan
+    //   halaman error + transaksi menggantung; pesan error dikembalikan ke user & log.
+    // - biaya_pasang / biaya_ongkir NULL di penawaran diubah jadi 0.
+    // - foto aksesoris ikut tersalin (jika kolomnya ada di tabel SO).
+    // ------------------------------------------------------------------
     public function simpan_dari_penawaran($id_penawaran, $input, $id_user)
+    {
+        $debug_lama         = $this->db->db_debug;
+        $this->db->db_debug = false;
+        $hasil              = $this->_proses_simpan($id_penawaran, $input, $id_user);
+        $this->db->db_debug = $debug_lama;
+        return $hasil;
+    }
+
+    // Rollback + catat error DB ke log, kembalikan array(false, pesan)
+    private function _gagal($pesan)
+    {
+        $e = $this->db->error();
+        $this->db->trans_rollback();
+        if (!empty($e['code'])) {
+            log_message('error', 'Sales_order_model: ' . $pesan . ' | DB ' . $e['code'] . ': ' . $e['message']);
+            $pesan .= ' (DB ' . $e['code'] . ': ' . $e['message'] . ')';
+        }
+        return array(false, $pesan);
+    }
+
+    // Ambil hanya key yang kolomnya ada di $tabel; yang tidak ada dicatat di log
+    private function _saring_kolom($tabel, $data)
+    {
+        $kolom  = $this->db->list_fields($tabel);
+        $hilang = array_diff(array_keys($data), $kolom);
+        if ($hilang) {
+            log_message('error', $tabel . ': kolom tidak ada, dilewati -> ' . implode(', ', $hilang));
+        }
+        return array_intersect_key($data, array_flip($kolom));
+    }
+
+    private function _proses_simpan($id_penawaran, $input, $id_user)
     {
         $this->db->trans_begin();
 
-        $p = $this->db->query('SELECT * FROM penawaran WHERE id = ? FOR UPDATE', array((int) $id_penawaran))->row();
+        $q = $this->db->query('SELECT * FROM penawaran WHERE id = ? FOR UPDATE', array((int) $id_penawaran));
+        $p = $q ? $q->row() : null;
         if (!$p || $p->status !== 'approved') {
             $this->db->trans_rollback();
             return array(false, 'Penawaran belum di-approve atau tidak ditemukan.');
         }
-        if ($this->db->where('id_penawaran', $p->id)->where('status !=', 'batal')->count_all_results('sales_order') > 0) {
+        $ada_so = $this->db->query(
+            "SELECT COUNT(*) AS n FROM sales_order WHERE id_penawaran = ? AND COALESCE(status, '') <> 'batal'",
+            array((int) $p->id)
+        )->row();
+        if ($ada_so && (int) $ada_so->n > 0) {
             $this->db->trans_rollback();
             return array(false, 'Penawaran ini sudah dibuatkan Sales Order.');
         }
@@ -149,7 +209,7 @@ class Sales_order_model extends CI_Model
         $no = $this->generate_no($input['tanggal'], true);
 
         // ---- Tabel 1: header ----
-        $this->db->insert('sales_order', array(
+        $header = $this->_saring_kolom('sales_order', array(
             'no_so'          => $no['no_so'],
             'no_urut'        => $no['no_urut'],
             'tahun'          => $no['tahun'],
@@ -161,56 +221,74 @@ class Sales_order_model extends CI_Model
             'alamat_kirim'   => $input['alamat_kirim'],
             'termin'         => $input['termin'],
             'dp_persen'      => $input['dp_persen'],
-            'subtotal'       => $p->subtotal,
-            'ppn_persen'     => $p->ppn_persen,
-            'ppn_nominal'    => $p->ppn_nominal,
-            'pph_persen'     => $p->pph_persen,
-            'pph_nominal'    => $p->pph_nominal,
-            'biaya_pasang'   => $p->biaya_pasang,
-            'biaya_ongkir'   => $p->biaya_ongkir,
-            'grand_total'    => $p->grand_total,
+            'subtotal'       => (float) $p->subtotal,
+            'ppn_persen'     => (float) $p->ppn_persen,
+            'ppn_nominal'    => (float) $p->ppn_nominal,
+            'pph_persen'     => (float) $p->pph_persen,
+            'pph_nominal'    => (float) $p->pph_nominal,
+            'biaya_pasang'   => (float) $p->biaya_pasang,   // NULL -> 0
+            'biaya_ongkir'   => (float) $p->biaya_ongkir,   // NULL -> 0
+            'grand_total'    => (float) $p->grand_total,
             'catatan'        => $input['catatan'],
             'status'         => 'draft',
             'id_user'        => $id_user,
         ));
+        if (!$this->db->insert('sales_order', $header)) {
+            return $this->_gagal('Gagal menyimpan header Sales Order.');
+        }
         $id_so = $this->db->insert_id();
 
         // ---- Tabel 2: item; Tabel 3: aksesoris; Tabel 4: kaca ----
         $items = $this->db->where('id_penawaran', $p->id)->order_by('id', 'ASC')
             ->get('penawaran_detail')->result_array();
 
+        $ada_aks  = $this->db->table_exists('sales_order_detail_aksesoris');
+        $ada_kaca = $this->db->table_exists('sales_order_detail_kaca');
+
         foreach ($items as $row) {
             $id_lama = (int) $row['id'];
             unset($row['id'], $row['id_penawaran']);
             $row['id_so'] = $id_so;
-            $this->db->insert('sales_order_detail', $row);
+            $row = $this->_saring_kolom('sales_order_detail', $row);
+
+            if (!$this->db->insert('sales_order_detail', $row)) {
+                return $this->_gagal('Gagal menyimpan item Sales Order.');
+            }
             $id_baru = $this->db->insert_id();
 
-            // aksesoris
-            $aks = $this->db->where('id_penawaran_detail', $id_lama)->get('penawaran_detail_aksesoris')->result_array();
+            // aksesoris (salin semua kolom yang ada, termasuk foto)
+            $aks = $this->db->where('id_penawaran_detail', $id_lama)
+                ->get('penawaran_detail_aksesoris')->result_array();
+            if ($aks && !$ada_aks) {
+                return $this->_gagal('Tabel sales_order_detail_aksesoris belum dibuat.');
+            }
             foreach ($aks as $a) {
-                $this->db->insert('sales_order_detail_aksesoris', array(
-                    'id_so_detail' => $id_baru,
-                    'nama'         => $a['nama'],
-                    'qty'          => $a['qty'],
-                    'harga'        => $a['harga'],
-                    'total_harga'  => $a['total_harga'],
-                ));
+                unset($a['id'], $a['id_penawaran_detail']);
+                $a['id_so_detail'] = $id_baru;
+                $a = $this->_saring_kolom('sales_order_detail_aksesoris', $a);
+                if (!$this->db->insert('sales_order_detail_aksesoris', $a)) {
+                    return $this->_gagal('Gagal menyimpan aksesoris Sales Order.');
+                }
             }
 
-            // kaca: salin semua kolom, hanya id & FK yang diganti
-            // (syarat: kolom sales_order_detail_kaca sama dengan penawaran_detail_kaca)
-            $kaca = $this->db->where('id_penawaran_detail', $id_lama)->get('penawaran_detail_kaca')->result_array();
+            // kaca
+            $kaca = $this->db->where('id_penawaran_detail', $id_lama)
+                ->get('penawaran_detail_kaca')->result_array();
+            if ($kaca && !$ada_kaca) {
+                return $this->_gagal('Tabel sales_order_detail_kaca belum dibuat.');
+            }
             foreach ($kaca as $k) {
                 unset($k['id'], $k['id_penawaran_detail']);
                 $k['id_so_detail'] = $id_baru;
-                $this->db->insert('sales_order_detail_kaca', $k);
+                $k = $this->_saring_kolom('sales_order_detail_kaca', $k);
+                if (!$this->db->insert('sales_order_detail_kaca', $k)) {
+                    return $this->_gagal('Gagal menyimpan detail kaca Sales Order.');
+                }
             }
         }
 
         if ($this->db->trans_status() === false) {
-            $this->db->trans_rollback();
-            return array(false, 'Gagal menyimpan Sales Order.');
+            return $this->_gagal('Gagal menyimpan Sales Order.');
         }
         $this->db->trans_commit();
         return array(true, $no['no_so']);
@@ -225,15 +303,39 @@ class Sales_order_model extends CI_Model
 
     public function batalkan($id)
     {
-        $kirim = $this->db->select_sum('qty_terkirim', 'total')->where('id_so', (int) $id)
-            ->get('sales_order_detail')->row();
-        if ((float) $kirim->total > 0) {
-            return array(false, 'SO tidak bisa dibatalkan karena sudah ada barang yang terkirim.');
+        // Sudah ada pembayaran masuk (DP / pelunasan) -> tidak boleh dibatalkan
+        if ($this->db->where('id_so', (int) $id)->count_all_results('sales_order_pembayaran') > 0) {
+            return array(false, 'SO tidak bisa dibatalkan karena sudah ada pembayaran yang tercatat.');
+        }
+        // qty_terkirim hanya dicek kalau kolomnya ada (hindari error Unknown column)
+        if ($this->db->field_exists('qty_terkirim', 'sales_order_detail')) {
+            $kirim = $this->db->select_sum('qty_terkirim', 'total')->where('id_so', (int) $id)
+                ->get('sales_order_detail')->row();
+            if ($kirim && (float) $kirim->total > 0) {
+                return array(false, 'SO tidak bisa dibatalkan karena sudah ada barang yang terkirim.');
+            }
         }
         if (!$this->ubah_status($id, array('draft', 'confirmed'), 'batal')) {
             return array(false, 'SO dengan status ini tidak bisa dibatalkan.');
         }
         return array(true, 'Sales Order dibatalkan. Penawarannya bisa dibuatkan SO baru.');
+    }
+
+    // Ubah info SO yang masih boleh berubah: No. PO customer, target tanggal kirim & catatan.
+    // Kolom lain (item, harga, termin, grand total) sengaja TIDAK bisa diubah.
+    public function ubah_info($id, $d)
+    {
+        $so = $this->db->select('id, status')->get_where('sales_order', array('id' => (int) $id))->row();
+        if (!$so || in_array($so->status, array('batal', 'selesai'), true)) {
+            return array(false, 'SO tidak ditemukan atau sudah batal / selesai, data tidak bisa diubah.');
+        }
+        $ok = $this->db->where('id', (int) $id)->update('sales_order', array(
+            'no_po_customer' => $d['no_po_customer'],
+            'tgl_kirim'      => $d['tgl_kirim'] !== '' ? $d['tgl_kirim'] : null,
+            'catatan'        => isset($d['catatan']) ? $d['catatan'] : '',
+        ));
+        return $ok ? array(true, 'No. PO customer, tanggal kirim dan catatan diperbarui.')
+                   : array(false, 'Gagal memperbarui data SO.');
     }
 
     // ================= PEMBAYARAN (DP / pelunasan) =================
@@ -249,11 +351,22 @@ class Sales_order_model extends CI_Model
     {
         $r = $this->db->select_sum('nominal', 'total')->where('id_so', (int) $id_so)
             ->get('sales_order_pembayaran')->row();
-        return (float) $r->total;
+        return $r ? (float) $r->total : 0.0;
     }
 
     // $d: tanggal, jenis, nominal, metode, no_referensi, catatan
     public function simpan_pembayaran($id_so, $d, $id_user)
+    {
+        // db_debug dimatikan supaya error DB (mis. ENUM 'jenis' belum berisi 'pph')
+        // tidak jadi halaman error, tapi dikembalikan sebagai pesan ke user + log.
+        $debug_lama         = $this->db->db_debug;
+        $this->db->db_debug = false;
+        $hasil              = $this->_proses_pembayaran($id_so, $d, $id_user);
+        $this->db->db_debug = $debug_lama;
+        return $hasil;
+    }
+
+    private function _proses_pembayaran($id_so, $d, $id_user)
     {
         $this->db->trans_begin();
         $so = $this->db->query('SELECT id, status, grand_total FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id_so))->row();
@@ -266,7 +379,12 @@ class Sales_order_model extends CI_Model
             $this->db->trans_rollback();
             return array(false, 'Nominal melebihi sisa tagihan (Rp ' . number_format($sisa, 0, ',', '.') . ').');
         }
-        $this->db->insert('sales_order_pembayaran', array(
+        // PPh tidak dicatat sebagai pembayaran: grand_total dari penawaran sudah dikurangi PPh.
+        if ($d['jenis'] === 'pph') {
+            $this->db->trans_rollback();
+            return array(false, 'PPh sudah dipotong di grand total penawaran, tidak perlu dicatat sebagai pembayaran.');
+        }
+        $ok = $this->db->insert('sales_order_pembayaran', array(
             'id_so'        => (int) $id_so,
             'tanggal'      => $d['tanggal'],
             'jenis'        => $d['jenis'],
@@ -276,9 +394,17 @@ class Sales_order_model extends CI_Model
             'catatan'      => $d['catatan'],
             'id_user'      => $id_user,
         ));
-        if ($this->db->trans_status() === false) {
+        if (!$ok || $this->db->trans_status() === false) {
+            return $this->_gagal('Gagal menyimpan pembayaran.');
+        }
+        // MySQL non-strict: nilai di luar ENUM disimpan sebagai '' tanpa error -> cek ulang
+        $cek = $this->db->select('jenis')->where('id', $this->db->insert_id())
+            ->get('sales_order_pembayaran')->row();
+        if (!$cek || $cek->jenis !== $d['jenis']) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal menyimpan pembayaran.');
+            log_message('error', 'Sales_order_model: kolom sales_order_pembayaran.jenis tidak menerima nilai ' . $d['jenis']);
+            return array(false, 'Jenis pembayaran "' . $d['jenis'] . '" belum didukung database. '
+                . 'Tambahkan nilai tersebut ke kolom sales_order_pembayaran.jenis (lihat file SQL migrasi).');
         }
         $this->db->trans_commit();
         return array(true, 'Pembayaran Rp ' . number_format($d['nominal'], 0, ',', '.') . ' dicatat.');
@@ -309,6 +435,10 @@ class Sales_order_model extends CI_Model
             }
         }
         $this->db->where('id', (int) $id_bayar)->delete('sales_order_pembayaran');
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return array(false, 'Gagal menghapus pembayaran.', (int) $so->id);
+        }
         $this->db->trans_commit();
         return array(true, 'Pembayaran dihapus.', (int) $so->id);
     }
@@ -330,6 +460,10 @@ class Sales_order_model extends CI_Model
                 . ', tercatat Rp ' . number_format($dibayar, 0, ',', '.') . '.');
         }
         $this->db->where('id', $so->id)->update('sales_order', array('status' => 'confirmed'));
+        if ($this->db->trans_status() === false) {
+            $this->db->trans_rollback();
+            return array(false, 'Gagal mengonfirmasi SO.');
+        }
         $this->db->trans_commit();
         return array(true, 'SO ' . $so->no_so . ' dikonfirmasi. Siap diproses ke produksi.');
     }

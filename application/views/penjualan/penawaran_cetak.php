@@ -2,74 +2,113 @@
 
 <?php
 
-// Luas ditampilkan apa adanya (tanpa pembulatan ke 2 desimal): minimal 2 desimal,
-// maksimal 4 desimal sesuai presisi yang disimpan. Contoh: 34.72, 10.00, 7.0067
+// Luas selalu ditampilkan 2 angka di belakang koma (dibulatkan). Contoh: 1.649 -> 1.65, 10 -> 10.00
 $fmt_luas = function ($v) {
-  $s   = number_format((float) $v, 4, '.', '');
-  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
-  return number_format((float) $v, $dec, '.', '');
+  return number_format(round((float) $v, 2), 2, '.', '');
 };
 
-// Ukuran yang ditampilkan di cetak. Rolling door: lebar +200 mm & tinggi +600 mm
-// (sama dengan dasar perhitungan luas penagihan). Kategori lain tampil apa adanya.
+// Ukuran yang ditampilkan di cetak = dasar perhitungan luas penagihan.
+// Rolling door (tahan api / baja / otomatis) sesuai rumus ukuran item:
+//   l200_t600 (default) : lebar +200 mm, tinggi +600 mm
+//   t500                : lebar tetap,   tinggi +500 mm
+// Kategori lain tampil apa adanya.
 $ukuran_cetak = function ($row) {
   $l = (int) $row->lebar_mm;
   $t = (int) $row->tinggi_mm;
-  if (preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) ($row->rumus ?? ''))) {
-    $l += 200;
-    $t += 600;
+  if (preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', (string) ($row->rumus ?? ''))) {
+    if (($row->rumus_ukuran ?? '') === 't500') {
+      $t += 500;
+    } else {
+      $l += 200;
+      $t += 600;
+    }
   }
   return [$l, $t];
 };
 
-// Kelompokkan baris item per "jenis barang"
-$kelompok = [];
+// CETAK PER PRODUK: setiap item penawaran tampil sebagai blok sendiri
+// (gambar, deskripsi, ukuran, aksesoris & keterangannya masing-masing),
+// walaupun produknya sama. Ubah ke TRUE kalau mau kembali digabung
+// (produk yang sama jadi satu deskripsi dengan beberapa baris ukuran).
+$gabung_produk_sama = FALSE;
 
-foreach ($items as $it) {
+// Kelompokkan baris item (per item, atau per "jenis barang" kalau digabung)
+$kelompok = [];
+$items_aks_saja = []; // item tanpa nama barang (penawaran manual: hanya aksesoris / kaca)
+
+foreach ($items as $idx_item => $it) {
+  if (trim((string) ($it->jenis_item ?? '')) === '') {
+    $items_aks_saja[] = $it;
+    continue;
+  }
   // Barang master pun dipisah per kombinasi komponen/books penutup/kelengkapan,
   // karena ketiganya sekarang bisa diedit per item.
-  $kunci = !empty($it->id_barang)
-    ? 'b' . $it->id_barang . '_' . md5(($it->komponen ?? '') . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? ''))
+  $kunci = !$gabung_produk_sama
+    ? 'i' . $idx_item . '_' . ($it->id ?? '')
+    : (!empty($it->id_barang)
+    ? 'b' . $it->id_barang . '_' . md5(($it->komponen ?? '') . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? '') . '|' . ($it->tebal ?? ''))
     : 't' . md5(
       ($it->jenis_item ?? '') . '|' . ($it->warna ?? '') . '|' . ($it->komponen ?? '') . '|' .
         ($it->finishing ?? '') . '|' . ($it->komponen_kusen ?? '') . '|' . ($it->tipe_motor ?? '')  .
         '|' . ($it->komponen_daun ?? '') . '|' . ($it->input_power ?? '') . '|' . ($it->voltage ?? '')
-        . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? '')
-    );
+        . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? '') . '|' . ($it->foto ?? '')
+        . '|' . ($it->tebal ?? '')
+    ));
 
   if (!isset($kelompok[$kunci])) {
     $kelompok[$kunci] = [
       'jenis_item'     => $it->jenis_item,
       // Samakan ejaan kategori rolling door supaya cocok dengan kunci $spek_tampil
-      'rumus'          => preg_match('/^ro{1,2}l{1,2}ing_(door_)?baja$/', (string) ($it->rumus ?? ''))
-        ? 'rolling_door_baja'
-        : (preg_match('/^ro{1,2}l{1,2}ing_(door_)?tahan_api$/', (string) ($it->rumus ?? ''))
-          ? 'rolling_door_tahan_api'
-          : ($it->rumus ?? '')),
+      'rumus'          => preg_match('/^ro{1,2}l{1,2}ing_(door_)?(baja|tahan_api|otomatis)$/', (string) ($it->rumus ?? ''), $m_rd)
+        ? 'rolling_door_' . $m_rd[2]
+        : ($it->rumus ?? ''),
       'warna'          => $it->warna,
       'komponen'       => $it->komponen ?? '',
       'finishing'      => $it->finishing,
       'komponen_kusen' => $it->komponen_kusen,
       'komponen_daun'  => $it->komponen_daun,
+      'tebal'          => $it->tebal ?? '',
       'tipe_motor'     => $it->tipe_motor,
       'input_power'    => $it->input_power,
       'voltage'        => $it->voltage,
       'books_penutup'  => $it->books_penutup,
       'kelengkapan'    => $it->kelengkapan,
       'gambar'         => $it->gambar_barang ?? null,
+      'foto'           => $it->foto ?? null,
       'keterangan'     => [],
       'baris'          => [],
     ];
   }
 
-  if (!empty($it->keterangan) && !in_array($it->keterangan, $kelompok[$kunci]['keterangan'], TRUE)) {
-    $kelompok[$kunci]['keterangan'][] = $it->keterangan;
+  // Keterangan per item (penawaran_detail.keterangan) - berlaku untuk semua kategori
+  // (rolling door, unit fix, pintu, jendela, dst.). Hanya yang tidak kosong yang dicetak.
+  $ket_item = trim((string) ($it->keterangan ?? ''));
+  if ($ket_item !== '' && !in_array($ket_item, $kelompok[$kunci]['keterangan'], TRUE)) {
+    $kelompok[$kunci]['keterangan'][] = $ket_item;
   }
 
   $kelompok[$kunci]['baris'][] = $it;
 }
 
 $folder_gambar_barang = 'uploads/barang/';
+
+// ---- Penawaran MANUAL: foto hanya dianggap ada kalau file benar-benar ada di server.
+// Kolom GAMBAR hanya dicetak kalau minimal ada 1 foto (item / aksesoris); kalau tidak,
+// tabel langsung dimulai dari Deskripsi. Baris tanpa foto dibiarkan kosong (tanpa ikon).
+$is_manual_cetak = (($header->tipe ?? 'rumus') === 'manual');
+$foto_ada = function ($nama) {
+  $nama = trim((string) $nama);
+  return $nama !== '' && preg_match('/^[A-Za-z0-9_.-]+$/', $nama) && is_file(FCPATH . 'uploads/penawaran/' . $nama);
+};
+$ada_foto_manual = false;
+if ($is_manual_cetak) {
+  foreach ($items as $it_f) {
+    if ($foto_ada($it_f->foto ?? '')) { $ada_foto_manual = true; break; }
+    foreach (($it_f->aksesoris ?? []) as $ak_f) {
+      if ($foto_ada($ak_f->foto ?? '')) { $ada_foto_manual = true; break 2; }
+    }
+  }
+}
 
 // Baris spesifikasi yang tampil per kategori rumus (urutan = urutan tampil).
 // Kunci baris: nama (Tipe/Jenis), warna, finishing, dimensi, komponen, kusen_daun.
@@ -78,6 +117,18 @@ $folder_gambar_barang = 'uploads/barang/';
 $spek_tampil = [
   // Rolling door: Tipe, Warna, Finishing, Dimensi lubang dinding, Komponen
   'rolling_door_baja'      => [
+    'nama',
+    'warna',
+    'finishing',
+    'dimensi',
+    'komponen',
+    'tipe_motor',
+    'input_power',
+    'voltage',
+    'books_penutup',
+    'kelengkapan'
+  ],
+  'rolling_door_otomatis'  => [
     'nama',
     'warna',
     'finishing',
@@ -106,13 +157,13 @@ $spek_tampil = [
   'pintu_kayu'             => ['nama', 'warna', 'komponen', 'kusen_daun'],
 
   // Fix unit: Warna, Jenis
-  'unit_fix'               => ['warna', 'nama', 'komponen', 'kusen_daun', 'finishing'],
+  'unit_fix'               => ['warna', 'nama', 'komponen', 'kusen_daun', 'finishing','tebal'],
 
 
-  'default'                => ['nama', 'warna', 'komponen', 'kusen_daun', 'finishing'],
+  'default'                => ['nama', 'warna', 'komponen', 'kusen_daun', 'tebal'],
 ];
 // Kategori yang label "nama"-nya "Tipe" (selain itu "Jenis").
-$rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
+$rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api', 'rolling_door_otomatis'];
 
 // Render tabel spesifikasi untuk daftar baris tertentu ($kolom_list).
 // Dipakai dua kali bila ada Books Penutup: bagian atas (sampai Dimensi lubang
@@ -132,6 +183,11 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
         <tr>
           <td class="spek-label">Warna<span class="cn">/ 颜色</span></td>
           <td><?= html_escape($grp['warna']); ?></td>
+        </tr>
+      <?php elseif ($kolom === 'tebal' && !empty($grp['tebal'])): ?>
+        <tr>
+          <td class="spek-label">Tebal(mm)<span class="cn">/ 厚的</span></td>
+          <td><?= html_escape($grp['tebal']); ?></td>
         </tr>
 
       <?php elseif ($kolom === 'komponen' && !empty($grp['komponen'])): ?>
@@ -165,6 +221,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             </table>
           </td>
         </tr>
+
+     
 
       <?php elseif ($kolom === 'kusen_daun' && (!empty($grp['komponen_kusen']) || !empty($grp['komponen_daun']))): ?>
         <tr>
@@ -454,6 +512,10 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       margin: 0 auto;
     }
 
+    .gambar-cell.aks img {
+      max-width: 70px;
+    }
+
     .gambar-kosong {
       width: 90px;
       height: 90px;
@@ -646,6 +708,13 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
         <td class="sep">:</td>
         <td><?= html_escape($header->no_surat); ?></td>
       </tr>
+      <?php if (($header->jenis_penjualan ?? 'biasa') === 'konsinyasi'): ?>
+      <tr>
+        <td class="label">Sifat / 性质</td>
+        <td class="sep">:</td>
+        <td><strong>Konsinyasi (titip jual)</strong> &mdash; hanya barang yang terjual yang ditagihkan sesuai harga ini; barang yang tidak terjual ditarik kembali.</td>
+      </tr>
+      <?php endif; ?>
       <tr>
         <td class="label">Nama Perusahaan Klien / 客户公司名称 </td>
         <td class="sep">:</td>
@@ -667,18 +736,139 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     <table class="item-table">
       <thead>
         <tr>
-          <th>GAMBAR<br><span class="cn">图片</span></th>
+          <?php if (!$is_manual_cetak || $ada_foto_manual): ?>
+            <th>GAMBAR<br><span class="cn">图片</span></th>
+          <?php endif; ?>
           <th>Deskripsi<br><span class="cn">描述</span></th>
           <th>Lebar (mm)<br><span class="cn">宽 (mm)</span></th>
           <th>Tinggi (mm)<br><span class="cn">高 (mm)</span></th>
-          <th>Total Luas (m²)<br><span class="cn">总面积 (m²)</span></th>
+          <th><?= $is_manual_cetak ? 'Luas (m²)' : 'Total Luas (m²)'; ?><br><span class="cn">总面积 (m²)</span></th>
           <th>Qty<br><span class="cn">数量</span></th>
-          <th>Harga / Unit</th>
+          <th><?= $is_manual_cetak ? 'Harga / m²' : 'Harga / Unit'; ?></th>
           <th>Total Harga<br><span class="cn">总计</span></th>
         </tr>
       </thead>
       <tbody>
         <?php $jumlah_unit = 0; ?>
+        <?php if ($is_manual_cetak): ?>
+          <?php
+          // Baris aksesoris: [foto] | nama | - | - | - | qty | harga | total
+          $baris_aks_manual = function ($ak) use ($ada_foto_manual, $foto_ada, $fmt_luas, &$rp_isi) {
+            ?>
+            <tr class="aksesoris-row">
+              <?php if ($ada_foto_manual): ?>
+                <td class="gambar-cell aks">
+                  <?php if ($foto_ada($ak->foto ?? '')): ?>
+                    <img src="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" alt="<?= html_escape($ak->nama); ?>">
+                  <?php endif; ?>
+                </td>
+              <?php endif; ?>
+              <td class="deskripsi-cell">
+                <strong>Aksesoris<span class="cn">/ 配件</span>:</strong>
+                <?= html_escape($ak->nama); ?>
+              </td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"><?= (int) $ak->qty; ?></td>
+              <td class="money"><?= $rp_isi($ak->harga); ?></td>
+              <td class="money"><?= $rp_isi(isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?></td>
+            </tr>
+            <?php
+          };
+
+          // Baris detail kaca: [kosong] | nama | - | - | luas | - | harga/m² | total
+          $baris_kaca_manual = function ($kc) use ($ada_foto_manual, $fmt_luas, &$rp_isi) {
+            ?>
+            <tr class="kaca-row">
+              <?php if ($ada_foto_manual): ?><td class="gambar-cell aks"></td><?php endif; ?>
+              <td class="deskripsi-cell"><?= html_escape($kc->nama); ?></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"><?= (float) $kc->luas > 0 ? $fmt_luas($kc->luas) : ''; ?></td>
+              <td class="num"></td>
+              <td class="money"><?= $rp_isi($kc->harga); ?></td>
+              <td class="money"><?= $rp_isi(isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga); ?></td>
+            </tr>
+            <?php
+          };
+          // Penawaran manual: tampilkan SEMUA isian form manual (urutan sama dengan form).
+          // Baris yang isiannya kosong otomatis tidak dicetak (dicek di $render_spek).
+          $spek_manual = ['nama', 'warna', 'finishing', 'komponen', 'tebal', 'kusen_daun'];
+
+          // Rupiah untuk cetak manual: kalau nilainya 0 (tidak diisi), sel dibiarkan kosong
+          $rp_isi = function ($v) {
+            return ((float) $v > 0) ? 'Rp ' . number_format((float) $v, 0, ',', '.') : '';
+          };
+          ?>
+
+          <?php foreach ($kelompok as $grp): ?>
+            <?php
+            $jumlah_baris = count($grp['baris']);
+            $aks_grp = [];
+            $kc_grp  = [];
+            foreach ($grp['baris'] as $b_g) {
+              foreach (($b_g->aksesoris ?? []) as $a_g) $aks_grp[] = $a_g;
+              foreach (($b_g->kaca ?? []) as $k_g) $kc_grp[] = $k_g;
+            }
+            $baris_pertama = TRUE;
+            ?>
+            <?php foreach ($grp['baris'] as $it): $jumlah_unit += (int) $it->qty; ?>
+              <?php
+              $lebar_it = (int) $it->lebar_mm;
+              $tinggi_it = (int) $it->tinggi_mm;
+              $luas_it = (float) ($it->luas_m2 ?? 0);
+
+              // total_harga di database = barang + aksesoris + kaca; baris barang
+              // hanya menampilkan bagian barangnya (aksesoris & kaca punya baris sendiri).
+              $total_lain = 0;
+              foreach (($it->aksesoris ?? []) as $a_t) {
+                $total_lain += isset($a_t->total_harga) ? (float) $a_t->total_harga : (int) $a_t->qty * (float) $a_t->harga;
+              }
+              foreach (($it->kaca ?? []) as $k_t) {
+                $total_lain += isset($k_t->total_harga) ? (float) $k_t->total_harga : (float) $k_t->luas * (float) $k_t->harga;
+              }
+              $total_barang_it = max(0, (float) $it->total_harga - $total_lain);
+              ?>
+              <tr>
+                <?php if ($baris_pertama): ?>
+                  <?php if ($ada_foto_manual): ?>
+                    <td class="gambar-cell" rowspan="<?= $jumlah_baris; ?>">
+                      <?php if ($foto_ada($grp['foto'] ?? '')): ?>
+                        <img src="<?= base_url('uploads/penawaran/' . rawurlencode($grp['foto'])); ?>" alt="<?= html_escape($grp['jenis_item']); ?>">
+                      <?php endif; ?>
+                    </td>
+                  <?php endif; ?>
+                  <td class="deskripsi-cell" rowspan="<?= $jumlah_baris; ?>">
+                    <?php $render_spek($spek_manual, $grp, 'Jenis', TRUE); ?>
+                  </td>
+                <?php endif; ?>
+                <?php if ($lebar_it <= 0 && $tinggi_it <= 0 && trim((string) ($it->ukuran_teks ?? '')) !== ''): ?>
+                  <?php /* Data lama (sebelum ada input lebar x tinggi): tampilkan ukuran teks apa adanya */ ?>
+                  <td class="num" colspan="3"><?= html_escape($it->ukuran_teks); ?></td>
+                <?php else: ?>
+                  <td class="num"><?= $lebar_it > 0 ? $lebar_it : ''; ?></td>
+                  <td class="num"><?= $tinggi_it > 0 ? $tinggi_it : ''; ?></td>
+                  <td class="num"><?= $luas_it > 0 ? $fmt_luas($luas_it) : ''; ?></td>
+                <?php endif; ?>
+                <td class="num"><?= (int) $it->qty > 0 ? (int) $it->qty : ''; ?></td>
+                <td class="money"><?= $rp_isi($it->harga_unit); ?></td>
+                <td class="money"><?= $rp_isi($total_barang_it); ?></td>
+              </tr>
+              <?php $baris_pertama = FALSE; ?>
+            <?php endforeach; ?>
+
+            <?php foreach ($aks_grp as $ak) $baris_aks_manual($ak); ?>
+            <?php foreach ($kc_grp as $kc) $baris_kaca_manual($kc); ?>
+          <?php endforeach; ?>
+
+          <?php /* Item tanpa barang (hanya aksesoris / kaca) */ ?>
+          <?php foreach ($items_aks_saja as $ik): ?>
+            <?php foreach (($ik->aksesoris ?? []) as $ak) $baris_aks_manual($ak); ?>
+            <?php foreach (($ik->kaca ?? []) as $kc) $baris_kaca_manual($kc); ?>
+          <?php endforeach; ?>
+
+        <?php else: ?>
         <?php foreach ($kelompok as $grp): ?>
           <?php
           $jumlah_baris  = count($grp['baris']);
@@ -736,7 +926,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 'luas'      => (float) $kaca_row->luas,
                 'qty'       => null,
                 'harga'     => (float) $kaca_row->harga,
-                'total'     => isset($kaca_row->total_harga) ? (float) $kaca_row->total_harga : (float) $kaca_row->luas * (float) $ak_row->harga,
+                'total'     => isset($kaca_row->total_harga) ? (float) $kaca_row->total_harga : (float) $kaca_row->luas * (float) $kaca_row->harga,
               ];
             }
           }
@@ -759,7 +949,11 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             <tr>
               <?php if ($baris_pertama): ?>
                 <td class="gambar-cell" rowspan="<?= $jumlah_baris_total; ?>">
-                  <?php if (!empty($grp['gambar'])): ?>
+                  <?php if (!empty($grp['foto'])): ?>
+                    <img src="<?= base_url('uploads/penawaran/' . $grp['foto']); ?>"
+                      alt="<?= html_escape($grp['jenis_item']); ?>"
+                      onerror="this.parentElement.innerHTML='<div class=&quot;gambar-kosong&quot;><i class=&quot;bi bi-image&quot;></i></div>'">
+                  <?php elseif (!empty($grp['gambar'])): ?>
                     <img src="<?= base_url($folder_gambar_barang . $grp['gambar']); ?>"
                       alt="<?= html_escape($grp['jenis_item']); ?>"
                       onerror="this.parentElement.innerHTML='<div class=&quot;gambar-kosong&quot;><i class=&quot;bi bi-image&quot;></i></div>'">
@@ -777,9 +971,13 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 </td>
               <?php endif; ?>
               <?php list($uk_l, $uk_t) = $ukuran_cetak($it); ?>
-              <td class="num"><?= $uk_l; ?></td>
-              <td class="num"><?= $uk_t; ?></td>
-              <td class="num"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
+              <?php if (($header->tipe ?? 'rumus') === 'manual'): ?>
+                <td class="num" colspan="3"><?= html_escape($it->ukuran_teks ?? ''); ?></td>
+              <?php else: ?>
+                <td class="num"><?= $uk_l; ?></td>
+                <td class="num"><?= $uk_t; ?></td>
+                <td class="num"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
+              <?php endif; ?>
               <td class="num"><?= (int) $it->qty; ?></td>
               <td class="money">Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
               <?php
@@ -793,6 +991,10 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               $total_aks_it += (float) ($it->luas_m2_books ?? 0) * (int) ($it->qty_books ?? 0) * (float) ($it->harga_m2_books ?? 0);
               // Biaya instalasi juga sudah termasuk di total_harga; tampil di baris sendiri
               $total_aks_it += (float) ($it->luas_billing_m2 ?? $it->luas_m2 ?? 0) * (float) ($it->qty_instalasi ?? 0) * (float) ($it->harga_m2_instalasi ?? 0);
+              // Detail kaca juga sudah termasuk di total_harga; tampil di baris sendiri
+              foreach (($it->kaca ?? []) as $kc_it) {
+                $total_aks_it += isset($kc_it->total_harga) ? (float) $kc_it->total_harga : (float) $kc_it->luas * (float) $kc_it->harga;
+              }
               $total_barang_it = max(0, (float) $it->total_harga - $total_aks_it);
               ?>
               <td class="money">Rp <?= number_format($total_barang_it, 0, ',', '.'); ?></td>
@@ -899,6 +1101,38 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             </tr>
           <?php endforeach; ?>
         <?php endforeach; ?>
+
+        <?php /* Item tanpa barang (hanya aksesoris / kaca) - penawaran manual */ ?>
+        <?php foreach ($items_aks_saja as $ik): ?>
+          <?php foreach (($ik->aksesoris ?? []) as $ak): ?>
+            <tr class="aksesoris-row">
+              <td></td>
+              <td class="deskripsi-cell">
+                <strong>Aksesoris<span class="cn">/ 配件</span>:</strong>
+                <?= html_escape($ak->nama); ?>
+              </td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"><?= (int) $ak->qty; ?></td>
+              <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format(isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga, 0, ',', '.'); ?></td>
+            </tr>
+          <?php endforeach; ?>
+          <?php foreach (($ik->kaca ?? []) as $kc): ?>
+            <tr class="kaca-row">
+              <td></td>
+              <td class="deskripsi-cell"><?= html_escape($kc->nama); ?></td>
+              <td class="num"></td>
+              <td class="num"></td>
+              <td class="num"><?= $fmt_luas($kc->luas); ?></td>
+              <td class="num"></td>
+              <td class="money">Rp <?= number_format((float) $kc->harga, 0, ',', '.'); ?></td>
+              <td class="money">Rp <?= number_format(isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga, 0, ',', '.'); ?></td>
+            </tr>
+          <?php endforeach; ?>
+        <?php endforeach; ?>
+        <?php endif; ?>
       </tbody>
     </table>
 
@@ -927,8 +1161,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       <?php endif; ?>
       <?php if ((float) $header->pph_persen > 0): ?>
         <tr>
-          <td class="tlabel">PPh <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>%</td>
-          <td class="tval">Rp <?= number_format((float) $header->pph_nominal, 0, ',', '.'); ?></td>
+          <td class="tlabel">PPh <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)</td>
+          <td class="tval">- Rp <?= number_format((float) $header->pph_nominal, 0, ',', '.'); ?></td>
         </tr>
       <?php endif; ?>
       <tr class="grand">

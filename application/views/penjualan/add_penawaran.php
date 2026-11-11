@@ -2,11 +2,14 @@
 
 <?php
 $tarif_ppn = isset($tarif_ppn) ? $tarif_ppn : 11;
-$tarif_pph = isset($tarif_pph) ? $tarif_pph : 2.5;
+$tarif_pph = isset($tarif_pph) ? $tarif_pph : 2;
 $list_customer = isset($list_customer) ? (array) $list_customer : [];
 $list_barang   = isset($list_barang) ? (array) $list_barang : [];
 $ada_customer  = !empty($list_customer);
 $tanggal_maks  = date('Y-m-d');
+$tipe          = (isset($tipe) && $tipe === 'manual') ? 'manual' : 'rumus';
+$is_manual     = ($tipe === 'manual');
+$folder_foto   = base_url('uploads/penawaran/');
 
 $is_edit     = (isset($mode) && $mode === 'edit' && !empty($penawaran_edit));
 $pen         = $is_edit ? $penawaran_edit : null;
@@ -35,10 +38,14 @@ if ($is_edit && !empty($items_edit)) {
       'finishing'          => $it['finishing'] ?? '',
       'komponen_kusen'     => $it['komponen_kusen'] ?? '',
       'komponen_daun'      => $it['komponen_daun'] ?? '',
+      'tebal'              => $it['tebal'] ?? '',
       'lebar_mm'           => (int) ($it['lebar_mm'] ?? 0),
       'tinggi_mm'          => (int) ($it['tinggi_mm'] ?? 0),
+      'rumus_ukuran'       => $it['rumus_ukuran'] ?? '',
+      'luas_m2'            => (float) ($it['luas_m2'] ?? 0),
       'qty'                => (int) ($it['qty'] ?? 1),
       'harga_unit'         => (float) ($it['harga_unit'] ?? 0),
+      'satuan_harga'       => (($it['satuan_harga'] ?? 'm2') === 'unit') ? 'unit' : 'm2',
       'keterangan'         => $it['keterangan'] ?? '',
       'tipe_motor'         => $it['tipe_motor'] ?? '',
       'input_power'        => $it['input_power'] ?? '',
@@ -53,6 +60,7 @@ if ($is_edit && !empty($items_edit)) {
       'kelengkapan'        => $it['kelengkapan'] ?? '',
       'aksesoris'          => $it['aksesoris'] ?? [],
       'kaca'               => $it['kaca'] ?? [],
+      'foto'               => $it['foto'] ?? '',
     ];
   }
 }
@@ -64,6 +72,7 @@ if ($is_edit && !empty($items_edit)) {
     --pnw-brand-dark: #234f38;
     --pnw-radius: 14px;
   }
+
   .pnw-page .page-header {
     background: linear-gradient(135deg, var(--pnw-brand), var(--pnw-brand-dark));
     color: #fff;
@@ -72,8 +81,16 @@ if ($is_edit && !empty($items_edit)) {
     margin-bottom: 22px;
     box-shadow: 0 6px 18px rgba(35, 79, 56, .25);
   }
-  .pnw-page .page-header h4 { margin: 0; font-weight: 600; }
-  .pnw-page .page-header small { opacity: .85; }
+
+  .pnw-page .page-header h4 {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .pnw-page .page-header small {
+    opacity: .85;
+  }
+
   .pnw-page .card-modern {
     background: #fff;
     border: none;
@@ -81,6 +98,7 @@ if ($is_edit && !empty($items_edit)) {
     box-shadow: 0 2px 10px rgba(0, 0, 0, .06);
     margin-bottom: 20px;
   }
+
   .pnw-page .card-modern .card-header {
     background: #fff;
     border-bottom: 1px solid #eef1ef;
@@ -89,13 +107,28 @@ if ($is_edit && !empty($items_edit)) {
     color: var(--pnw-brand-dark);
     padding: 14px 20px;
   }
-  .pnw-page .card-modern .card-body { padding: 20px; }
-  .pnw-page .form-label { font-weight: 500; font-size: .84rem; color: #4a4a4a; }
-  .pnw-page .form-control[readonly] { background: #f3f6f4; color: #5a5a5a; }
-  .pnw-page .form-control:focus, .pnw-page .form-select:focus {
+
+  .pnw-page .card-modern .card-body {
+    padding: 20px;
+  }
+
+  .pnw-page .form-label {
+    font-weight: 500;
+    font-size: .84rem;
+    color: #4a4a4a;
+  }
+
+  .pnw-page .form-control[readonly] {
+    background: #f3f6f4;
+    color: #5a5a5a;
+  }
+
+  .pnw-page .form-control:focus,
+  .pnw-page .form-select:focus {
     border-color: var(--pnw-brand);
     box-shadow: 0 0 0 .2rem rgba(47, 111, 79, .15);
   }
+
   .pnw-page .item-card {
     border: 1px solid #eef1ef;
     border-radius: 12px;
@@ -104,39 +137,157 @@ if ($is_edit && !empty($items_edit)) {
     position: relative;
     background: #fbfdfc;
   }
-  .pnw-page .item-card .item-title { font-weight: 700; color: var(--pnw-brand-dark); font-size: .88rem; }
-  .pnw-page .item-card .item-subtotal { font-weight: 700; color: var(--pnw-brand-dark); }
-  .pnw-page .btn-remove-item { color: #b3261e; }
-  .pnw-page .btn-remove-item:hover { color: #7a1a15; }
-  .pnw-page .btn-remove-item:disabled { color: #c9c9c9; }
-  .pnw-page .barang-picker { position: relative; }
-  .pnw-page .it-books-penutup, .pnw-page .it-kelengkapan { min-height: 130px; resize: vertical; }
-  .pnw-page .it-jenis.is-locked { background: #eef6f1; color: var(--pnw-brand-dark); font-weight: 600; cursor: not-allowed; }
+
+  .pnw-page .item-card .item-title {
+    font-weight: 700;
+    color: var(--pnw-brand-dark);
+    font-size: .88rem;
+  }
+
+  .pnw-page .item-card .item-subtotal {
+    font-weight: 700;
+    color: var(--pnw-brand-dark);
+  }
+
+  .pnw-page .btn-remove-item {
+    color: #b3261e;
+  }
+
+  .pnw-page .btn-remove-item:hover {
+    color: #7a1a15;
+  }
+
+  .pnw-page .btn-remove-item:disabled {
+    color: #c9c9c9;
+  }
+
+  .pnw-page .barang-picker {
+    position: relative;
+  }
+
+  .pnw-page .it-books-penutup,
+  .pnw-page .it-kelengkapan,
+  .pnw-page .it-komponen {
+    min-height: 130px;
+    resize: vertical;
+  }
+
+  .pnw-page .it-jenis.is-locked {
+    background: #eef6f1;
+    color: var(--pnw-brand-dark);
+    font-weight: 600;
+    cursor: not-allowed;
+  }
+
   .pnw-page .barang-dropdown-list {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 20;
-    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .12); max-height: 220px; overflow-y: auto; margin-top: 4px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: #fff;
+    border: 1px solid #dfe6e2;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    max-height: 220px;
+    overflow-y: auto;
+    margin-top: 4px;
   }
-  .pnw-page .barang-dropdown-list .barang-opt { padding: 8px 12px; cursor: pointer; font-size: .85rem; border-bottom: 1px solid #f2f4f3; }
-  .pnw-page .barang-dropdown-list .barang-opt:hover { background: #eef6f1; }
-  .pnw-page .barang-dropdown-list .barang-opt .bo-nama { font-weight: 600; color: #26332c; display: block; }
-  .pnw-page .barang-dropdown-list .barang-opt .bo-meta { color: #7a8a80; font-size: .76rem; }
-  .pnw-page .customer-picker { position: relative; }
-  .pnw-page .customer-picker .form-control { padding-right: 34px; }
-  .pnw-page .customer-picker .customer-caret { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #7a8a80; font-size: .8rem; pointer-events: none; }
+
+  .pnw-page .barang-dropdown-list .barang-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .85rem;
+    border-bottom: 1px solid #f2f4f3;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt:hover {
+    background: #eef6f1;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt .bo-nama {
+    font-weight: 600;
+    color: #26332c;
+    display: block;
+  }
+
+  .pnw-page .barang-dropdown-list .barang-opt .bo-meta {
+    color: #7a8a80;
+    font-size: .76rem;
+  }
+
+  .pnw-page .customer-picker {
+    position: relative;
+  }
+
+  .pnw-page .customer-picker .form-control {
+    padding-right: 34px;
+  }
+
+  .pnw-page .customer-picker .customer-caret {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7a8a80;
+    font-size: .8rem;
+    pointer-events: none;
+  }
+
   .pnw-page .customer-dropdown-list {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 30;
-    background: #fff; border: 1px solid #dfe6e2; border-radius: 8px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, .12); max-height: 240px; overflow-y: auto; margin-top: 4px;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: #fff;
+    border: 1px solid #dfe6e2;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, .12);
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: 4px;
   }
-  .pnw-page .customer-dropdown-list .customer-opt { padding: 8px 12px; cursor: pointer; font-size: .88rem; font-weight: 600; color: #26332c; border-bottom: 1px solid #f2f4f3; }
-  .pnw-page .customer-dropdown-list .customer-opt:hover { background: #eef6f1; }
-  .pnw-page .summary-box { background: #f8faf9; border: 1px dashed #cfe0d6; border-radius: 10px; padding: 16px 18px; }
-  .pnw-page .total-box { background: #f8faf9; border-left: 4px solid var(--pnw-brand); border-radius: 10px; padding: 16px 18px; }
+
+  .pnw-page .customer-dropdown-list .customer-opt {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: .88rem;
+    font-weight: 600;
+    color: #26332c;
+    border-bottom: 1px solid #f2f4f3;
+  }
+
+  .pnw-page .customer-dropdown-list .customer-opt:hover {
+    background: #eef6f1;
+  }
+
+  .pnw-page .summary-box {
+    background: #f8faf9;
+    border: 1px dashed #cfe0d6;
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .pnw-page .total-box {
+    background: #f8faf9;
+    border-left: 4px solid var(--pnw-brand);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
   .pnw-page .footer-actions {
-    position: sticky; bottom: 0; background: #fff; padding: 14px 20px;
-    border-radius: var(--pnw-radius); box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
-    display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; z-index: 5;
+    position: sticky;
+    bottom: 0;
+    background: #fff;
+    padding: 14px 20px;
+    border-radius: var(--pnw-radius);
+    box-shadow: 0 -4px 14px rgba(0, 0, 0, .06);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    z-index: 5;
   }
 </style>
 
@@ -170,7 +321,14 @@ if ($is_edit && !empty($items_edit)) {
     </div>
   <?php endif; ?>
 
-  <?= form_open($form_action, ['id' => 'formPenawaran', 'autocomplete' => 'off']); ?>
+  <?= form_open_multipart($form_action, ['id' => 'formPenawaran', 'autocomplete' => 'off']); ?>
+  <input type="hidden" name="tipe" value="<?= $tipe; ?>">
+  <?php if ($is_manual): ?>
+    <div class="alert alert-info py-2 mb-3">
+      <i class="bi bi-pencil-square me-1"></i>
+      <strong>Penawaran Manual</strong> &mdash; semua isian diketik langsung (tanpa rumus luas). Nama barang boleh dikosongkan kalau hanya mengisi aksesoris.
+    </div>
+  <?php endif; ?>
 
   <div class="card-modern">
     <div class="card-header"><i class="bi bi-info-circle me-2"></i><?= translate('informasi_penawaran') ?></div>
@@ -198,12 +356,32 @@ if ($is_edit && !empty($items_edit)) {
           ?>
           <div class="customer-picker">
             <input type="hidden" name="id_customer" id="id_customer" value="<?= $cust_id_val > 0 ? $cust_id_val : ''; ?>" <?= $hdr_lock; ?>>
-            <input type="text" id="customer_search" class="form-control" placeholder= "<?= translate('p_s_penawaran') ?>"
+            <input type="text" id="customer_search" class="form-control" placeholder="<?= translate('p_s_penawaran') ?>"
               autocomplete="off" value="<?= html_escape($cust_nama_val); ?>" <?= $hdr_lock; ?>>
             <i class="bi bi-chevron-down customer-caret"></i>
             <div class="customer-dropdown-list d-none"></div>
           </div>
         </div>
+        <?php if ($this->db->field_exists('jenis_penjualan', 'penawaran')): ?>
+          <?php $jenis_val = $is_edit ? ($pen->jenis_penjualan ?? 'biasa') : 'biasa'; ?>
+          <div class="col-md-4">
+            <label for="jenis_penjualan" class="form-label">Jenis penjualan</label>
+            <select id="jenis_penjualan" name="jenis_penjualan" class="form-select" <?= $pajak_lock; ?>>
+              <option value="biasa" <?= $jenis_val !== 'konsinyasi' ? 'selected' : ''; ?>>Penjualan biasa</option>
+              <option value="konsinyasi" <?= $jenis_val === 'konsinyasi' ? 'selected' : ''; ?>>Konsinyasi / titip jual (sample)</option>
+            </select>
+          </div>
+          <div class="col-md-8 d-flex align-items-end">
+            <div class="form-text" id="info_konsinyasi" style="<?= $jenis_val === 'konsinyasi' ? '' : 'display:none'; ?>">
+              <i class="bi bi-info-circle me-1"></i>Barang dititip ke customer dengan harga di penawaran ini. Tanpa DP; yang ditagih hanya barang yang laku, sisanya ditarik kembali ke gudang.
+            </div>
+          </div>
+          <script>
+            document.getElementById('jenis_penjualan').addEventListener('change', function () {
+              document.getElementById('info_konsinyasi').style.display = this.value === 'konsinyasi' ? '' : 'none';
+            });
+          </script>
+        <?php endif; ?>
         <div class="col-12">
           <label for="catatan" class="form-label"><?= translate('catatan') ?></label>
           <textarea id="catatan" name="catatan" class="form-control" rows="2" placeholder="<?= translate('p_catatan_pnwrn') ?>" <?= $hdr_lock; ?>><?= $is_edit ? html_escape($pen->catatan) : ''; ?></textarea>
@@ -260,12 +438,13 @@ if ($is_edit && !empty($items_edit)) {
         <div class="card-body">
           <div class="form-check form-switch mb-3">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_ppn" name="pakai_ppn" value="1" <?= ($is_edit && (float) $pen->ppn_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_ppn"><?=  translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</label>
+            <label class="form-check-label" for="pakai_ppn"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</label>
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>%</label>
+            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong customer)</label>
           </div>
+          <div class="form-text" id="infoPph">PPh <?= html_escape($tarif_pph); ?>% hanya bisa dipilih kalau ada biaya pemasangan / instalasi, dihitung dari nilai jasa pemasangan saja, dan mengurangi grand total.</div>
         </div>
       </div>
     </div>
@@ -281,10 +460,10 @@ if ($is_edit && !empty($items_edit)) {
             <span class="text-muted"><?= translate('subtotal') ?></span><span id="sumSubtotal">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"><?= translate('ppn') . ' ' .html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
+            <span class="text-muted"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"> <?= translate('pph') .' ' .html_escape($tarif_pph); ?>%</span><span id="sumPph">Rp 0</span>
+            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong)</span><span id="sumPph">Rp 0</span>
           </div>
           <div class="total-box mt-3">
             <div class="text-muted small"><?= translate('grand_total') ?></div>
@@ -307,161 +486,305 @@ if ($is_edit && !empty($items_edit)) {
   <?= form_close(); ?>
 </div>
 
-<template id="templateItem">
-  <div class="item-card">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <span class="item-title">Item <span class="item-no">1</span></span>
-      <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
-    </div>
-    <div class="row g-2">
-      <div class="col-md-4">
-        <label class="form-label"><?= translate('pilih_barang') ?><span class="text-danger">*</span></label>
-        <div class="barang-picker">
-          <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
-          <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
-            placeholder="<?= translate('cari') ?>" autocomplete="off" required>
-          <div class="barang-dropdown-list d-none"></div>
+<?php if ($is_manual): ?>
+  <template id="templateItem">
+    <div class="item-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="item-title">Item <span class="item-no">1</span></span>
+        <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+      </div>
+      <div class="row g-2">
+        <!-- Penampung kategori rumus (kosong di mode manual, tidak ikut dikirim) -->
+        <input type="hidden" class="it-id-barang" value="">
+
+        <div class="col-md-6">
+          <label class="form-label">Nama Barang</label>
+          <input type="text" name="jenis_item[]" class="form-control it-jenis" autocomplete="off"
+            placeholder="Ketik nama barang (boleh kosong jika hanya aksesoris)">
         </div>
-        <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
-          <i class="bi bi-arrow-repeat me-1"></i><?= translate('ganti_barang') ?>
-        </button>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label"><?= translate('warna') ?></label>
-        <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Finishing</label>
-        <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Powder Coating / 粉末涂料">
-      </div>
-
-      <div class="col-6 col-md-2">
-        <label class="form-label">Lebar (mm)</label>
-        <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Tinggi (mm)</label>
-        <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Luas (m²)</label>
-        <input type="text" class="form-control it-luas" value="0.0000" readonly>
-      </div>
-      <div class="col-6 col-md-2">
-        <label class="form-label">Qty <span class="text-danger">*</span></label>
-        <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty" required>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
-        <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Komponen</label>
-        <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang">
-      </div>
-
-      <div class="col-md-2">
-        <label class="form-label">Kusen (mm)</label>
-        <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Daun (mm)</label>
-        <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Tipe Motor</label>
-        <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="Mis. Electra 600">
-      </div>
-      <div class="col-md-2">
-        <label class="form-label">Input Power</label>
-        <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="Mis. 250 W">
-      </div>
-
-      <div class="col-md-2">
-        <label class="form-label">Voltage</label>
-        <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Books Penutup</label>
-        <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup"></textarea>
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">Kelengkapan</label>
-        <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
-      </div>
-
-      <!-- Books Penutup (khusus rolling door) -->
-      <div class="col-12 books-blok d-none"><div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div></div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Lebar (mm)</label>
-        <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Tinggi (mm)</label>
-        <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="Mis. 600">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Luas (m²)</label>
-        <input type="text" class="form-control it-books-luas" value="0.0000" readonly tabindex="-1">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Qty</label>
-        <input type="number" min="0" step="1" name="qty_books[]" class="form-control it-books-qty" placeholder="Mis. 1">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Harga (Rp / m²)</label>
-        <input type="number" min="0" step="any" name="harga_m2_books[]" class="form-control it-books-harga" placeholder="Mis. 500000">
-      </div>
-      <div class="col-md-3 books-blok d-none">
-        <label class="form-label">Total Books</label>
-        <input type="text" class="form-control it-books-total" value="Rp 0" readonly tabindex="-1">
-      </div>
-
-      <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
-      <div class="col-12 instalasi-blok d-none"><div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div></div>
-      <div class="col-md-4 instalasi-blok d-none">
-        <label class="form-label">Qty Instalasi</label>
-        <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
-      </div>
-      <div class="col-md-4 instalasi-blok d-none">
-        <label class="form-label">Tarif Pasang (Rp / m²)</label>
-        <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="Mis. 50000">
-      </div>
-      <div class="col-md-4 instalasi-blok d-none">
-        <label class="form-label">Total Biaya Instalasi</label>
-        <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
-      </div>
-
-      <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
-     <div class="col-12 mt-2 wrap-kaca-container">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
+        <div class="col-md-3">
+          <label class="form-label"><?= translate('warna') ?></label>
+          <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
         </div>
-        <div class="list-kaca"></div>
-      </div>
-
-      <!-- Aksesoris Tambahan -->
-      <div class="col-12 mt-2 wrap-aksesoris-container">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-          <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
-          <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
+        <div class="col-md-3">
+          <label class="form-label">Finishing</label>
+          <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Mis. Powder Coating">
         </div>
-        <div class="list-aksesoris"></div>
-      </div>
 
-      <div class="col-12">
-        <label class="form-label"><?= translate('catatan') ?></label>
-        <textarea name="keterangan[]" class="form-control" rows="1" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
-      </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Lebar (mm)</label>
+          <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Tinggi (mm)</label>
+          <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Luas (m²)</label>
+          <input type="text" inputmode="decimal" name="luas_m2[]" class="form-control it-luas" value="" placeholder="0,00" autocomplete="off">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Qty</label>
+          <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Satuan Harga</label>
+          <select name="satuan_harga[]" class="form-select it-satuan">
+            <option value="m2">Per m²</option>
+            <option value="unit">Per unit</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label"><span class="it-harga-label">Harga / m²</span> (Rp)</label>
+          <input type="number" name="harga_unit[]" min="0" step="any" class="form-control it-harga" placeholder="0">
+        </div>
 
-      <div class="col-12 text-end">
-        <label class="form-label d-block"><?= translate('subtotal') ?></label>
-        <span class="item-subtotal">Rp 0</span>
+        <div class="col-md-3">
+          <label class="form-label">Total Barang (otomatis)</label>
+          <input type="text" class="form-control it-total-barang" value="Rp 0" readonly tabindex="-1">
+          <div class="form-text it-rumus-info"></div>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Komponen</label>
+          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="Opsional"></textarea>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Tebal(mm)</label>
+          <input type="text" name="tebal[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Kusen (mm)</label>
+          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Daun (mm)</label>
+          <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+
+        <div class="col-12">
+          <div class="form-text mt-0">Luas terisi otomatis dari Lebar × Tinggi, tapi boleh diketik sendiri (mis. 1,65). Satuan <strong>Per m²</strong>: total barang = Luas × Qty × Harga / m² (jika lebar/tinggi dikosongkan, total = Qty × Harga). Satuan <strong>Per unit</strong>: total barang = Qty × Harga / unit (luas tidak ikut dihitung).</div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label">Foto Barang</label>
+          <input type="file" name="foto[]" accept="image/jpeg,image/png" class="form-control it-foto">
+          <input type="hidden" name="foto_lama[]" class="it-foto-lama" value="">
+          <div class="foto-preview mt-2"></div>
+          <div class="form-text">JPG / PNG, maks. 3 MB. Kosongkan untuk tanpa foto (saat edit: kosongkan untuk tetap memakai foto lama).</div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label"><?= translate('catatan') ?></label>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="4" placeholder="Spesifikasi, catatan khusus, dll."></textarea>
+        </div>
+
+        <!-- Biaya untuk kaca (Luas x Harga per m²) -->
+        <div class="col-12 mt-2 wrap-kaca-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
+          </div>
+          <div class="list-kaca"></div>
+        </div>
+
+        <!-- Aksesoris Tambahan -->
+        <div class="col-12 mt-2 wrap-aksesoris-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
+          </div>
+          <div class="list-aksesoris"></div>
+        </div>
+
+        <div class="col-12 text-end">
+          <label class="form-label d-block"><?= translate('subtotal') ?></label>
+          <span class="item-subtotal">Rp 0</span>
+        </div>
       </div>
     </div>
-  </div>
-</template>
+  </template>
+<?php else: ?>
+  <template id="templateItem">
+    <div class="item-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="item-title">Item <span class="item-no">1</span></span>
+        <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+      </div>
+      <div class="row g-2">
+        <div class="col-md-4">
+          <label class="form-label"><?= translate('pilih_barang') ?><span class="text-danger">*</span></label>
+          <div class="barang-picker">
+            <input type="hidden" name="id_barang[]" class="it-id-barang" value="">
+            <input type="text" name="jenis_item[]" class="form-control it-jenis it-barang-search"
+              placeholder="<?= translate('cari') ?>" autocomplete="off" required>
+            <div class="barang-dropdown-list d-none"></div>
+          </div>
+          <button type="button" class="btn btn-link btn-ganti-barang p-0 mt-1 d-none">
+            <i class="bi bi-arrow-repeat me-1"></i><?= translate('ganti_barang') ?>
+          </button>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label"><?= translate('warna') ?></label>
+          <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Finishing</label>
+          <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Powder Coating / 粉末涂料">
+        </div>
+
+        <div class="col-6 col-md-2">
+          <label class="form-label">Lebar (mm)</label>
+          <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Tinggi (mm)</label>
+          <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Luas (m²)</label>
+          <input type="text" class="form-control it-luas" value="0.00" readonly>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Qty <span class="text-danger">*</span></label>
+          <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty" required>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
+          <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
+        </div>
+
+        <!-- Rumus ukuran (khusus rolling door). Selalu ikut terkirim supaya urutan array item tetap sejajar. -->
+        <div class="col-md-4 rumus-ukuran-blok d-none">
+          <label class="form-label">Rumus Ukuran Rolling Door</label>
+          <select name="rumus_ukuran[]" class="form-select it-rumus-ukuran">
+            <option value="l200_t600">Lebar +200, Tinggi +600</option>
+            <option value="t500">Lebar tetap, Tinggi +500</option>
+          </select>
+        </div>
+        <div class="col-md-8 rumus-ukuran-blok d-none">
+          <div class="h-100 d-flex align-items-end">
+            <div class="form-text it-ukuran-tagih mb-2"></div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Komponen</label>
+          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="Otomatis dari data barang"></textarea>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Tebal (mm)</label>
+          <input type="text" name="tebal[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Kusen (mm)</label>
+          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Daun (mm)</label>
+          <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Tipe Motor</label>
+          <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="Mis. Electra 600">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label">Input Power</label>
+          <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="Mis. 250 W">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Voltage</label>
+          <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Books Penutup</label>
+          <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup"></textarea>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Kelengkapan</label>
+          <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
+        </div>
+        <div class="col-3">
+          <label class="form-label"><?= translate('catatan') ?></label>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="5" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
+        </div>
+
+        <!-- Books Penutup (khusus rolling door) -->
+        <div class="col-12 books-blok d-none">
+          <div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div>
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Lebar (mm)</label>
+          <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Tinggi (mm)</label>
+          <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="Mis. 600">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Luas (m²)</label>
+          <input type="text" class="form-control it-books-luas" value="0.00" readonly tabindex="-1">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Qty</label>
+          <input type="number" min="0" step="1" name="qty_books[]" class="form-control it-books-qty" placeholder="Mis. 1">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Harga (Rp / m²)</label>
+          <input type="number" min="0" step="any" name="harga_m2_books[]" class="form-control it-books-harga" placeholder="Mis. 500000">
+        </div>
+        <div class="col-md-3 books-blok d-none">
+          <label class="form-label">Total Books</label>
+          <input type="text" class="form-control it-books-total" value="Rp 0" readonly tabindex="-1">
+        </div>
+
+        <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
+        <div class="col-12 instalasi-blok d-none">
+          <div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div>
+        </div>
+        <div class="col-md-4 instalasi-blok d-none">
+          <label class="form-label">Qty Instalasi</label>
+          <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
+        </div>
+        <div class="col-md-4 instalasi-blok d-none">
+          <label class="form-label">Tarif Pasang (Rp / m²)</label>
+          <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="Mis. 50000">
+        </div>
+        <div class="col-md-4 instalasi-blok d-none">
+          <label class="form-label">Total Biaya Instalasi</label>
+          <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
+        </div>
+
+        <!-- Biaya untuk kaca (Luas x Harga Pasang per m²) -->
+        <div class="col-12 mt-2 wrap-kaca-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('B_detail_kaca') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-kaca"><i class="bi bi-plus"></i><?= translate('add') ?></button>
+          </div>
+          <div class="list-kaca"></div>
+        </div>
+
+        <!-- Aksesoris Tambahan -->
+        <div class="col-12 mt-2 wrap-aksesoris-container">
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <label class="form-label fw-bold text-success m-0"><i class="bi bi-plus-circle me-1"></i><?= translate('aksesoris_tambhn') ?></label>
+            <button type="button" class="btn btn-xs btn-outline-success btn-tambah-aksesoris"><i class="bi bi-plus"></i> <?= translate('add') ?></button>
+          </div>
+          <div class="list-aksesoris"></div>
+        </div>
+
+
+
+        <div class="col-12 text-end">
+          <label class="form-label d-block"><?= translate('subtotal') ?></label>
+          <span class="item-subtotal">Rp 0</span>
+        </div>
+      </div>
+    </div>
+  </template>
+<?php endif; ?>
 
 <script>
   document.addEventListener('DOMContentLoaded', function() {
@@ -479,6 +802,10 @@ if ($is_edit && !empty($items_edit)) {
     var wrapOngkir = document.getElementById('wrapOngkir');
     var TARIF_PPN = <?= (float) $tarif_ppn; ?>;
     var TARIF_PPH = <?= (float) $tarif_pph; ?>;
+    var IS_MANUAL = <?= $is_manual ? 'true' : 'false'; ?>;
+    var FOLDER_FOTO = <?= json_encode($folder_foto); ?>;
+    // Kalau form terkunci (belum ada customer), switch PPh jangan dibuka oleh segarkan()
+    if (chkPph.disabled) chkPph.dataset.kunci = '1';
 
     var ITEMS_EDIT = <?= json_encode($items_js, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP); ?>;
     var DATA_BARANG = [];
@@ -507,38 +834,69 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     function templateBarisAksoris(itemIndex) {
+      // Mode manual: setiap aksesoris boleh diberi foto (JPG/PNG, maks. 3 MB)
+      var kolFoto = IS_MANUAL ? `
+        <div class="col-md-4">
+          <label class="form-label small text-muted mb-0">Foto</label>
+          <input type="file" name="aks_foto[${itemIndex}][]" accept="image/jpeg,image/png" class="form-control form-control-sm aks-foto">
+          <input type="hidden" name="aks_foto_lama[${itemIndex}][]" class="aks-foto-lama" value="">
+          <div class="aks-foto-preview mt-1"></div>
+        </div>` : '';
+      var cNama = IS_MANUAL ? 'col-md-3' : 'col-md-5';
+      var cQty = 'col-md-2';
+      var cHarga = IS_MANUAL ? 'col-md-2' : 'col-md-4';
+      var cHapus = 'col-md-1';
       return `
-      <div class="row g-2 align-items-center mb-1 baris-aksesoris">
-        <div class="col-md-5">
+      <div class="row g-2 align-items-start mb-1 baris-aksesoris">
+        <div class="${cNama}">
+          <label class="form-label small text-muted mb-0">Nama</label>
           <input type="text" name="aks_nama[${itemIndex}][]" class="form-control form-control-sm aks-nama" placeholder="Nama Aksesoris">
         </div>
-        <div class="col-md-2">
+        <div class="${cQty}">
+          <label class="form-label small text-muted mb-0">Qty</label>
           <input type="number" name="aks_qty[${itemIndex}][]" min="1" value="1" class="form-control form-control-sm aks-qty" placeholder="Qty">
         </div>
-        <div class="col-md-4">
+        <div class="${cHarga}">
+          <label class="form-label small text-muted mb-0">Harga (Rp)</label>
           <input type="number" name="aks_harga[${itemIndex}][]" min="0" step="1" value="0" class="form-control form-control-sm aks-harga" placeholder="Harga">
-        </div>
-        <div class="col-md-1 text-end">
+        </div>${kolFoto}
+        <div class="${cHapus} text-end pt-4">
           <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-aksesoris"><i class="bi bi-x-circle"></i></button>
         </div>
       </div>`;
     }
+
+    // Tampilkan thumbnail foto di elemen preview (dipakai foto item & foto aksesoris)
+    function tampilThumb(pv, src, tinggi) {
+      if (!pv) return;
+      pv.innerHTML = '';
+      var im = document.createElement('img');
+      im.src = src;
+      im.className = 'img-thumbnail';
+      im.style.maxHeight = (tinggi || 90) + 'px';
+      pv.appendChild(im);
+    }
+
     function templateBarisKaca(itemIndex) {
       return `
-      <div class="row g-2 align-items-center mb-1 baris-kaca">
+      <div class="row g-2 align-items-start mb-1 baris-kaca">
         <div class="col-md-4">
+          <label class="form-label small text-muted mb-0">Nama</label>
           <input type="text" name="kaca_nama[${itemIndex}][]" class="form-control form-control-sm kaca-nama" placeholder="Nama Detail Kaca">
         </div>
         <div class="col-md-2">
+          <label class="form-label small text-muted mb-0">Luas (m²)</label>
           <input type="text" inputmode="decimal" name="kaca_luas[${itemIndex}][]" value="1" class="form-control form-control-sm kaca-luas" placeholder="Luas m² (mis. 1,25)">
         </div>
         <div class="col-md-3">
+          <label class="form-label small text-muted mb-0">Harga / m² (Rp)</label>
           <input type="number" name="kaca_harga[${itemIndex}][]" min="0" step="any" value="0" class="form-control form-control-sm kaca-harga" placeholder="Harga / m²">
         </div>
         <div class="col-md-2">
+          <label class="form-label small text-muted mb-0">Total</label>
           <input type="text" class="form-control form-control-sm kaca-total" value="Rp 0" readonly tabindex="-1">
         </div>
-        <div class="col-md-1 text-end">
+        <div class="col-md-1 text-end pt-4">
           <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-kaca"><i class="bi bi-x-circle"></i></button>
         </div>
       </div>`;
@@ -560,12 +918,23 @@ if ($is_edit && !empty($items_edit)) {
       set('.it-id-barang', d.id_barang > 0 ? d.id_barang : '');
       set('.it-warna', d.warna);
       set('.it-komponen', d.komponen);
+      set('[name="tebal[]"]', d.tebal);
       set('[name="komponen_kusen[]"]', d.komponen_kusen);
       set('[name="komponen_daun[]"]', d.komponen_daun);
       set('.it-lebar', d.lebar_mm);
       set('.it-tinggi', d.tinggi_mm);
-      set('.it-qty', d.qty);
+      set('.it-rumus-ukuran', d.rumus_ukuran === 't500' ? 't500' : 'l200_t600');
+      if (IS_MANUAL) {
+        var luasSimpan = parseFloat(d.luas_m2) || 0;
+        var luasHitung = Math.round(((parseInt(d.lebar_mm, 10) || 0) * (parseInt(d.tinggi_mm, 10) || 0)) / 10000) / 100;
+        if (luasSimpan > 0 && Math.abs(luasSimpan - luasHitung) > 0.001) {
+          card.dataset.luasManual = '1';
+          set('.it-luas', luasSimpan.toFixed(2));
+        }
+      }
+      set('.it-qty', d.qty > 0 ? d.qty : 1);
       set('.it-harga', d.harga_unit);
+      set('.it-satuan', d.satuan_harga === 'unit' ? 'unit' : 'm2');
       set('[name="keterangan[]"]', d.keterangan);
       set('[name="tipe_motor[]"]', d.tipe_motor);
       set('[name="input_power[]"]', d.input_power);
@@ -578,8 +947,20 @@ if ($is_edit && !empty($items_edit)) {
       set('.it-instalasi-qty', (parseFloat(d.qty_instalasi) || ''));
       set('.it-instalasi-harga', (parseFloat(d.harga_m2_instalasi) || ''));
       set('[name="kelengkapan[]"]', d.kelengkapan);
+      set('.it-foto-lama', d.foto);
+      if (d.foto) {
+        var pv = card.querySelector('.foto-preview');
+        if (pv) {
+          pv.innerHTML = '';
+          var im = document.createElement('img');
+          im.src = FOLDER_FOTO + encodeURIComponent(d.foto);
+          im.className = 'img-thumbnail';
+          im.style.maxHeight = '90px';
+          pv.appendChild(im);
+        }
+      }
 
-      var finValue = (d && d.finishing && d.finishing.trim() !== '') ? d.finishing : 'Powder Coating / 粉末涂料';
+      var finValue = (d && d.finishing && d.finishing.trim() !== '') ? d.finishing : (IS_MANUAL ? '' : 'Powder Coating / 粉末涂料');
       set('.it-finishing', finValue);
 
       if (d.id_barang > 0) {
@@ -597,6 +978,10 @@ if ($is_edit && !empty($items_edit)) {
           lastRow.querySelector('.aks-nama').value = ak.nama || '';
           lastRow.querySelector('.aks-qty').value = ak.qty || 1;
           lastRow.querySelector('.aks-harga').value = ak.harga || 0;
+          if (IS_MANUAL && ak.foto) {
+            lastRow.querySelector('.aks-foto-lama').value = ak.foto;
+            tampilThumb(lastRow.querySelector('.aks-foto-preview'), FOLDER_FOTO + encodeURIComponent(ak.foto), 60);
+          }
         });
       }
 
@@ -618,9 +1003,14 @@ if ($is_edit && !empty($items_edit)) {
           row.querySelector('.aks-nama').name = `aks_nama[${idx}][]`;
           row.querySelector('.aks-qty').name = `aks_qty[${idx}][]`;
           row.querySelector('.aks-harga').name = `aks_harga[${idx}][]`;
+          var inpFoto = row.querySelector('.aks-foto');
+          if (inpFoto) inpFoto.name = `aks_foto[${idx}][]`;
+          var inpFotoLama = row.querySelector('.aks-foto-lama');
+          if (inpFotoLama) inpFotoLama.name = `aks_foto_lama[${idx}][]`;
         });
       });
     }
+
     function reindexKaca() {
       baris().forEach(function(card, idx) {
         card.querySelectorAll('.baris-kaca').forEach(function(row) {
@@ -690,7 +1080,7 @@ if ($is_edit && !empty($items_edit)) {
 
       var inputCari = card.querySelector('.it-barang-search');
       var inputId = card.querySelector('.it-id-barang');
-      
+
       var elWarna = card.querySelector('.it-warna');
       if (elWarna) elWarna.value = b.warna || '';
       var elHarga = card.querySelector('.it-harga');
@@ -698,7 +1088,7 @@ if ($is_edit && !empty($items_edit)) {
       var elKomponen = card.querySelector('.it-komponen');
       if (elKomponen) elKomponen.value = b.komponen || '';
       var elKet = card.querySelector('.it-keterangan');
-      if (elKet) elKet.value = b.keterangan || '';
+      if (elKet && !elKet.value.trim()) elKet.value = b.keterangan || '';
 
       if (inputCari) {
         inputCari.value = b.nama;
@@ -733,11 +1123,23 @@ if ($is_edit && !empty($items_edit)) {
       return (b && b.kategori_rumus) ? b.kategori_rumus : 'unit_fix';
     }
 
+    // Rolling door: tahan api, baja, otomatis
     function isRollingDoor(kategori) {
-      return /^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/.test(String(kategori || ''));
+      return /^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/.test(String(kategori || ''));
     }
 
-    function luasBilling(kategori, luasRiil, lebarMm, tinggiMm) {
+    // Ukuran tagih rolling door [lebar, tinggi] sesuai rumus ukuran (sama dengan server)
+    function ukuranRolling(lebarMm, tinggiMm, rumusUkuran) {
+      if (rumusUkuran === 't500') return [lebarMm, tinggiMm + 500];
+      return [lebarMm + 200, tinggiMm + 600];
+    }
+
+    // Bulatkan luas ke 2 angka di belakang koma (mis. 1,649 -> 1,65)
+    function bulat2(n) {
+      return Math.round((n + Number.EPSILON) * 100) / 100;
+    }
+
+    function luasBilling(kategori, luasRiil, lebarMm, tinggiMm, rumusUkuran) {
       var luas = luasRiil;
       if (kategori === 'jendela_sliding') {
         luas = Math.max(luasRiil, 1.3);
@@ -747,9 +1149,10 @@ if ($is_edit && !empty($items_edit)) {
       } else if (kategori === 'pintu_baja') {
         luas = Math.max(luasRiil, 2);
       } else if (isRollingDoor(kategori)) {
-        luas = Math.max(Math.round(((lebarMm + 200) / 1000) * ((tinggiMm + 600) / 1000) * 10000) / 10000, 10);
+        var uk = ukuranRolling(lebarMm, tinggiMm, rumusUkuran);
+        luas = Math.max(Math.round((uk[0] * uk[1]) / 10000) / 100, 10);
       }
-      return luas;
+      return bulat2(luas);
     }
 
     function hitungBaris(card) {
@@ -759,11 +1162,25 @@ if ($is_edit && !empty($items_edit)) {
       var harga = parseFloat(card.querySelector('.it-harga').value) || 0;
 
       var kategori = kategoriBaris(card);
-      var luasRiil = Math.round((lebar / 1000) * (tinggi / 1000) * 10000) / 10000;
-      var luas = luasBilling(kategori, luasRiil, lebar, tinggi);
-
+      var elRumusUk = card.querySelector('.it-rumus-ukuran');
+      var rumusUk = elRumusUk ? elRumusUk.value : 'l200_t600';
+      // Luas dibulatkan 2 angka di belakang koma (dihitung dari mm² langsung, sama dengan server)
+      var luasRiil = Math.round((lebar * tinggi) / 10000) / 100;
+      var luas = luasBilling(kategori, luasRiil, lebar, tinggi, rumusUk);
       var inpLuas = card.querySelector('.it-luas');
-      if (inpLuas) inpLuas.value = luas.toFixed(4);
+      if (IS_MANUAL) {
+        // Mode manual: tanpa luas minimum / aturan kategori.
+        // Luas diketik sendiri -> pakai ketikan; kalau tidak -> Lebar x Tinggi.
+        if (card.dataset.luasManual === '1') {
+          luas = bulat2(toNum(inpLuas.value));
+        } else {
+          luas = luasRiil;
+          // Jangan timpa isian yang sedang diketik
+          if (inpLuas && document.activeElement !== inpLuas) inpLuas.value = luas > 0 ? luas.toFixed(2) : '';
+        }
+      } else if (inpLuas) {
+        inpLuas.value = luas.toFixed(2);
+      }
 
       var totalAksesoris = 0;
       card.querySelectorAll('.baris-aksesoris').forEach(function(row) {
@@ -784,21 +1201,31 @@ if ($is_edit && !empty($items_edit)) {
       });
 
       var rolling = isRollingDoor(kategori);
-      
+
+      // Pilihan rumus ukuran hanya untuk rolling door
+      card.querySelectorAll('.rumus-ukuran-blok').forEach(function(el) {
+        el.classList.toggle('d-none', !rolling);
+      });
+      var elUkTagih = card.querySelector('.it-ukuran-tagih');
+      if (elUkTagih && rolling) {
+        var ukT = ukuranRolling(lebar, tinggi, rumusUk);
+        elUkTagih.textContent = 'Ukuran tagih: ' + ukT[0] + ' × ' + ukT[1] + ' mm → luas ' + luas.toFixed(2) + ' m² (minimal 10 m²)';
+      }
+
       // Toggle Books Penutup
       card.querySelectorAll('.books-blok').forEach(function(el) {
         el.classList.toggle('d-none', !rolling);
       });
       var totalBooks = 0;
       if (rolling) {
-        var bLebar  = parseFloat(card.querySelector('.it-books-lebar').value) || 0;
+        var bLebar = parseFloat(card.querySelector('.it-books-lebar').value) || 0;
         var bTinggi = parseFloat(card.querySelector('.it-books-tinggi').value) || 0;
-        var bQty    = parseFloat(card.querySelector('.it-books-qty').value) || 0;
-        var bHarga  = parseFloat(card.querySelector('.it-books-harga').value) || 0;
-        var bLuas   = Math.round((bLebar / 1000) * (bTinggi / 1000) * 10000) / 10000;
-        totalBooks  = bLuas * bQty * bHarga;
+        var bQty = parseFloat(card.querySelector('.it-books-qty').value) || 0;
+        var bHarga = parseFloat(card.querySelector('.it-books-harga').value) || 0;
+        var bLuas = Math.round((bLebar * bTinggi) / 10000) / 100;
+        totalBooks = bLuas * bQty * bHarga;
         var elBLuas = card.querySelector('.it-books-luas');
-        if (elBLuas) elBLuas.value = bLuas.toFixed(4);
+        if (elBLuas) elBLuas.value = bLuas.toFixed(2);
         var elBTotal = card.querySelector('.it-books-total');
         if (elBTotal) elBTotal.value = rupiah(totalBooks);
       }
@@ -816,8 +1243,28 @@ if ($is_edit && !empty($items_edit)) {
         var elInstTotal = card.querySelector('.it-instalasi-total');
         if (elInstTotal) elInstTotal.value = rupiah(totalInstalasi);
       }
+      card.dataset.instalasi = totalInstalasi;
 
-      var total = ((kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga)) + totalAksesoris + totalKaca + totalBooks + totalInstalasi;
+      var totalBarang;
+      if (IS_MANUAL) {
+        // Per unit: Qty x Harga. Per m²: Luas x Qty x Harga/m² (luas 0 -> Qty x Harga)
+        var elSatuan = card.querySelector('.it-satuan');
+        var perUnit = elSatuan && elSatuan.value === 'unit';
+        var elHargaLbl = card.querySelector('.it-harga-label');
+        if (elHargaLbl) elHargaLbl.textContent = perUnit ? 'Harga / unit' : 'Harga / m²';
+        totalBarang = (perUnit || luas <= 0 ? 1 : luas) * qty * harga;
+        var elTB = card.querySelector('.it-total-barang');
+        if (elTB) elTB.value = rupiah(totalBarang);
+        var elInfo = card.querySelector('.it-rumus-info');
+        if (elInfo) {
+          elInfo.textContent = (perUnit || luas <= 0)
+            ? qty + ' × ' + rupiah(harga)
+            : luas.toFixed(2).replace('.', ',') + ' m² × ' + qty + ' × ' + rupiah(harga);
+        }
+      } else {
+        totalBarang = (kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga);
+      }
+      var total = totalBarang + totalAksesoris + totalKaca + totalBooks + totalInstalasi;
       card.querySelector('.item-subtotal').textContent = rupiah(total);
 
       return total;
@@ -832,29 +1279,59 @@ if ($is_edit && !empty($items_edit)) {
         card.querySelector('.item-no').textContent = i + 1;
         card.querySelector('.btn-remove-item').disabled = (rows.length === 1);
         subtotal += hitungBaris(card);
+
+        // 1. Tambah qty utama item
         totalQty += Math.max(0, parseInt(card.querySelector('.it-qty').value, 10) || 0);
+
+        // 2. Tambah qty dari masing-masing aksesoris di dalam item ini
+        card.querySelectorAll('.baris-aksesoris').forEach(function(rowAks) {
+          totalQty += Math.max(0, parseInt(rowAks.querySelector('.aks-qty').value, 10) || 0);
+        });
+
+        // (Detail kaca sengaja dilewati / tidak ditambahkan ke totalQty)
       });
 
       var pasang = nominalBiaya(chkPasang, inpPasang);
       var ongkir = nominalBiaya(chkOngkir, inpOngkir);
       var dasar = subtotal + pasang + ongkir;
 
+      // PPh hanya boleh kalau ada pemasangan (biaya pasang header atau instalasi rolling door)
+      var totalInstalasiSemua = rows.reduce(function(s, card) {
+        return s + (parseFloat(card.dataset.instalasi) || 0);
+      }, 0);
+      var adaPasang = pasang > 0 || totalInstalasiSemua > 0;
+      if (chkPph.dataset.kunci !== '1') {
+        chkPph.disabled = !adaPasang;
+      }
+      if (!adaPasang) chkPph.checked = false;
+
       var ppn = chkPpn.checked ? Math.round(dasar * TARIF_PPN / 100) : 0;
-      var pph = chkPph.checked ? Math.round(dasar * TARIF_PPH / 100) : 0;
-      var grand = dasar + ppn + pph;
+      // PPh 23 hanya dari nilai jasa pemasangan (biaya pasang + instalasi), bukan seluruh subtotal
+      var dasarJasa = pasang + totalInstalasiSemua;
+      var pph = chkPph.checked ? Math.round(dasarJasa * TARIF_PPH / 100) : 0;
+      // PPh dipotong customer -> mengurangi grand total
+      var grand = dasar + ppn - pph;
 
       document.getElementById('sumJumlahItem').textContent = totalQty;
       document.getElementById('sumSubtotal').textContent = rupiah(subtotal);
       document.getElementById('sumPpn').textContent = rupiah(ppn);
-      document.getElementById('sumPph').textContent = rupiah(pph);
+      document.getElementById('sumPph').textContent = pph > 0 ? '- ' + rupiah(pph) : rupiah(0);
       document.getElementById('sumGrandTotal').textContent = rupiah(grand);
     }
 
-    btnTambah.addEventListener('click', function() { tambahItem(); });
+    btnTambah.addEventListener('click', function() {
+      tambahItem();
+    });
     chkPpn.addEventListener('change', segarkan);
     chkPph.addEventListener('change', segarkan);
-    chkPasang.addEventListener('change', function() { toggleBiaya(chkPasang, wrapPasang, inpPasang); segarkan(); });
-    chkOngkir.addEventListener('change', function() { toggleBiaya(chkOngkir, wrapOngkir, inpOngkir); segarkan(); });
+    chkPasang.addEventListener('change', function() {
+      toggleBiaya(chkPasang, wrapPasang, inpPasang);
+      segarkan();
+    });
+    chkOngkir.addEventListener('change', function() {
+      toggleBiaya(chkOngkir, wrapOngkir, inpOngkir);
+      segarkan();
+    });
     inpPasang.addEventListener('input', segarkan);
     inpOngkir.addEventListener('input', segarkan);
 
@@ -863,7 +1340,29 @@ if ($is_edit && !empty($items_edit)) {
         tampilkanDropdown(e.target.closest('.item-card'), cariBarang(e.target.value));
         return;
       }
-      if (e.target.closest('.item-card')) segarkan();
+      var cardInp = e.target.closest('.item-card');
+      if (IS_MANUAL && cardInp) {
+        if (e.target.classList.contains('it-luas')) {
+          // Luas diketik sendiri; dikosongkan -> kembali otomatis dari Lebar x Tinggi
+          cardInp.dataset.luasManual = e.target.value.trim() !== '' ? '1' : '';
+        } else if (e.target.classList.contains('it-lebar') || e.target.classList.contains('it-tinggi')) {
+          // Ukuran diubah -> luas dihitung ulang otomatis
+          cardInp.dataset.luasManual = '';
+        }
+      }
+      if (cardInp) segarkan();
+    });
+
+    // Mode manual: setelah selesai mengetik luas, rapikan jadi 2 angka di belakang koma
+    wrap.addEventListener('focusout', function(e) {
+      if (!IS_MANUAL || !e.target.classList.contains('it-luas')) return;
+      var card = e.target.closest('.item-card');
+      if (card.dataset.luasManual === '1') {
+        var v = bulat2(toNum(e.target.value));
+        e.target.value = v > 0 ? v.toFixed(2) : '';
+        if (v <= 0) card.dataset.luasManual = '';
+      }
+      segarkan();
     });
 
     wrap.addEventListener('focusin', function(e) {
@@ -897,18 +1396,58 @@ if ($is_edit && !empty($items_edit)) {
         return;
       }
       var opt = e.target.closest('.barang-opt');
-      if (opt) { pilihBarang(card, opt.getAttribute('data-id')); return; }
+      if (opt) {
+        pilihBarang(card, opt.getAttribute('data-id'));
+        return;
+      }
       var btnGanti = e.target.closest('.btn-ganti-barang');
-      if (btnGanti) { gantiBarang(card); return; }
+      if (btnGanti) {
+        gantiBarang(card);
+        return;
+      }
       var btnHapus = e.target.closest('.btn-remove-item');
-      if (btnHapus && !btnHapus.disabled) { card.remove(); reindexAksesoris(); reindexKaca(); segarkan(); return; }
+      if (btnHapus && !btnHapus.disabled) {
+        card.remove();
+        reindexAksesoris();
+        reindexKaca();
+        segarkan();
+        return;
+      }
+    });
+
+    // Preview foto saat memilih file (penawaran manual): foto barang & foto aksesoris
+    wrap.addEventListener('change', function(e) {
+      if (e.target.classList.contains('it-satuan')) {
+        segarkan();
+        return;
+      }
+      var isItem = e.target.classList.contains('it-foto');
+      var isAks = e.target.classList.contains('aks-foto');
+      if (!isItem && !isAks) return;
+      var pv = isItem ?
+        e.target.closest('.item-card').querySelector('.foto-preview') :
+        e.target.closest('.baris-aksesoris').querySelector('.aks-foto-preview');
+      var f = e.target.files && e.target.files[0];
+      if (!pv || !f) return;
+      if (f.size > 3 * 1024 * 1024) {
+        alert('Ukuran foto maksimal 3 MB.');
+        e.target.value = '';
+        return;
+      }
+      var rd = new FileReader();
+      rd.onload = function(ev) {
+        tampilThumb(pv, ev.target.result, isItem ? 90 : 60);
+      };
+      rd.readAsDataURL(f);
     });
 
     // Customer Auto-complete
     var DATA_CUSTOMER = [];
     try {
       DATA_CUSTOMER = JSON.parse(document.getElementById('dataCustomer').textContent || '[]') || [];
-    } catch (e) { DATA_CUSTOMER = []; }
+    } catch (e) {
+      DATA_CUSTOMER = [];
+    }
 
     var custInput = document.getElementById('customer_search');
     var custId = document.getElementById('id_customer');
@@ -917,7 +1456,9 @@ if ($is_edit && !empty($items_edit)) {
     function cariCustomer(kata) {
       kata = (kata || '').trim().toLowerCase();
       if (kata === '') return DATA_CUSTOMER;
-      return DATA_CUSTOMER.filter(function(c) { return c.nama.toLowerCase().indexOf(kata) !== -1; });
+      return DATA_CUSTOMER.filter(function(c) {
+        return c.nama.toLowerCase().indexOf(kata) !== -1;
+      });
     }
 
     function tutupDropdownCustomer() {
@@ -946,7 +1487,9 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     function pilihCustomer(id) {
-      var c = DATA_CUSTOMER.find(function(x) { return String(x.id) === String(id); });
+      var c = DATA_CUSTOMER.find(function(x) {
+        return String(x.id) === String(id);
+      });
       if (!c) return;
       custId.value = c.id;
       custInput.value = c.nama;
@@ -954,8 +1497,13 @@ if ($is_edit && !empty($items_edit)) {
     }
 
     if (custInput && !custInput.disabled) {
-      custInput.addEventListener('focus', function() { tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value)); });
-      custInput.addEventListener('input', function() { custId.value = ''; tampilkanCustomer(cariCustomer(custInput.value)); });
+      custInput.addEventListener('focus', function() {
+        tampilkanCustomer(cariCustomer(custId.value ? '' : custInput.value));
+      });
+      custInput.addEventListener('input', function() {
+        custId.value = '';
+        tampilkanCustomer(cariCustomer(custInput.value));
+      });
       custList.addEventListener('click', function(e) {
         var opt = e.target.closest('.customer-opt');
         if (opt) pilihCustomer(opt.getAttribute('data-id'));
@@ -974,12 +1522,28 @@ if ($is_edit && !empty($items_edit)) {
         return;
       }
       var jenisTerisi = baris().some(function(card) {
-        return card.querySelector('.it-jenis').value.trim() !== '';
+        if (card.querySelector('.it-jenis').value.trim() !== '') return true;
+        if (!IS_MANUAL) return false;
+        // Mode manual: item tanpa nama barang tetap sah kalau ada aksesoris / detail kaca
+        return Array.prototype.some.call(card.querySelectorAll('.aks-nama, .kaca-nama'), function(el) {
+          return el.value.trim() !== '';
+        });
       });
       if (!jenisTerisi) {
         e.preventDefault();
-        alert('Minimal harus ada 1 item dengan Jenis Item diisi.');
+        alert(IS_MANUAL ? 'Minimal isi 1 nama barang atau 1 aksesoris.' : 'Minimal harus ada 1 item dengan Jenis Item diisi.');
         return;
+      }
+      if (IS_MANUAL) {
+        var hargaTanpaNama = baris().some(function(card) {
+          return card.querySelector('.it-jenis').value.trim() === '' &&
+            (parseFloat(card.querySelector('.it-harga').value) || 0) > 0;
+        });
+        if (hargaTanpaNama) {
+          e.preventDefault();
+          alert('Nama barang wajib diisi kalau harga satuan diisi.');
+          return;
+        }
       }
       if (!confirm(<?= $is_edit ? "'Simpan perubahan penawaran ini?'" : "'Simpan penawaran ini?'"; ?>)) {
         e.preventDefault();
@@ -987,7 +1551,9 @@ if ($is_edit && !empty($items_edit)) {
     });
 
     if (ITEMS_EDIT.length) {
-      ITEMS_EDIT.forEach(function(d) { tambahItem(d); });
+      ITEMS_EDIT.forEach(function(d) {
+        tambahItem(d);
+      });
     } else {
       tambahItem();
     }

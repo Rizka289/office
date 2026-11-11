@@ -125,6 +125,7 @@
                         <select name="kategori_rumus" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?> --</option>
                             <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_jungkit">Jendela Jungkit</option>
                             <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>
@@ -132,6 +133,7 @@
                             <option value="jendela_mati">Jendela Mati</option>
                             <option value="pintu_baja">Pintu Baja</option>
                             <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_tahan_api_double">Pintu Tahan Api Double</option>
                             <option value="pintu_kayu">Pintu Kayu</option>
                             <option value="pintu_alumunium">Pintu Alumunium</option>
                             <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>
@@ -258,6 +260,7 @@
                         <select name="kategori_rumus" id="edit_kategori_rumus" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('select') ?>--</option>
                             <option value="unit_fix">Unit Fix</option>
+                            <option value="jendela_jungkit">Jendela Jungkit</option>
                             <option value="jendela_sliding">Jendela Sliding</option>
                             <option value="jendela_swing_b1">Jendela Swing B1</option>
                             <option value="jendela_swing_b2">Jendela Swing B2</option>
@@ -265,6 +268,7 @@
                             <option value="jendela_mati">Jendela Mati</option>
                             <option value="pintu_baja">Pintu Baja</option>
                             <option value="pintu_tahan_api">Pintu Tahan Api</option>
+                            <option value="pintu_tahan_api_double">Pintu Tahan Api Double</option>
                             <option value="pintu_kayu">Pintu Kayu</option>
                             <option value="pintu_alumunium">Pintu Alumunium</option>
                             <option value="rolling_door_tahan_api">Rooling Door Tahan Api</option>

@@ -7,7 +7,7 @@ class Dashboard extends MY_Controller
     {
         parent::__construct();
         // Sesuaikan role apa saja yang boleh akses dashboard
-        $this->requireRole(['super_admin', 'staff_purchasing']);
+        $this->requireRole(['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang']);
     }
 
     public function index()

@@ -72,9 +72,11 @@
                         <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
                         <select name="role" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('label_choice') ?> --</option>
-                            <option value="super_admin">super admin</option>
-                            <option value="supervisor">supervisor</option>
-                            <option value="staff_purchasing">staff purchasing</option>
+                            <option value="super_admin">Super Admin (kelola sistem &amp; user)</option>
+                            <option value="atasan">Atasan (lihat semua &amp; approve)</option>
+                            <option value="finance">Finance</option>
+                            <option value="staff_purchasing">Purchasing / Admin Penawaran</option>
+                            <option value="staff_gudang">Gudang</option>
                         </select>
                     </div>
                 </div>
@@ -116,9 +118,11 @@
                         <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
                         <select name="role" id="edit_role" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('label_choice') ?> --</option>
-                            <option value="super_admin">super admin</option>
-                            <option value="supervisor">supervisor</option>
-                            <option value="staff_purchasing">staff purchasing</option>
+                            <option value="super_admin">Super Admin (kelola sistem &amp; user)</option>
+                            <option value="atasan">Atasan (lihat semua &amp; approve)</option>
+                            <option value="finance">Finance</option>
+                            <option value="staff_purchasing">Purchasing / Admin Penawaran</option>
+                            <option value="staff_gudang">Gudang</option>
                         </select>
                     </div>
                 </div>

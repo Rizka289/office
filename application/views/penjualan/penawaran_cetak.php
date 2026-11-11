@@ -7,30 +7,45 @@ $fmt_luas = function ($v) {
   return number_format(round((float) $v, 2), 2, '.', '');
 };
 
-// Ukuran yang ditampilkan di cetak. Rolling door: lebar +200 mm & tinggi +600 mm
-// (sama dengan dasar perhitungan luas penagihan). Kategori lain tampil apa adanya.
+// Ukuran yang ditampilkan di cetak = dasar perhitungan luas penagihan.
+// Rolling door (tahan api / baja / otomatis) sesuai rumus ukuran item:
+//   l200_t600 (default) : lebar +200 mm, tinggi +600 mm
+//   t500                : lebar tetap,   tinggi +500 mm
+// Kategori lain tampil apa adanya.
 $ukuran_cetak = function ($row) {
   $l = (int) $row->lebar_mm;
   $t = (int) $row->tinggi_mm;
-  if (preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) ($row->rumus ?? ''))) {
-    $l += 200;
-    $t += 600;
+  if (preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', (string) ($row->rumus ?? ''))) {
+    if (($row->rumus_ukuran ?? '') === 't500') {
+      $t += 500;
+    } else {
+      $l += 200;
+      $t += 600;
+    }
   }
   return [$l, $t];
 };
 
-// Kelompokkan baris item per "jenis barang"
+// CETAK PER PRODUK: setiap item penawaran tampil sebagai blok sendiri
+// (gambar, deskripsi, ukuran, aksesoris & keterangannya masing-masing),
+// walaupun produknya sama. Ubah ke TRUE kalau mau kembali digabung
+// (produk yang sama jadi satu deskripsi dengan beberapa baris ukuran).
+$gabung_produk_sama = FALSE;
+
+// Kelompokkan baris item (per item, atau per "jenis barang" kalau digabung)
 $kelompok = [];
 $items_aks_saja = []; // item tanpa nama barang (penawaran manual: hanya aksesoris / kaca)
 
-foreach ($items as $it) {
+foreach ($items as $idx_item => $it) {
   if (trim((string) ($it->jenis_item ?? '')) === '') {
     $items_aks_saja[] = $it;
     continue;
   }
   // Barang master pun dipisah per kombinasi komponen/books penutup/kelengkapan,
   // karena ketiganya sekarang bisa diedit per item.
-  $kunci = !empty($it->id_barang)
+  $kunci = !$gabung_produk_sama
+    ? 'i' . $idx_item . '_' . ($it->id ?? '')
+    : (!empty($it->id_barang)
     ? 'b' . $it->id_barang . '_' . md5(($it->komponen ?? '') . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? '') . '|' . ($it->tebal ?? ''))
     : 't' . md5(
       ($it->jenis_item ?? '') . '|' . ($it->warna ?? '') . '|' . ($it->komponen ?? '') . '|' .
@@ -38,17 +53,15 @@ foreach ($items as $it) {
         '|' . ($it->komponen_daun ?? '') . '|' . ($it->input_power ?? '') . '|' . ($it->voltage ?? '')
         . '|' . ($it->books_penutup ?? '') . '|' . ($it->kelengkapan ?? '') . '|' . ($it->foto ?? '')
         . '|' . ($it->tebal ?? '')
-    );
+    ));
 
   if (!isset($kelompok[$kunci])) {
     $kelompok[$kunci] = [
       'jenis_item'     => $it->jenis_item,
       // Samakan ejaan kategori rolling door supaya cocok dengan kunci $spek_tampil
-      'rumus'          => preg_match('/^ro{1,2}l{1,2}ing_(door_)?baja$/', (string) ($it->rumus ?? ''))
-        ? 'rolling_door_baja'
-        : (preg_match('/^ro{1,2}l{1,2}ing_(door_)?tahan_api$/', (string) ($it->rumus ?? ''))
-          ? 'rolling_door_tahan_api'
-          : ($it->rumus ?? '')),
+      'rumus'          => preg_match('/^ro{1,2}l{1,2}ing_(door_)?(baja|tahan_api|otomatis)$/', (string) ($it->rumus ?? ''), $m_rd)
+        ? 'rolling_door_' . $m_rd[2]
+        : ($it->rumus ?? ''),
       'warna'          => $it->warna,
       'komponen'       => $it->komponen ?? '',
       'finishing'      => $it->finishing,
@@ -115,6 +128,18 @@ $spek_tampil = [
     'books_penutup',
     'kelengkapan'
   ],
+  'rolling_door_otomatis'  => [
+    'nama',
+    'warna',
+    'finishing',
+    'dimensi',
+    'komponen',
+    'tipe_motor',
+    'input_power',
+    'voltage',
+    'books_penutup',
+    'kelengkapan'
+  ],
   'rolling_door_tahan_api' => [
     'nama',
     'warna',
@@ -138,7 +163,7 @@ $spek_tampil = [
   'default'                => ['nama', 'warna', 'komponen', 'kusen_daun', 'tebal'],
 ];
 // Kategori yang label "nama"-nya "Tipe" (selain itu "Jenis").
-$rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api'];
+$rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api', 'rolling_door_otomatis'];
 
 // Render tabel spesifikasi untuk daftar baris tertentu ($kolom_list).
 // Dipakai dua kali bila ada Books Penutup: bagian atas (sampai Dimensi lubang
@@ -683,6 +708,13 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
         <td class="sep">:</td>
         <td><?= html_escape($header->no_surat); ?></td>
       </tr>
+      <?php if (($header->jenis_penjualan ?? 'biasa') === 'konsinyasi'): ?>
+      <tr>
+        <td class="label">Sifat / 性质</td>
+        <td class="sep">:</td>
+        <td><strong>Konsinyasi (titip jual)</strong> &mdash; hanya barang yang terjual yang ditagihkan sesuai harga ini; barang yang tidak terjual ditarik kembali.</td>
+      </tr>
+      <?php endif; ?>
       <tr>
         <td class="label">Nama Perusahaan Klien / 客户公司名称 </td>
         <td class="sep">:</td>

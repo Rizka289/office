@@ -94,6 +94,7 @@ class Penawaran_model extends CI_Model
             pen.grand_total,
             pen.status,
             pen.tipe,
+            ' . ($this->db->field_exists('jenis_penjualan', 'penawaran') ? 'pen.jenis_penjualan,' : '') . '
             cus.nama AS customer,
             (
                 SELECT COALESCE(SUM(pd.qty), 0)

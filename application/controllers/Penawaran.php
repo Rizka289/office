@@ -47,7 +47,7 @@ class Penawaran extends MY_Controller
         // Pagination: 5 data per halaman (halaman dipilih lewat ?page=N)
         $this->load->library('pagination');
 
-        $per_page   = 5;
+        $per_page   = 20;
         $total_data = $this->Penawaran_model->count_penawaran($filter);
         $total_page = max(1, (int) ceil($total_data / $per_page));
         $page       = min(max(1, (int) $this->input->get('page')), $total_page);
@@ -197,6 +197,8 @@ class Penawaran extends MY_Controller
         $kaca_nama      = $this->input->post('kaca_nama', TRUE)      ?: [];
         $kaca_luas      = $this->input->post('kaca_luas', TRUE)      ?: [];
         $kaca_harga     = $this->input->post('kaca_harga', TRUE)     ?: [];
+        // Rumus ukuran rolling door per item: l200_t600 (lebar +200, tinggi +600) | t500 (lebar tetap, tinggi +500)
+        $rumus_ukuran   = $this->input->post('rumus_ukuran', TRUE)   ?: [];
 
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
@@ -228,10 +230,12 @@ class Penawaran extends MY_Controller
                 $kategori_rumus = 'unit_fix';
             }
 
+            $ru = $this->_is_rolling_door($kategori_rumus) ? $this->_rumus_ukuran_valid($rumus_ukuran[$i] ?? '') : null;
+
             // Luas dibulatkan 2 angka di belakang koma (mis. 1,649 -> 1,65),
             // dihitung dari mm² langsung supaya tidak terjadi pembulatan ganda.
             $luas_riil    = round(($l * $t) / 1000000, 2);
-            $luas_billing = round($this->_luas_billing($kategori_rumus, $luas_riil, $l, $t), 2);
+            $luas_billing = round($this->_luas_billing($kategori_rumus, $luas_riil, $l, $t, $ru), 2);
 
             $total = ($kategori_rumus === 'unit_fix')
                 ? $q * $harga_m2
@@ -340,6 +344,7 @@ class Penawaran extends MY_Controller
                 'tebal'           => trim($tebal[$i] ?? ''),
                 'lebar_mm'        => $l,
                 'tinggi_mm'       => $t,
+                'rumus_ukuran'    => $ru,
                 'luas_m2'         => $luas_riil,
                 'luas_billing_m2' => $luas_billing,
                 'qty'             => $q,
@@ -373,8 +378,10 @@ class Penawaran extends MY_Controller
     // - Nama barang boleh kosong; item tetap disimpan kalau ada aksesoris / detail kaca.
     // - Ukuran diinput Lebar x Tinggi (mm) -> Luas (m2) dihitung otomatis,
     //   tapi Luas boleh diketik sendiri (luas_m2[]) dan ketikan itu yang dipakai.
-    // - Total barang = Luas x Qty x Harga per m2.
-    //   (Kalau lebar/tinggi dikosongkan sehingga luas = 0, total = Qty x Harga.)
+    // - Satuan harga per item (satuan_harga[]): 'm2' atau 'unit'.
+    //   m2   : Total barang = Luas x Qty x Harga per m2
+    //          (kalau lebar/tinggi dikosongkan sehingga luas = 0, total = Qty x Harga).
+    //   unit : Total barang = Qty x Harga per unit (luas tidak dipakai).
     // - Total item = total barang + aksesoris + detail kaca.
     // - Foto per item (foto[]) dan foto per aksesoris (aks_foto[i][]).
     //   Foto lama dibawa lewat foto_lama[] dan aks_foto_lama[i][].
@@ -390,6 +397,8 @@ class Penawaran extends MY_Controller
         $luas_input    = $this->input->post('luas_m2', TRUE)       ?: [];
         $qty           = $this->input->post('qty', TRUE)           ?: [];
         $harga_unit    = $this->input->post('harga_unit', TRUE)    ?: [];
+        // Satuan harga per item: 'm2' (Luas x Qty x Harga/m²) | 'unit' (Qty x Harga/unit)
+        $satuan_harga  = $this->input->post('satuan_harga', TRUE)  ?: [];
         $tebal         = $this->input->post('tebal', TRUE)    ?: [];
         $komponen_kusen    = $this->input->post('komponen_kusen', TRUE)    ?: [];
         $komponen_daun    = $this->input->post('komponen_daun', TRUE)    ?: [];
@@ -410,6 +419,7 @@ class Penawaran extends MY_Controller
             $jenis = trim((string) $jenis);
             $h     = max(0, (float) ($harga_unit[$i] ?? 0));
             $q     = max(1, (int) ($qty[$i] ?? 1));
+            $sat   = (($satuan_harga[$i] ?? 'm2') === 'unit') ? 'unit' : 'm2';
             $l     = max(0, (int) ($lebar_mm[$i] ?? 0));
             $t     = max(0, (int) ($tinggi_mm[$i] ?? 0));
             // Luas manual boleh diketik sendiri (mis. "1,65"). Kalau kosong / 0,
@@ -478,11 +488,13 @@ class Penawaran extends MY_Controller
                 $jenis = 'Item';
             }
 
-            // Rumus barang manual: Luas x Qty x Harga/m².
-            // Kalau ukuran tidak diisi (luas 0), pakai Qty x Harga supaya total tidak 0.
+            // Rumus barang manual:
+            // - Harga per unit : Qty x Harga (luas hanya informasi, tidak ikut dihitung).
+            // - Harga per m²   : Luas x Qty x Harga/m². Kalau ukuran tidak diisi (luas 0),
+            //                    pakai Qty x Harga supaya total tidak 0.
             $total_barang = 0;
             if ($ada_barang) {
-                $total_barang = ($luas > 0) ? ($luas * $q * $h) : ($q * $h);
+                $total_barang = ($sat === 'unit' || $luas <= 0) ? ($q * $h) : ($luas * $q * $h);
             }
             $total = round($total_barang, 2) + $total_aks + $total_kaca;
 
@@ -510,6 +522,7 @@ class Penawaran extends MY_Controller
                 'luas_billing_m2'    => $ada_barang ? $luas : 0,
                 'qty'                => $ada_barang ? $q : 0,
                 'harga_unit'         => $ada_barang ? $h : 0,
+                'satuan_harga'       => $sat,
                 'total_harga'        => round($total, 2),
                 'keterangan'         => trim($keterangan[$i] ?? ''),
                 'tipe_motor'         => '',
@@ -530,6 +543,13 @@ class Penawaran extends MY_Controller
             ];
 
             $subtotal += $total;
+        }
+
+        // Kolom satuan_harga belum dibuat -> total tetap benar, tapi pilihan "per unit"
+        // tidak tersimpan (saat edit akan kembali ke per m²). Beri tahu user.
+        if (in_array('unit', array_column($items, 'satuan_harga'), true)
+            && !$this->db->field_exists('satuan_harga', 'penawaran_detail')) {
+            $this->foto_errors[] = 'Kolom satuan_harga belum ada di tabel penawaran_detail (jalankan database/satuan_harga.sql), pilihan harga per unit belum tersimpan.';
         }
 
         return [$items, $subtotal];
@@ -628,13 +648,39 @@ class Penawaran extends MY_Controller
         return (float) $v;
     }
 
+    // Rolling door: tahan api, baja, otomatis (ejaan "rooling" / tanpa "door_" juga dikenali)
     private function _is_rolling_door($kategori)
     {
-        return (bool) preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) $kategori);
+        return (bool) preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', (string) $kategori);
     }
 
-    private function _luas_billing($kategori, $luas_riil, $lebar_mm = 0, $tinggi_mm = 0)
+    // Pilihan rumus ukuran rolling door. Default (data lama / tidak dipilih) = lebar +200, tinggi +600.
+    const RUMUS_UKURAN_ROLLING = [
+        'l200_t600' => 'Lebar +200, tinggi +600',
+        't500'      => 'Lebar tetap, tinggi +500',
+    ];
+
+    private function _rumus_ukuran_valid($v)
     {
+        return isset(self::RUMUS_UKURAN_ROLLING[$v]) ? $v : 'l200_t600';
+    }
+
+    // Ukuran tagih rolling door (mm) sesuai rumus ukuran
+    private function _ukuran_rolling($lebar_mm, $tinggi_mm, $rumus_ukuran)
+    {
+        if ($rumus_ukuran === 't500') {
+            return [$lebar_mm, $tinggi_mm + 500];
+        }
+        return [$lebar_mm + 200, $tinggi_mm + 600];
+    }
+
+    private function _luas_billing($kategori, $luas_riil, $lebar_mm = 0, $tinggi_mm = 0, $rumus_ukuran = null)
+    {
+        // Rolling door (tahan api / baja / otomatis): luas dari ukuran tagih, minimal 10 m²
+        if ($this->_is_rolling_door($kategori)) {
+            list($lb, $tb) = $this->_ukuran_rolling($lebar_mm, $tinggi_mm, $this->_rumus_ukuran_valid((string) $rumus_ukuran));
+            return max(round(($lb * $tb) / 1000000, 2), 10.0);
+        }
         switch ($kategori) {
             case 'jendela_sliding':
                 return max($luas_riil, 1.3);
@@ -659,16 +705,7 @@ class Penawaran extends MY_Controller
             case 'pintu_alumunium_double':
             case 'pintu_tahan_api_double':
                 return max($luas_riil, 3.9);
-            case 'rolling_door_tahan_api':
-            case 'rolling_door_baja':
-            case 'rooling_door_tahan_api':
-            case 'rooling_door_baja':
-                $luas = round((($lebar_mm + 200) * ($tinggi_mm + 600)) / 1000000, 2);
-                return max($luas, 10.0);
             default:
-                if ($this->_is_rolling_door($kategori)) {
-                    return max(round((($lebar_mm + 200) * ($tinggi_mm + 600)) / 1000000, 2), 10.0);
-                }
                 return $luas_riil;
         }
     }
@@ -732,6 +769,21 @@ class Penawaran extends MY_Controller
         ];
     }
 
+    // Jenis penjualan dari form: biasa / konsinyasi (titip jual).
+    // Kolom hanya diisi kalau migrasi database/konsinyasi.sql sudah dijalankan.
+    // $lama = nilai sebelumnya (edit), dipakai kalau field tidak terkirim.
+    private function _jenis_penjualan($lama = 'biasa')
+    {
+        if (!$this->db->field_exists('jenis_penjualan', 'penawaran')) {
+            return [];
+        }
+        $v = $this->input->post('jenis_penjualan');
+        if ($v === null) {
+            $v = $lama;
+        }
+        return ['jenis_penjualan' => $v === 'konsinyasi' ? 'konsinyasi' : 'biasa'];
+    }
+
     public function simpan()
     {
         $tanggal     = $this->input->post('tanggal', TRUE);
@@ -760,7 +812,7 @@ class Penawaran extends MY_Controller
             'tipe'        => $tipe,
             'status'      => 'draft',
             'id_user'     => $this->session->userdata('user_id') ?? 0,
-        ], $this->_hitung_total($subtotal, $items));
+        ], $this->_jenis_penjualan(), $this->_hitung_total($subtotal, $items));
 
         $id_penawaran = $this->Penawaran_model->simpan_penawaran($header, $items);
 
@@ -843,7 +895,7 @@ class Penawaran extends MY_Controller
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
-        ], $this->_hitung_total($subtotal, $items));
+        ], $this->_jenis_penjualan($penawaran['header']->jenis_penjualan ?? 'biasa'), $this->_hitung_total($subtotal, $items));
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
             // Hapus file foto yang tidak dipakai lagi (diganti / item dihapus)

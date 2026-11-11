@@ -15,11 +15,16 @@ $ukuran_tampil = function ($row) {
   $l = (int) $row->lebar_mm;
   $t = (int) $row->tinggi_mm;
   $rumus = (string) ($row->rumus ?? '');
-  $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', $rumus)
+  $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', $rumus)
     || ($rumus === '' && preg_match('/ro{1,2}l{1,2}ing\s*door/i', (string) ($row->jenis_item ?? '')));
   if ($is_rd) {
-    $l += 200;
-    $t += 600;
+    // Rumus ukuran dari penawaran: t500 = lebar tetap, tinggi +500; selain itu lebar +200, tinggi +600
+    if ((isset($row->rumus_ukuran) ? $row->rumus_ukuran : '') === 't500') {
+      $t += 500;
+    } else {
+      $l += 200;
+      $t += 600;
+    }
   }
   return array($l, $t);
 };
@@ -42,11 +47,17 @@ $status_map = array(
 );
 $st = isset($status_map[$h->status]) ? $status_map[$h->status] : array('secondary', ucfirst($h->status));
 
+// Konsinyasi (titip jual): tagihan = nilai barang yang sudah dilaporkan laku
+$konsinyasi = ($h->jenis_penjualan ?? 'biasa') === 'konsinyasi';
+$tagihan    = $konsinyasi ? (float) ($h->nilai_laku ?? 0) : (float) $h->grand_total;
+
 // Termin & DP
 $dp_persen = (float) $h->dp_persen;
 $dp_nilai  = round((float) $h->grand_total * $dp_persen / 100);
 $sisa      = (float) $h->grand_total - $dp_nilai;
-if ($h->termin === '100' || $dp_persen <= 0) {
+if ($konsinyasi) {
+  $termin_teks = 'Konsinyasi (titip jual): ditagih sesuai barang yang laku';
+} elseif ($h->termin === '100' || $dp_persen <= 0) {
   $termin_teks = translate('100%');
 } else {
   $termin_teks = 'DP ' . $num($dp_persen, 2) . '% / ' . translate('pelunasan') . $num(100 - $dp_persen, 2) . '%';
@@ -65,7 +76,7 @@ $persen_kirim = $total_qty > 0 ? min(100, round($total_kirim / $total_qty * 100)
 $bayar_list  = isset($so['pembayaran']) ? $so['pembayaran'] : array();
 $total_bayar = isset($so['total_dibayar']) ? (float) $so['total_dibayar'] : 0;
 $kurang_dp   = max(0, $dp_nilai - $total_bayar);
-$sisa_tagih  = max(0, (float) $h->grand_total - $total_bayar);
+$sisa_tagih  = max(0, $tagihan - $total_bayar);
 $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_tagih > 0;
 
 // PPh sudah dipotong di penawaran: grand_total = dasar + PPN - PPh.
@@ -73,7 +84,7 @@ $bisa_bayar  = !in_array($h->status, array('batal', 'selesai'), true) && $sisa_t
 $pph_so       = (float) $h->pph_nominal;
 $nominal_awal = $kurang_dp > 0 ? (float) $kurang_dp : (float) $sisa_tagih;
 $uang_masuk   = $total_bayar;
-$lunas        = (float) $h->grand_total > 0 && $sisa_tagih <= 0.005;
+$lunas        = $konsinyasi ? ($h->status === 'selesai') : ((float) $h->grand_total > 0 && $sisa_tagih <= 0.005);
 $label_jenis = array(
   'dp'        => 'DP',
   'pelunasan' => 'Pelunasan',
@@ -395,10 +406,14 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         </div>
       </div>
       <div class="d-flex align-items-center gap-2 no-print">
+        <?php if ($konsinyasi): ?><span class="badge bg-info text-dark fs-6 fw-normal px-3 py-2"><i class="bi bi-box-seam me-1"></i>Konsinyasi</span><?php endif; ?>
         <span class="badge bg-<?= $st[0] ?> fs-6 fw-normal px-3 py-2"><?= $st[1] ?></span>
         <a href="<?= site_url('sales_order') ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?></a>
         <?php if (in_array($h->status, array('confirmed', 'produksi', 'terkirim', 'selesai'), true)): ?>
           <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-warning btn-sm"><i class="bi bi-diagram-3 me-1"></i>Proses Pesanan</a>
+        <?php endif; ?>
+        <?php if ($konsinyasi && in_array($h->status, array('produksi', 'terkirim', 'selesai'), true)): ?>
+          <a href="<?= site_url('konsinyasi/so/' . (int) $h->id) ?>" class="btn btn-info btn-sm"><i class="bi bi-box-seam me-1"></i>Barang Titipan</a>
         <?php endif; ?>
         <?php if ($h->status === 'draft'): ?>
           <?= form_open('sales_order/konfirmasi/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Konfirmasi SO ini? Setelah dikonfirmasi SO siap diproses.')")) ?>
@@ -754,11 +769,17 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
             <?php endif; ?>
 
             <div class="block">
+              <?php if ($konsinyasi): ?>
+                <div class="sum-row"><span>Nilai barang dititip</span><span><?= $rp($h->grand_total) ?></span></div>
+                <div class="sum-row"><span>Tagihan (barang laku)</span><strong><?= $rp($tagihan) ?></strong></div>
+              <?php endif; ?>
               <div class="sum-row"><span>Uang diterima</span><strong><?= $rp($uang_masuk) ?></strong></div>
 
               <div class="sum-row"><span><?= translate('lbl_tagihan') ?></span>
                 <?php if ($lunas): ?>
                   <span class="badge bg-success">LUNAS</span>
+                <?php elseif ($konsinyasi && $sisa_tagih <= 0.005): ?>
+                  <span class="text-muted small">Menunggu laporan laku</span>
                 <?php else: ?>
                   <strong><?= $rp($sisa_tagih) ?></strong>
                 <?php endif; ?>
@@ -815,7 +836,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                     <div class="col-6">
                       <label class="form-label small mb-1"><?= translate('jenis') ?></label>
                       <select name="jenis" id="bayar_jenis" class="form-select form-select-sm">
-                        <option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option>
+                        <?php if (!$konsinyasi): ?><option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option><?php endif; ?>
                         <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>><?= translate('pelunasan') ?></option>
                         <option value="lainnya"><?= translate('lainnya') ?></option>
                       </select>

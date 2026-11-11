@@ -234,7 +234,7 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
             <th style="width:12%"><?= translate('ukuran') ?> (mm)</th>
             <th style="width:8%" class="text-center"><?= translate('luas') ?> m²</th>
             <th style="width:6%" class="text-center"><?= translate('qty') ?></th>
-            <th style="width:12%" class="text-end"><?= translate('harga') ?><?= $is_manual ? ' / m²' : ''; ?></th>
+            <th style="width:12%" class="text-end"><?= translate('harga') ?></th>
             <th style="width:12%" class="text-end"><?= translate('subtotal') ?></th>
           </tr>
         </thead>
@@ -319,7 +319,12 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
                 </td>
                 <td class="text-center"><?= ($is_manual && (float) ($it->luas_m2 ?? 0) <= 0) ? '-' : $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
                 <td class="text-center"><?= ((int) $it->qty > 0) ? (int) $it->qty : '-'; ?></td>
-                <td class="text-end"><?= $rp($it->harga_unit); ?></td>
+                <td class="text-end">
+                  <?= $rp($it->harga_unit); ?>
+                  <?php if ($is_manual && (float) $it->harga_unit > 0): ?>
+                    <span class="spek-line"><?= (($it->satuan_harga ?? 'm2') === 'unit') ? '/ unit' : '/ m²'; ?></span>
+                  <?php endif; ?>
+                </td>
                 <td class="text-end"><?= $rp($it->total_harga); ?></td>
               </tr>
             <?php endforeach; ?>

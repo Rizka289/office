@@ -65,11 +65,16 @@ $ukuran_tampil = function ($row) {
   $l = (int) $row->lebar_mm;
   $t = (int) $row->tinggi_mm;
   $rumus = (string) (isset($row->rumus) ? $row->rumus : '');
-  $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', $rumus)
+  $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', $rumus)
     || ($rumus === '' && preg_match('/ro{1,2}l{1,2}ing\s*door/i', (string) (isset($row->jenis_item) ? $row->jenis_item : '')));
   if ($is_rd) {
-    $l += 200;
-    $t += 600;
+    // Rumus ukuran dari penawaran: t500 = lebar tetap, tinggi +500; selain itu lebar +200, tinggi +600
+    if ((isset($row->rumus_ukuran) ? $row->rumus_ukuran : '') === 't500') {
+      $t += 500;
+    } else {
+      $l += 200;
+      $t += 600;
+    }
   }
   return array($l, $t);
 };

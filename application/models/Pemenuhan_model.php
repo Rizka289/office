@@ -53,17 +53,22 @@ class Pemenuhan_model extends CI_Model
         );
     }
 
-    // Ukuran tampil (sama dengan detail SO / invoice): rolling door +200 x +600 mm
+    // Ukuran tampil (sama dengan detail SO / invoice): rolling door sesuai rumus ukuran
+    // dari penawaran: l200_t600 (default) = +200 x +600 mm, t500 = lebar tetap, tinggi +500 mm
     public function ukuran($row)
     {
         $l     = (int) ($row->lebar_mm ?? 0);
         $t     = (int) ($row->tinggi_mm ?? 0);
         $rumus = (string) ($row->rumus ?? '');
-        $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', $rumus)
+        $is_rd = preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', $rumus)
             || ($rumus === '' && preg_match('/ro{1,2}l{1,2}ing\s*door/i', (string) ($row->jenis_item ?? '')));
         if ($is_rd) {
-            $l += 200;
-            $t += 600;
+            if (($row->rumus_ukuran ?? '') === 't500') {
+                $t += 500;
+            } else {
+                $l += 200;
+                $t += 600;
+            }
         }
         return array($l, $t);
     }
@@ -793,7 +798,15 @@ class Pemenuhan_model extends CI_Model
             $this->db->trans_rollback();
             return array(false, 'Surat jalan sudah dibatalkan.');
         }
+        $cek_konsinyasi = $this->db->field_exists('qty_laku', 'sales_order_detail');
         foreach ($this->db->get_where('pm_sj_detail', array('id_sj' => $sj->id))->result() as $d) {
+            // Konsinyasi: barang yang sudah dilaporkan laku / ditarik tidak bisa "batal dikirim"
+            if ($cek_konsinyasi) {
+                $sod = $this->db->select('qty_terkirim, qty_laku, qty_retur')->get_where('sales_order_detail', array('id' => (int) $d->id_so_detail))->row();
+                if ($sod && (float) $sod->qty_terkirim - (float) $d->qty + $this->eps < (float) $sod->qty_laku + (float) $sod->qty_retur) {
+                    return $this->_gagal('Surat jalan tidak bisa dibatalkan: sebagian barangnya sudah dilaporkan laku / ditarik (konsinyasi). Batalkan dokumen konsinyasinya dulu.');
+                }
+            }
             $this->db->query('UPDATE sales_order_detail SET qty_terkirim = GREATEST(0, qty_terkirim - ?) WHERE id = ?', array((float) $d->qty, $d->id_so_detail));
         }
         // kembalikan stok yang keluar lewat SJ ini
@@ -1084,18 +1097,26 @@ class Pemenuhan_model extends CI_Model
 
     public function sinkron_status_so($id_so)
     {
-        $so = $this->db->select('id, status, grand_total')->get_where('sales_order', array('id' => (int) $id_so))->row();
+        $so = $this->db->get_where('sales_order', array('id' => (int) $id_so))->row();
         if (!$so || !in_array($so->status, array('confirmed', 'produksi', 'terkirim', 'selesai'), true)) {
             return;
         }
+        // Konsinyasi (titip jual): tagihan = nilai yang sudah laku, dan baru selesai
+        // kalau semua barang sudah laku / ditarik kembali.
+        $konsinyasi = ($so->jenis_penjualan ?? 'biasa') === 'konsinyasi';
         $t = $this->db->query(
-            'SELECT COALESCE(SUM(qty), 0) AS q, COALESCE(SUM(qty_terkirim), 0) AS k FROM sales_order_detail WHERE id_so = ?',
+            'SELECT COALESCE(SUM(qty), 0) AS q, COALESCE(SUM(qty_terkirim), 0) AS k'
+            . ($konsinyasi ? ', COALESCE(SUM(qty_laku + qty_retur), 0) AS tuntas' : '')
+            . ' FROM sales_order_detail WHERE id_so = ?',
             array($so->id)
         )->row();
 
         if ((float) $t->q > 0 && (float) $t->k + $this->eps >= (float) $t->q) {
-            $b    = $this->db->select_sum('nominal', 't')->where('id_so', $so->id)->get('sales_order_pembayaran')->row();
-            $baru = ((float) ($b ? $b->t : 0) + 0.005 >= (float) $so->grand_total) ? 'selesai' : 'terkirim';
+            $b       = $this->db->select_sum('nominal', 't')->where('id_so', $so->id)->get('sales_order_pembayaran')->row();
+            $tagihan = $konsinyasi ? (float) $so->nilai_laku : (float) $so->grand_total;
+            $lunas   = (float) ($b ? $b->t : 0) + 0.005 >= $tagihan;
+            $tuntas  = !$konsinyasi || (float) $t->tuntas + $this->eps >= (float) $t->q;
+            $baru    = ($lunas && $tuntas) ? 'selesai' : 'terkirim';
         } else {
             $ada = $this->db->where('id_so', $so->id)->where('status <>', 'batal')->count_all_results('pm_spk')
                 + $this->db->where('id_so', $so->id)->where('status <>', 'batal')->count_all_results('pm_po')
@@ -1429,7 +1450,8 @@ class Pemenuhan_model extends CI_Model
     public function get_sj($id)
     {
         $h = $this->db->select('sj.*, so.no_so, so.no_po_customer, c.nama AS nama_customer, c.alamat AS alamat_customer,
-                po.no_po, s.nama AS nama_supplier')
+                po.no_po, s.nama AS nama_supplier'
+                . ($this->db->field_exists('jenis_penjualan', 'sales_order') ? ', so.jenis_penjualan' : ''))
             ->from('pm_sj sj')
             ->join('sales_order so', 'so.id = sj.id_so', 'left')
             ->join('customer c', 'c.id = so.id_customer', 'left')

@@ -41,9 +41,11 @@ if ($is_edit && !empty($items_edit)) {
       'tebal'              => $it['tebal'] ?? '',
       'lebar_mm'           => (int) ($it['lebar_mm'] ?? 0),
       'tinggi_mm'          => (int) ($it['tinggi_mm'] ?? 0),
+      'rumus_ukuran'       => $it['rumus_ukuran'] ?? '',
       'luas_m2'            => (float) ($it['luas_m2'] ?? 0),
       'qty'                => (int) ($it['qty'] ?? 1),
       'harga_unit'         => (float) ($it['harga_unit'] ?? 0),
+      'satuan_harga'       => (($it['satuan_harga'] ?? 'm2') === 'unit') ? 'unit' : 'm2',
       'keterangan'         => $it['keterangan'] ?? '',
       'tipe_motor'         => $it['tipe_motor'] ?? '',
       'input_power'        => $it['input_power'] ?? '',
@@ -164,7 +166,8 @@ if ($is_edit && !empty($items_edit)) {
   }
 
   .pnw-page .it-books-penutup,
-  .pnw-page .it-kelengkapan {
+  .pnw-page .it-kelengkapan,
+  .pnw-page .it-komponen {
     min-height: 130px;
     resize: vertical;
   }
@@ -359,6 +362,26 @@ if ($is_edit && !empty($items_edit)) {
             <div class="customer-dropdown-list d-none"></div>
           </div>
         </div>
+        <?php if ($this->db->field_exists('jenis_penjualan', 'penawaran')): ?>
+          <?php $jenis_val = $is_edit ? ($pen->jenis_penjualan ?? 'biasa') : 'biasa'; ?>
+          <div class="col-md-4">
+            <label for="jenis_penjualan" class="form-label">Jenis penjualan</label>
+            <select id="jenis_penjualan" name="jenis_penjualan" class="form-select" <?= $pajak_lock; ?>>
+              <option value="biasa" <?= $jenis_val !== 'konsinyasi' ? 'selected' : ''; ?>>Penjualan biasa</option>
+              <option value="konsinyasi" <?= $jenis_val === 'konsinyasi' ? 'selected' : ''; ?>>Konsinyasi / titip jual (sample)</option>
+            </select>
+          </div>
+          <div class="col-md-8 d-flex align-items-end">
+            <div class="form-text" id="info_konsinyasi" style="<?= $jenis_val === 'konsinyasi' ? '' : 'display:none'; ?>">
+              <i class="bi bi-info-circle me-1"></i>Barang dititip ke customer dengan harga di penawaran ini. Tanpa DP; yang ditagih hanya barang yang laku, sisanya ditarik kembali ke gudang.
+            </div>
+          </div>
+          <script>
+            document.getElementById('jenis_penjualan').addEventListener('change', function () {
+              document.getElementById('info_konsinyasi').style.display = this.value === 'konsinyasi' ? '' : 'none';
+            });
+          </script>
+        <?php endif; ?>
         <div class="col-12">
           <label for="catatan" class="form-label"><?= translate('catatan') ?></label>
           <textarea id="catatan" name="catatan" class="form-control" rows="2" placeholder="<?= translate('p_catatan_pnwrn') ?>" <?= $hdr_lock; ?>><?= $is_edit ? html_escape($pen->catatan) : ''; ?></textarea>
@@ -504,14 +527,27 @@ if ($is_edit && !empty($items_edit)) {
           <label class="form-label">Qty</label>
           <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty">
         </div>
-        <div class="col-md-3">
-          <label class="form-label">Harga / m² (Rp)</label>
+        <div class="col-6 col-md-2">
+          <label class="form-label">Satuan Harga</label>
+          <select name="satuan_harga[]" class="form-select it-satuan">
+            <option value="m2">Per m²</option>
+            <option value="unit">Per unit</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-2">
+          <label class="form-label"><span class="it-harga-label">Harga / m²</span> (Rp)</label>
           <input type="number" name="harga_unit[]" min="0" step="any" class="form-control it-harga" placeholder="0">
         </div>
 
         <div class="col-md-3">
+          <label class="form-label">Total Barang (otomatis)</label>
+          <input type="text" class="form-control it-total-barang" value="Rp 0" readonly tabindex="-1">
+          <div class="form-text it-rumus-info"></div>
+        </div>
+
+        <div class="col-md-3">
           <label class="form-label">Komponen</label>
-          <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Opsional">
+          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="Opsional"></textarea>
         </div>
 
         <div class="col-md-3">
@@ -529,7 +565,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
 
         <div class="col-12">
-          <div class="form-text mt-0">Luas terisi otomatis dari Lebar × Tinggi, tapi boleh diketik sendiri (mis. 1,65). Total barang = <strong>Luas × Qty × Harga / m²</strong>. Jika lebar/tinggi dikosongkan, total = Qty × Harga.</div>
+          <div class="form-text mt-0">Luas terisi otomatis dari Lebar × Tinggi, tapi boleh diketik sendiri (mis. 1,65). Satuan <strong>Per m²</strong>: total barang = Luas × Qty × Harga / m² (jika lebar/tinggi dikosongkan, total = Qty × Harga). Satuan <strong>Per unit</strong>: total barang = Qty × Harga / unit (luas tidak ikut dihitung).</div>
         </div>
 
         <div class="col-md-6">
@@ -618,9 +654,23 @@ if ($is_edit && !empty($items_edit)) {
           <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
           <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
         </div>
-        <div class="col-md-2">
+
+        <!-- Rumus ukuran (khusus rolling door). Selalu ikut terkirim supaya urutan array item tetap sejajar. -->
+        <div class="col-md-4 rumus-ukuran-blok d-none">
+          <label class="form-label">Rumus Ukuran Rolling Door</label>
+          <select name="rumus_ukuran[]" class="form-select it-rumus-ukuran">
+            <option value="l200_t600">Lebar +200, Tinggi +600</option>
+            <option value="t500">Lebar tetap, Tinggi +500</option>
+          </select>
+        </div>
+        <div class="col-md-8 rumus-ukuran-blok d-none">
+          <div class="h-100 d-flex align-items-end">
+            <div class="form-text it-ukuran-tagih mb-2"></div>
+          </div>
+        </div>
+        <div class="col-md-3">
           <label class="form-label">Komponen</label>
-          <input type="text" name="komponen[]" class="form-control it-komponen" placeholder="Otomatis dari data barang">
+          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="Otomatis dari data barang"></textarea>
         </div>
 
         <div class="col-md-2">
@@ -873,6 +923,7 @@ if ($is_edit && !empty($items_edit)) {
       set('[name="komponen_daun[]"]', d.komponen_daun);
       set('.it-lebar', d.lebar_mm);
       set('.it-tinggi', d.tinggi_mm);
+      set('.it-rumus-ukuran', d.rumus_ukuran === 't500' ? 't500' : 'l200_t600');
       if (IS_MANUAL) {
         var luasSimpan = parseFloat(d.luas_m2) || 0;
         var luasHitung = Math.round(((parseInt(d.lebar_mm, 10) || 0) * (parseInt(d.tinggi_mm, 10) || 0)) / 10000) / 100;
@@ -883,6 +934,7 @@ if ($is_edit && !empty($items_edit)) {
       }
       set('.it-qty', d.qty > 0 ? d.qty : 1);
       set('.it-harga', d.harga_unit);
+      set('.it-satuan', d.satuan_harga === 'unit' ? 'unit' : 'm2');
       set('[name="keterangan[]"]', d.keterangan);
       set('[name="tipe_motor[]"]', d.tipe_motor);
       set('[name="input_power[]"]', d.input_power);
@@ -1071,8 +1123,15 @@ if ($is_edit && !empty($items_edit)) {
       return (b && b.kategori_rumus) ? b.kategori_rumus : 'unit_fix';
     }
 
+    // Rolling door: tahan api, baja, otomatis
     function isRollingDoor(kategori) {
-      return /^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/.test(String(kategori || ''));
+      return /^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/.test(String(kategori || ''));
+    }
+
+    // Ukuran tagih rolling door [lebar, tinggi] sesuai rumus ukuran (sama dengan server)
+    function ukuranRolling(lebarMm, tinggiMm, rumusUkuran) {
+      if (rumusUkuran === 't500') return [lebarMm, tinggiMm + 500];
+      return [lebarMm + 200, tinggiMm + 600];
     }
 
     // Bulatkan luas ke 2 angka di belakang koma (mis. 1,649 -> 1,65)
@@ -1080,7 +1139,7 @@ if ($is_edit && !empty($items_edit)) {
       return Math.round((n + Number.EPSILON) * 100) / 100;
     }
 
-    function luasBilling(kategori, luasRiil, lebarMm, tinggiMm) {
+    function luasBilling(kategori, luasRiil, lebarMm, tinggiMm, rumusUkuran) {
       var luas = luasRiil;
       if (kategori === 'jendela_sliding') {
         luas = Math.max(luasRiil, 1.3);
@@ -1090,7 +1149,8 @@ if ($is_edit && !empty($items_edit)) {
       } else if (kategori === 'pintu_baja') {
         luas = Math.max(luasRiil, 2);
       } else if (isRollingDoor(kategori)) {
-        luas = Math.max(Math.round(((lebarMm + 200) * (tinggiMm + 600)) / 10000) / 100, 10);
+        var uk = ukuranRolling(lebarMm, tinggiMm, rumusUkuran);
+        luas = Math.max(Math.round((uk[0] * uk[1]) / 10000) / 100, 10);
       }
       return bulat2(luas);
     }
@@ -1102,9 +1162,11 @@ if ($is_edit && !empty($items_edit)) {
       var harga = parseFloat(card.querySelector('.it-harga').value) || 0;
 
       var kategori = kategoriBaris(card);
+      var elRumusUk = card.querySelector('.it-rumus-ukuran');
+      var rumusUk = elRumusUk ? elRumusUk.value : 'l200_t600';
       // Luas dibulatkan 2 angka di belakang koma (dihitung dari mm² langsung, sama dengan server)
       var luasRiil = Math.round((lebar * tinggi) / 10000) / 100;
-      var luas = luasBilling(kategori, luasRiil, lebar, tinggi);
+      var luas = luasBilling(kategori, luasRiil, lebar, tinggi, rumusUk);
       var inpLuas = card.querySelector('.it-luas');
       if (IS_MANUAL) {
         // Mode manual: tanpa luas minimum / aturan kategori.
@@ -1139,6 +1201,16 @@ if ($is_edit && !empty($items_edit)) {
       });
 
       var rolling = isRollingDoor(kategori);
+
+      // Pilihan rumus ukuran hanya untuk rolling door
+      card.querySelectorAll('.rumus-ukuran-blok').forEach(function(el) {
+        el.classList.toggle('d-none', !rolling);
+      });
+      var elUkTagih = card.querySelector('.it-ukuran-tagih');
+      if (elUkTagih && rolling) {
+        var ukT = ukuranRolling(lebar, tinggi, rumusUk);
+        elUkTagih.textContent = 'Ukuran tagih: ' + ukT[0] + ' × ' + ukT[1] + ' mm → luas ' + luas.toFixed(2) + ' m² (minimal 10 m²)';
+      }
 
       // Toggle Books Penutup
       card.querySelectorAll('.books-blok').forEach(function(el) {
@@ -1175,8 +1247,20 @@ if ($is_edit && !empty($items_edit)) {
 
       var totalBarang;
       if (IS_MANUAL) {
-        // Luas x Qty x Harga/m². Kalau ukuran kosong (luas 0) -> Qty x Harga
-        totalBarang = (luas > 0 ? luas : 1) * qty * harga;
+        // Per unit: Qty x Harga. Per m²: Luas x Qty x Harga/m² (luas 0 -> Qty x Harga)
+        var elSatuan = card.querySelector('.it-satuan');
+        var perUnit = elSatuan && elSatuan.value === 'unit';
+        var elHargaLbl = card.querySelector('.it-harga-label');
+        if (elHargaLbl) elHargaLbl.textContent = perUnit ? 'Harga / unit' : 'Harga / m²';
+        totalBarang = (perUnit || luas <= 0 ? 1 : luas) * qty * harga;
+        var elTB = card.querySelector('.it-total-barang');
+        if (elTB) elTB.value = rupiah(totalBarang);
+        var elInfo = card.querySelector('.it-rumus-info');
+        if (elInfo) {
+          elInfo.textContent = (perUnit || luas <= 0)
+            ? qty + ' × ' + rupiah(harga)
+            : luas.toFixed(2).replace('.', ',') + ' m² × ' + qty + ' × ' + rupiah(harga);
+        }
       } else {
         totalBarang = (kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga);
       }
@@ -1333,6 +1417,10 @@ if ($is_edit && !empty($items_edit)) {
 
     // Preview foto saat memilih file (penawaran manual): foto barang & foto aksesoris
     wrap.addEventListener('change', function(e) {
+      if (e.target.classList.contains('it-satuan')) {
+        segarkan();
+        return;
+      }
       var isItem = e.target.classList.contains('it-foto');
       var isAks = e.target.classList.contains('aks-foto');
       if (!isItem && !isAks) return;

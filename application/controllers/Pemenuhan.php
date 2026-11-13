@@ -207,6 +207,9 @@ class Pemenuhan extends MY_Controller
         $data['items']         = $items;
         $data['id_supplier']   = $id_sup;
         $data['supplier_list'] = $this->Supplier_model->get_aktif();
+        $data['ada_tabel_biaya'] = $this->Pemenuhan_model->ada_tabel_biaya_po();
+        $data['ada_kolom_ppn']   = $this->Pemenuhan_model->ada_kolom_ppn_po();
+        $data['tarif_ppn']       = Pemenuhan_model::TARIF_PPN_PO;
         $data['alamat_default'] = $jenis === 'dropship'
             ? trim($h->nama_customer . "\n" . ($h->alamat_kirim ?: $h->alamat_customer))
             : 'Gudang ' . $p['nama'] . "\n" . $p['alamat'];
@@ -226,6 +229,7 @@ class Pemenuhan extends MY_Controller
             'tgl_butuh'    => $this->_tgl($this->input->post('tgl_butuh')),
             'alamat_kirim' => trim((string) $this->input->post('alamat_kirim', true)),
             'catatan'      => trim((string) $this->input->post('catatan', true)),
+            'pakai_ppn'    => (bool) $this->input->post('pakai_ppn'),
         );
         $ids    = (array) $this->input->post('line_id');
         $nama   = (array) $this->input->post('line_nama', true);
@@ -248,7 +252,25 @@ class Pemenuhan extends MY_Controller
                 'harga'        => (float) ($harga[$i] ?? 0),
             );
         }
-        $hasil = $this->Pemenuhan_model->simpan_po($h->id, $hdr, $lines, $this->_id_user());
+        // Biaya tambahan PO: biaya kirim, biaya gosok, packing, dll
+        $b_nama  = (array) $this->input->post('biaya_nama', true);
+        $b_nom   = (array) $this->input->post('biaya_nominal');
+        $b_ket   = (array) $this->input->post('biaya_ket', true);
+        $b_per   = (array) $this->input->post('biaya_hitung');
+        $b_luas  = (array) $this->input->post('biaya_luas');
+        $b_hrg   = (array) $this->input->post('biaya_harga');
+        $biaya   = array();
+        foreach ($b_nama as $i => $nm) {
+            $biaya[] = array(
+                'nama'       => (string) $nm,
+                'hitung'     => (string) ($b_per[$i] ?? 'borongan'),
+                'luas'       => (float) str_replace(',', '.', (string) ($b_luas[$i] ?? 0)),
+                'harga'      => (float) ($b_hrg[$i] ?? 0),
+                'nominal'    => (float) ($b_nom[$i] ?? 0),
+                'keterangan' => (string) ($b_ket[$i] ?? ''),
+            );
+        }
+        $hasil = $this->Pemenuhan_model->simpan_po($h->id, $hdr, $lines, $this->_id_user(), $biaya);
         $this->_flash($hasil[0], $hasil[1]);
         if ($hasil[0]) {
             redirect('pemenuhan/so/' . $h->id);

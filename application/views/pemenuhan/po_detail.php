@@ -8,6 +8,12 @@ $izin     = isset($izin) ? $izin : array();
 $kembali  = 'pemenuhan/po_detail/' . (int) $h->id;
 
 $total    = (float) $h->total;
+$biaya_po = isset($po['biaya']) ? $po['biaya'] : array();
+$ppn_po   = (float) ($h->ppn_nominal ?? 0);
+$ppn_pct  = (float) ($h->ppn_persen ?? 0);
+$rinci    = $biaya_po || $ppn_po > 0;   // tampilkan rincian subtotal / biaya / PPN
+$sub_brg  = 0;
+foreach ($po['items'] as $d_) { $sub_brg += (float) $d_->total; }
 $dibayar  = (float) ($h->total_bayar ?? 0);
 $sisa     = max(0, round($total - $dibayar, 2));
 $pct      = $total > 0 ? min(100, round($dibayar / $total * 100)) : 0;
@@ -25,10 +31,9 @@ $tombol_po = function ($aksi, $label, $kelas, $tanya) use ($h, $kembali) {
     . '<button type="submit" class="btn btn-sm ' . $kelas . '">' . $label . '</button>'
     . form_close();
 };
+// Luas selalu 2 angka di belakang koma (dibulatkan). Contoh: 3,298 -> 3,30
 $fmt_luas = function ($v) {
-  $s   = number_format((float) $v, 4, '.', '');
-  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
-  return number_format((float) $v, $dec, ',', '.');
+  return number_format(round((float) $v, 2), 2, ',', '.');
 };
 $per_m2 = function ($d) { return ($d->hitung_per ?? 'unit') === 'm2'; };
 $tgljam = function ($d) { return $d ? date('d M Y H:i', strtotime($d)) : '-'; };
@@ -157,7 +162,21 @@ $tgljam = function ($d) { return $d ? date('d M Y H:i', strtotime($d)) : '-'; };
           <?php endforeach; ?>
         </tbody>
         <tfoot>
-          <tr class="fw-semibold"><td colspan="4" class="text-end">Total</td><td class="text-end"><?= $num($tq) ?></td><td class="text-end"><?= $tl > 0 ? $fmt_luas($tl) : '-' ?></td><td colspan="2" class="text-end">Total PO</td><td class="text-end"><?= $rp($total) ?></td><td></td></tr>
+          <tr class="fw-semibold"><td colspan="4" class="text-end">Total</td><td class="text-end"><?= $num($tq) ?></td><td class="text-end"><?= $tl > 0 ? $fmt_luas($tl) : '-' ?></td><td colspan="2" class="text-end"><?= $rinci ? 'Subtotal barang' : 'Total PO' ?></td><td class="text-end"><?= $rp($rinci ? $sub_brg : $total) ?></td><td></td></tr>
+          <?php if ($rinci): ?>
+            <?php foreach ($biaya_po as $bp): ?>
+              <tr>
+                <td colspan="8" class="text-end"><?= html_escape($bp->nama) ?>
+                  <?php if (($bp->hitung_per ?? '') === 'm2'): ?><span class="muted">(<?= $fmt_luas($bp->luas_m2) ?> m² &times; <?= $rp($bp->harga) ?>)</span><?php endif; ?>
+                  <?= trim((string) ($bp->keterangan ?? '')) !== '' ? '<div class="muted">' . html_escape($bp->keterangan) . '</div>' : '' ?></td>
+                <td class="text-end"><?= $rp($bp->nominal) ?></td><td></td>
+              </tr>
+            <?php endforeach; ?>
+            <?php if ($ppn_po > 0): ?>
+              <tr><td colspan="8" class="text-end">PPN <?= rtrim(rtrim(number_format($ppn_pct, 2, ',', ''), '0'), ',') ?>%</td><td class="text-end"><?= $rp($ppn_po) ?></td><td></td></tr>
+            <?php endif; ?>
+            <tr class="fw-bold"><td colspan="8" class="text-end">Total PO</td><td class="text-end"><?= $rp($total) ?></td><td></td></tr>
+          <?php endif; ?>
         </tfoot>
       </table>
     </div>

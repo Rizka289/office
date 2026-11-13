@@ -148,6 +148,9 @@
         <div>
           <div class="kpi-value"><?= (int) ($total_belum ?? 0); ?></div>
           <div class="kpi-label"><?= translate('b_setuju') ?></div>
+          <?php if ((int) ($total_batal ?? 0) > 0): ?>
+            <div class="text-danger small"><i class="bi bi-x-circle me-1"></i><?= (int) $total_batal; ?> batal</div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -177,6 +180,7 @@
             <th class="text-center"><?= translate('t_penawaran') ?></th>
             <th class="text-center"><?= translate('setuju') ?></th>
             <th class="text-center"><?= translate('b_setuju') ?></th>
+            <th class="text-center">Batal</th>
             <th class="text-end"><?= translate('nilai_penawaran') ?></th>
           </tr>
         </thead>
@@ -189,11 +193,12 @@
                 <td class="text-center"><?= (int) $r->total; ?></td>
                 <td class="text-center"><?= (int) $r->approved; ?></td>
                 <td class="text-center"><?= (int) $r->belum; ?></td>
+                <td class="text-center"><?= (int) ($r->batal ?? 0); ?></td>
                 <td class="text-end">Rp <?= number_format((float) $r->nilai, 0, ',', '.'); ?></td>
               </tr>
             <?php endforeach; ?>
           <?php else: ?>
-            <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>Belum ada data penawaran.</td></tr>
+            <tr class="empty-row"><td colspan="6"><i class="bi bi-inbox"></i>Belum ada data penawaran.</td></tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -211,11 +216,21 @@
           value="<?= isset($filter_q) ? html_escape($filter_q) : ''; ?>">
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-2">
+      <label class="form-label small text-muted mb-1"><?= translate('status') ?></label>
+      <?php $fs = isset($filter_status) ? $filter_status : ''; ?>
+      <select name="status" class="form-select">
+        <option value="" <?= $fs === '' ? 'selected' : ''; ?>>Semua</option>
+        <option value="pending" <?= $fs === 'pending' ? 'selected' : ''; ?>>Belum approve</option>
+        <option value="approved" <?= $fs === 'approved' ? 'selected' : ''; ?>>Sudah approve</option>
+        <option value="batal" <?= $fs === 'batal' ? 'selected' : ''; ?>>Batal</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
       <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal1') ?></label>
       <input type="date" name="dari" class="form-control" value="<?= isset($filter_dari) ? $filter_dari : ''; ?>">
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
       <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal2') ?></label>
       <input type="date" name="sampai" class="form-control" value="<?= isset($filter_sampai) ? $filter_sampai : ''; ?>">
     </div>
@@ -258,13 +273,15 @@
             <?php foreach ($penawaran_list as $row): ?>
               <tr>
                 <td><?= $no++; ?></td>
-                <td class="fw-semibold"><?= html_escape($row->no_surat); ?><?php if (($row->tipe ?? 'rumus') === 'manual'): ?> <span class="badge bg-info text-dark">Manual</span><?php endif; ?></td>
+                <td class="fw-semibold"><?= html_escape($row->no_surat); ?><?php if (($row->tipe ?? 'rumus') === 'manual'): ?> <span class="badge bg-info text-dark">Manual</span><?php endif; ?><?php if (($row->jenis_penjualan ?? 'biasa') === 'konsinyasi'): ?> <span class="badge bg-purple text-white" style="background:#6f42c1" title="Konsinyasi / sample: dibayar sesuai barang yang laku, sisanya diambil kembali">Konsinyasi<?= in_array((int) ($row->masa_konsinyasi ?? 0), [30, 60], true) ? ' ' . (int) $row->masa_konsinyasi . 'h' : ''; ?></span><?php endif; ?></td>
                 <td><?= date('d M Y', strtotime($row->tanggal)); ?></td>
                 <td><?= html_escape($row->customer); ?></td>
                 <td class="text-center"><?= (int) $row->total_item; ?></td>
                 <td class="text-end">Rp <?= number_format((float) $row->grand_total, 0, ',', '.'); ?></td>
                 <td class="text-center">
-                  <?php if (($row->status ?? 'draft') === 'approved'): ?>
+                  <?php if (($row->status ?? 'draft') === 'batal'): ?>
+                    <span class="badge bg-danger" title="<?= html_escape($row->alasan_batal ?? ''); ?>"><i class="bi bi-x-circle me-1"></i>Batal</span>
+                  <?php elseif (($row->status ?? 'draft') === 'approved'): ?>
                     <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
                   <?php else: ?>
                     <span class="badge bg-warning text-dark"><?= translate('b_setuju') ?></span>
@@ -279,14 +296,22 @@
                     class="btn btn-icon-sm btn-outline-secondary" title="Cetak">
                     <i class="bi bi-printer"></i>
                   </a>
-                  <?php if (($row->status ?? 'draft') !== 'approved'): ?>
+                  <?php $row_approved = (($row->status ?? 'draft') === 'approved'); ?>
+                  <?php if (!$row_approved && ($row->status ?? 'draft') !== 'batal'): ?>
                     <a href="<?= site_url('penawaran/edit/' . $row->id); ?>"
                       class="btn btn-icon-sm btn-outline-warning" title="Edit">
                       <i class="bi bi-pencil-square"></i>
                     </a>
+                  <?php endif; ?>
+                  <?php if (!empty($boleh_hapus)): ?>
+                    <?php
+                      $pesan_hapus = $row_approved
+                        ? 'Penawaran ' . $row->no_surat . ' SUDAH DI-APPROVE. Yakin hapus (mis. customer batal order)? Data yang dihapus tidak bisa dikembalikan.'
+                        : 'Hapus penawaran ' . $row->no_surat . '? Data yang dihapus tidak bisa dikembalikan.';
+                    ?>
                     <?= form_open('penawaran/delete/' . (int) $row->id, [
                           'class'    => 'd-inline',
-                          'onsubmit' => "return confirm('Hapus penawaran " . html_escape($row->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+                          'onsubmit' => 'return confirm(' . html_escape(json_encode($pesan_hapus)) . ');'
                         ]); ?>
                       <button type="submit" class="btn btn-icon-sm btn-outline-danger" title="Hapus">
                         <i class="bi bi-trash"></i>

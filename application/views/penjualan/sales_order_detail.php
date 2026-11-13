@@ -836,9 +836,10 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                     <div class="col-6">
                       <label class="form-label small mb-1"><?= translate('jenis') ?></label>
                       <select name="jenis" id="bayar_jenis" class="form-select form-select-sm">
-                        <?php if (!$konsinyasi): ?><option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option><?php endif; ?>
-                        <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>><?= translate('pelunasan') ?></option>
-                        <option value="lainnya"><?= translate('lainnya') ?></option>
+                        <?php /* Pilihan jenis pembayaran: DP, Pelunasan, Lainnya (selalu tiga) */ ?>
+                        <option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option>
+                        <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>>Pelunasan</option>
+                        <option value="lainnya">Lainnya</option>
                       </select>
                     </div>
                     <div class="col-12">
@@ -909,6 +910,15 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         </div>
         <div class="modal-body">
           <div class="mb-3">
+            <label class="form-label">Tanggal SO</label>
+            <input type="date" name="tanggal" id="ubah_tgl_so" class="form-control" max="<?= date('Y-m-d') ?>"
+              value="<?= date('Y-m-d', strtotime($h->tanggal)) ?>"
+              data-tgl-lama="<?= date('Y-m-d', strtotime($h->tanggal)) ?>"
+              data-no-lama="<?= html_escape($h->no_so) ?>"
+              data-no-urut="<?= (int) ($h->no_urut ?? 0) ?>">
+            <div class="form-text" id="info_no_so_baru">Nomor SO: <strong><?= html_escape($h->no_so) ?></strong></div>
+          </div>
+          <div class="mb-3">
             <label class="form-label"><?= translate('no_po_pelanggan') ?></label>
             <input type="text" name="no_po_customer" class="form-control" maxlength="50"
               value="<?= html_escape((string) $h->no_po_customer) ?>">
@@ -932,6 +942,30 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
       </div>
     </div>
   </div>
+  <script>
+    // Preview nomor SO kalau tanggal SO diubah (urut/SO-OPJI/BULAN/TAHUN)
+    (function () {
+      var inp = document.getElementById('ubah_tgl_so');
+      var info = document.getElementById('info_no_so_baru');
+      if (!inp || !info) return;
+      function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+      inp.addEventListener('change', function () {
+        var lama = inp.dataset.noLama, v = inp.value;
+        if (!v || v === inp.dataset.tglLama) { info.innerHTML = 'Nomor SO: <strong>' + esc(lama) + '</strong>'; return; }
+        var thnBaru = v.substr(0, 4), blnBaru = v.substr(5, 2);
+        var thnLama = inp.dataset.tglLama.substr(0, 4);
+        var urut = parseInt(inp.dataset.noUrut, 10) || 0;
+        if (thnBaru === thnLama && urut > 0) {
+          var baru = (urut < 10 ? '0' : '') + urut + '/SO-OPJI/' + blnBaru + '/' + thnBaru;
+          info.innerHTML = baru === lama
+            ? 'Nomor SO tetap: <strong>' + esc(lama) + '</strong>'
+            : 'Nomor SO akan berubah: ' + esc(lama) + ' &rarr; <strong>' + esc(baru) + '</strong>';
+        } else {
+          info.innerHTML = 'Tahun berbeda: SO akan mendapat <strong>nomor urut baru di tahun ' + esc(thnBaru) + '</strong>.';
+        }
+      });
+    })();
+  </script>
 <?php endif; ?>
 
 <?php if ($bisa_bayar): ?>

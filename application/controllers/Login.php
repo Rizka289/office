@@ -48,10 +48,17 @@ class Login extends MY_Controller
 
         if ($user && password_verify($password, $user->password)) {
 
+            // Tolak login kalau role di database tidak dikenal sistem
+            if (!in_array($user->role, self::ROLE_VALID, TRUE)) {
+                $this->session->set_flashdata('error', 'Role akun "' . html_escape($user->role) . '" tidak dikenali sistem. Hubungi admin untuk memperbaiki role user.');
+                redirect('login');
+                return;
+            }
+
             $session = [
                 'user_id'   => $user->id,
                 'username'  => $user->username,
-                'nama'      => $user->nama_lengkap,
+                'nama'      => $user->nama,   // kolom di tabel users = `nama` (bukan nama_lengkap)
                 'role'      => $user->role,
                 'foto'      => $user->foto,
                 'logged_in' => TRUE

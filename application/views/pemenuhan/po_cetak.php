@@ -10,12 +10,17 @@ $sup      = $h->supplier;
 $dropship = $h->jenis === 'dropship';
 $is_sj    = $mode === 'sj';
 $judul    = $is_sj ? 'SURAT JALAN' : 'PURCHASE ORDER';
+// Luas selalu 2 angka di belakang koma (dibulatkan). Contoh: 3,298 -> 3,30
 $fmt_luas = function ($v) {
-  $s   = number_format((float) $v, 4, '.', '');
-  $dec = max(2, strlen(rtrim(substr($s, strpos($s, '.') + 1), '0')));
-  return number_format((float) $v, $dec, ',', '.');
+  return number_format(round((float) $v, 2), 2, ',', '.');
 };
 $per_m2 = function ($d) { return ($d->hitung_per ?? 'unit') === 'm2'; };
+$biaya_po = isset($po['biaya']) ? $po['biaya'] : array();
+$ppn_po   = (float) ($h->ppn_nominal ?? 0);
+$ppn_pct  = (float) ($h->ppn_persen ?? 0);
+$rinci    = $biaya_po || $ppn_po > 0;
+$sub_brg  = 0;
+foreach ($items as $d_) { $sub_brg += (float) $d_->total; }
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -105,7 +110,16 @@ $per_m2 = function ($d) { return ($d->hitung_per ?? 'unit') === 'm2'; };
       </tbody>
       <?php if (!$is_sj): ?>
         <tfoot>
-          <tr><td colspan="4" class="r">TOTAL</td><td class="c"><?= $num($tq) ?></td><td class="c"><?= $tl > 0 ? $fmt_luas($tl) : '-' ?></td><td colspan="2" class="r">TOTAL PO</td><td class="r"><?= $rp($h->total) ?></td></tr>
+          <tr><td colspan="4" class="r">TOTAL</td><td class="c"><?= $num($tq) ?></td><td class="c"><?= $tl > 0 ? $fmt_luas($tl) : '-' ?></td><td colspan="2" class="r"><?= $rinci ? 'SUBTOTAL BARANG' : 'TOTAL PO' ?></td><td class="r"><?= $rp($rinci ? $sub_brg : $h->total) ?></td></tr>
+          <?php foreach ($biaya_po as $bp): ?>
+            <tr><td colspan="8" class="r"><?= html_escape($bp->nama) ?><?= (($bp->hitung_per ?? '') === 'm2') ? ' (' . $fmt_luas($bp->luas_m2) . ' m² &times; ' . $rp($bp->harga) . ' / m²)' : '' ?><?= $isi($bp->keterangan ?? '') ? ' <span class="muted">' . html_escape($bp->keterangan) . '</span>' : '' ?></td><td class="r"><?= $rp($bp->nominal) ?></td></tr>
+          <?php endforeach; ?>
+          <?php if ($ppn_po > 0): ?>
+            <tr><td colspan="8" class="r">PPN <?= rtrim(rtrim(number_format($ppn_pct, 2, ',', ''), '0'), ',') ?>%</td><td class="r"><?= $rp($ppn_po) ?></td></tr>
+          <?php endif; ?>
+          <?php if ($rinci): ?>
+            <tr><td colspan="8" class="r"><strong>TOTAL PO</strong></td><td class="r"><strong><?= $rp($h->total) ?></strong></td></tr>
+          <?php endif; ?>
         </tfoot>
       <?php endif; ?>
     </table>

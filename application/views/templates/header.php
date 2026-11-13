@@ -490,14 +490,38 @@
     /**
      * NOTIFIKASI per role (lonceng di topbar + badge di menu).
      * Tambah notifikasi role lain cukup di blok ini.
-     *   atasan / super_admin : PO menunggu persetujuan
+     *   atasan / super_admin : Penawaran & PO menunggu persetujuan
      */
     $notif_list  = array();   // tiap item: judul, sub, url, waktu
     $notif_badge = array();   // key menu => jumlah
+    $notif_count = array('penawaran' => 0, 'po' => 0); // jumlah per jenis (untuk ringkasan dropdown)
     if (in_array($current_role, array('atasan', 'super_admin'), true)) {
         $CI        =& get_instance();
         $db_debug  = $CI->db->db_debug;
         $CI->db->db_debug = false; // kalau tabel/kolom belum ada, header tetap tampil
+
+        // 1) Penawaran yang belum di-approve (status draft / selain 'approved')
+        $qp = $CI->db->query(
+            "SELECT pen.id, pen.no_surat, pen.grand_total, pen.tanggal, cus.nama AS nama_customer, u.nama AS nama_pembuat
+               FROM penawaran pen
+               LEFT JOIN customer cus ON cus.id = pen.id_customer
+               LEFT JOIN users u      ON u.id = pen.id_user
+              WHERE pen.status IS NULL OR pen.status <> 'approved'
+              ORDER BY pen.id ASC"
+        );
+        foreach ($qp ? $qp->result() : array() as $r) {
+            $notif_list[] = array(
+                'ikon'  => 'bi-tags-fill text-primary',
+                'judul' => 'Penawaran ' . $r->no_surat . ' menunggu approval',
+                'sub'   => trim(($r->nama_customer ?: '-') . ' · Rp ' . number_format((float) $r->grand_total, 0, ',', '.')
+                    . ($r->nama_pembuat ? ' · oleh ' . $r->nama_pembuat : '')),
+                'url'   => site_url('penawaran/detail/' . (int) $r->id),
+                'waktu' => $r->tanggal ? date('d M Y', strtotime($r->tanggal)) : '',
+            );
+            $notif_count['penawaran']++;
+        }
+
+        // 2) PO yang masih draft
         $q = $CI->db->query(
             "SELECT po.id, po.no_po, po.total, po.tanggal, s.nama AS nama_supplier, so.no_so, u.nama AS nama_pembuat
                FROM pm_po po
@@ -517,9 +541,13 @@
                 'url'   => site_url('pemenuhan/po_detail/' . (int) $r->id),
                 'waktu' => $r->tanggal ? date('d M Y', strtotime($r->tanggal)) : '',
             );
+            $notif_count['po']++;
         }
-        if ($notif_list) {
-            $notif_badge['po'] = count($notif_list);
+        if ($notif_count['penawaran']) {
+            $notif_badge['penawaran'] = $notif_count['penawaran'];
+        }
+        if ($notif_count['po']) {
+            $notif_badge['po'] = $notif_count['po'];
         }
     }
 
@@ -641,10 +669,10 @@
                                 <div class="dropdown-menu dropdown-menu-end p-0 shadow notif-menu">
                                     <div class="px-3 py-2 border-bottom fw-semibold d-flex justify-content-between">
                                         <span>Perlu persetujuan</span>
-                                        <span class="text-muted small"><?= count($notif_list); ?> PO</span>
+                                        <span class="text-muted small"><?= (int) $notif_count['penawaran']; ?> Penawaran · <?= (int) $notif_count['po']; ?> PO</span>
                                     </div>
                                     <?php if (!$notif_list): ?>
-                                        <div class="px-3 py-4 text-center text-muted small"><i class="bi bi-check2-circle d-block fs-4 mb-1"></i>Tidak ada PO yang menunggu persetujuan.</div>
+                                        <div class="px-3 py-4 text-center text-muted small"><i class="bi bi-check2-circle d-block fs-4 mb-1"></i>Tidak ada penawaran / PO yang menunggu persetujuan.</div>
                                     <?php else: ?>
                                         <div class="notif-scroll">
                                             <?php foreach (array_slice($notif_list, 0, 10) as $n): ?>
@@ -658,7 +686,14 @@
                                                 </a>
                                             <?php endforeach; ?>
                                         </div>
-                                        <a href="<?= site_url('pemenuhan/po?status=draft'); ?>" class="dropdown-item text-center small py-2 text-primary">Lihat semua di Purchase Order</a>
+                                        <div class="d-flex">
+                                            <?php if ($notif_count['penawaran']): ?>
+                                                <a href="<?= site_url('penawaran?status=pending'); ?>" class="dropdown-item text-center small py-2 text-primary">Semua Penawaran</a>
+                                            <?php endif; ?>
+                                            <?php if ($notif_count['po']): ?>
+                                                <a href="<?= site_url('pemenuhan/po?status=draft'); ?>" class="dropdown-item text-center small py-2 text-primary">Semua PO</a>
+                                            <?php endif; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>

@@ -22,6 +22,55 @@ class Sales_order extends MY_Controller
             'sampai' => trim((string) $this->input->get('sampai', true)),
         );
 
+        // ---- Periode (kotak KPI & tabel selalu memakai periode yang sama) ----
+        // ?periode=bulan_ini | bulan_lalu | tahun_ini | semua
+        // Kalau dari/sampai diisi manual -> periode 'custom'.
+        // Kalau dibuka tanpa filter apa pun -> default bulan ini.
+        // Kalau hanya mencari (q) tanpa tanggal -> cari di semua periode.
+        $periode = (string) $this->input->get('periode', true);
+        if ($filter['dari'] !== '' || $filter['sampai'] !== '') {
+            $periode = 'custom';
+        } elseif (!in_array($periode, array('bulan_ini', 'bulan_lalu', 'tahun_ini', 'semua'), true)) {
+            $periode = ($filter['q'] !== '') ? 'semua' : 'bulan_ini';
+        }
+
+        $nama_bulan = array(1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
+            'Agustus', 'September', 'Oktober', 'November', 'Desember');
+        $tgl_indo = function ($ymd) use ($nama_bulan) {
+            $t = strtotime($ymd);
+            return $t ? date('j', $t) . ' ' . $nama_bulan[(int) date('n', $t)] . ' ' . date('Y', $t) : $ymd;
+        };
+
+        switch ($periode) {
+            case 'bulan_ini':
+                $filter['dari']   = date('Y-m-01');
+                $filter['sampai'] = date('Y-m-t');
+                $label_periode    = $nama_bulan[(int) date('n')] . ' ' . date('Y');
+                break;
+            case 'bulan_lalu':
+                $awal             = strtotime('first day of last month');
+                $filter['dari']   = date('Y-m-01', $awal);
+                $filter['sampai'] = date('Y-m-t', $awal);
+                $label_periode    = $nama_bulan[(int) date('n', $awal)] . ' ' . date('Y', $awal);
+                break;
+            case 'tahun_ini':
+                $filter['dari']   = date('Y-01-01');
+                $filter['sampai'] = date('Y-12-31');
+                $label_periode    = 'Tahun ' . date('Y');
+                break;
+            case 'semua':
+                $label_periode = 'Semua periode';
+                break;
+            default: // custom
+                if ($filter['dari'] !== '' && $filter['sampai'] !== '') {
+                    $label_periode = $tgl_indo($filter['dari']) . ' – ' . $tgl_indo($filter['sampai']);
+                } elseif ($filter['dari'] !== '') {
+                    $label_periode = 'Sejak ' . $tgl_indo($filter['dari']);
+                } else {
+                    $label_periode = 'Sampai ' . $tgl_indo($filter['sampai']);
+                }
+        }
+
         $data['sales_order_list'] = $this->Sales_order_model->get_all_sales_order($filter);
 
         $total_so       = 0;
@@ -29,6 +78,8 @@ class Sales_order extends MY_Controller
         $total_dp       = 0; // uang muka (jenis = dp) yang sudah masuk
         $total_diterima = 0; // semua pembayaran (DP + pelunasan)
         $total_sisa     = 0; // sisa tagihan
+        $jml_so_dp      = 0; // berapa SO yang sudah bayar DP
+        $jml_belum_lunas = 0; // berapa SO yang masih ada sisa tagihan
 
         foreach ($data['sales_order_list'] as $so) {
             if ($so->status === 'batal') {
@@ -38,22 +89,43 @@ class Sales_order extends MY_Controller
 
             $grand    = (float) $so->grand_total;
             $diterima = (float) $so->total_diterima;
+            $sisa     = isset($so->sisa_bayar) ? (float) $so->sisa_bayar : ($grand - $diterima);
 
             $total_nilai    += $grand;
             $total_dp       += (float) $so->total_dp;
             $total_diterima += $diterima;
-            $total_sisa     += isset($so->sisa_bayar) ? (float) $so->sisa_bayar : ($grand - $diterima);
+            $total_sisa     += $sisa;
+
+            if ((float) $so->total_dp > 0) {
+                $jml_so_dp++;
+            }
+            if ($sisa > 0.5) { // toleransi pembulatan
+                $jml_belum_lunas++;
+            }
         }
 
-        $data['total_so']       = $total_so;
-        $data['total_nilai']    = $total_nilai;
-        $data['total_dp']       = $total_dp;
-        $data['total_diterima'] = $total_diterima;
-        $data['sisa_diterima']  = $total_sisa;
+        $data['total_so']        = $total_so;
+        $data['total_nilai']     = $total_nilai;
+        $data['total_dp']        = $total_dp;
+        $data['total_diterima']  = $total_diterima;
+        $data['sisa_diterima']   = $total_sisa;
+        $data['jml_so_dp']       = $jml_so_dp;
+        $data['jml_belum_lunas'] = $jml_belum_lunas;
+        $data['periode']         = $periode;
+        $data['label_periode']   = $label_periode;
+
+        // Uang masuk: menurut TANGGAL BAYAR pada periode yang sama (termasuk pelunasan SO bulan-bulan sebelumnya)
+        $data['uang_masuk'] = $this->Sales_order_model->get_uang_masuk($filter['dari'], $filter['sampai'], $filter['q']);
+        // Piutang: semua SO belum lunas s/d hari ini, tanpa melihat periode.
+        // "Dari periode sebelumnya" = SO yang tanggalnya sebelum awal periode yang dipilih.
+        $data['piutang'] = $this->Sales_order_model->get_piutang_berjalan($filter['dari'], $filter['q']);
 
         $data['filter_q']      = $filter['q'];
-        $data['filter_dari']   = $filter['dari'];
-        $data['filter_sampai'] = $filter['sampai'];
+        // Kolom tanggal di form hanya terisi kalau user mengisinya sendiri (periode custom).
+        // Untuk periode tombol (bulan ini, bulan lalu, dst.) kolom tanggal dibiarkan kosong;
+        // periodenya tetap terlihat di label "Ringkasan periode".
+        $data['filter_dari']   = ($periode === 'custom') ? $filter['dari'] : '';
+        $data['filter_sampai'] = ($periode === 'custom') ? $filter['sampai'] : '';
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/sales_order_index', $data);
@@ -248,7 +320,24 @@ class Sales_order extends MY_Controller
             $tgl_kirim = date('Y-m-d', strtotime($tgl_kirim));
         }
 
+        // Tanggal SO (opsional; kosong = tidak diubah). Tidak boleh lebih dari hari ini.
+        $tanggal = trim((string) $this->input->post('tanggal', true));
+        if ($tanggal !== '') {
+            if (!strtotime($tanggal)) {
+                $this->session->set_flashdata('error', 'Tanggal SO tidak valid.');
+                redirect('sales_order/detail/' . $id);
+                return;
+            }
+            $tanggal = date('Y-m-d', strtotime($tanggal));
+            if ($tanggal > date('Y-m-d')) {
+                $this->session->set_flashdata('error', 'Tanggal SO tidak boleh melebihi hari ini.');
+                redirect('sales_order/detail/' . $id);
+                return;
+            }
+        }
+
         list($ok, $pesan) = $this->Sales_order_model->ubah_info($id, array(
+            'tanggal'        => $tanggal,
             'no_po_customer' => mb_substr(trim((string) $this->input->post('no_po_customer', true)), 0, 50),
             'tgl_kirim'      => $tgl_kirim,
             'catatan'        => trim((string) $this->input->post('catatan', true)),

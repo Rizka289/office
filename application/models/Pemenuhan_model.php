@@ -17,6 +17,19 @@ class Pemenuhan_model extends CI_Model
 {
     public $sumber_valid = array('produksi', 'beli', 'dropship', 'stok');
 
+    // Tarif PPN untuk PO ke supplier (persen)
+    const TARIF_PPN_PO = 11;
+
+    // Kolom PPN di pm_po sudah ada? (database/pm_po_ppn.sql)
+    public function ada_kolom_ppn_po()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $ada = $this->db->field_exists('ppn_persen', 'pm_po') && $this->db->field_exists('ppn_nominal', 'pm_po');
+        }
+        return $ada;
+    }
+
     // Status SO yang alokasi stoknya masih "memegang" stok
     private $so_aktif_stok = array('draft', 'confirmed', 'produksi', 'terkirim');
     private $eps = 0.0001;
@@ -278,13 +291,82 @@ class Pemenuhan_model extends CI_Model
 
     // $hdr: tanggal, jenis (stok|dropship), id_supplier, tgl_butuh, alamat_kirim, catatan
     // $lines: array of (id_so_detail, nama_barang, spesifikasi, qty, satuan, harga)
+    // $biaya: array of (nama, nominal, keterangan) -> biaya tambahan PO (ongkir, gosok, packing, dll)
     // Return: array(ok, pesan, id_po)
-    public function simpan_po($id_so, $hdr, $lines, $id_user)
+    public function simpan_po($id_so, $hdr, $lines, $id_user, $biaya = array())
     {
-        return $this->_aman('_proses_po', array($id_so, $hdr, $lines, $id_user));
+        return $this->_aman('_proses_po', array($id_so, $hdr, $lines, $id_user, $biaya));
     }
 
-    private function _proses_po($id_so, $hdr, $lines, $id_user)
+    // Biaya tambahan PO (tabel pm_po_biaya, lihat database/pm_po_biaya.sql)
+    public function ada_tabel_biaya_po()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $ada = $this->db->table_exists('pm_po_biaya');
+        }
+        return $ada;
+    }
+
+    // Kolom cara hitung biaya (hitung_per, luas_m2, harga) sudah ada? (database/pm_po_biaya_luas.sql)
+    private function _biaya_po_per_m2_siap()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $ada = $this->ada_tabel_biaya_po()
+                && $this->db->field_exists('hitung_per', 'pm_po_biaya')
+                && $this->db->field_exists('luas_m2', 'pm_po_biaya')
+                && $this->db->field_exists('harga', 'pm_po_biaya');
+        }
+        return $ada;
+    }
+
+    // Saring & validasi baris biaya dari form. Return array(rows, total, pesan_error)
+    // Cara hitung per baris:
+    //   borongan : total = nominal yang diketik
+    //   m2       : total = luas (m²) x harga per m²  (mis. biaya gosok) - dihitung ulang di server
+    private function _saring_biaya_po($biaya)
+    {
+        $rows  = array();
+        $total = 0;
+        foreach ((array) $biaya as $b) {
+            $nama  = mb_substr(trim((string) ($b['nama'] ?? '')), 0, 100);
+            $ket   = mb_substr(trim((string) ($b['keterangan'] ?? '')), 0, 255);
+            $per   = (($b['hitung'] ?? '') === 'm2') ? 'm2' : 'borongan';
+            $luas  = round(max(0, (float) ($b['luas'] ?? 0)), 2);
+            $harga = round(max(0, (float) ($b['harga'] ?? 0)), 2);
+            $nominal = $per === 'm2' ? round($luas * $harga, 2) : round((float) ($b['nominal'] ?? 0), 2);
+
+            if ($nama === '' && $nominal == 0 && $luas == 0 && $harga == 0) {
+                continue; // baris kosong
+            }
+            if ($nama === '') {
+                return array(array(), 0, 'Nama biaya tambahan wajib diisi (mis. Biaya kirim).');
+            }
+            if ($per === 'm2') {
+                if (!$this->_biaya_po_per_m2_siap()) {
+                    return array(array(), 0, 'Hitung biaya per m² belum aktif. Jalankan database/pm_po_biaya_luas.sql dulu.');
+                }
+                if ($luas <= 0 || $harga <= 0) {
+                    return array(array(), 0, 'Luas dan harga per m² untuk "' . $nama . '" wajib diisi.');
+                }
+            } elseif ($nominal <= 0) {
+                return array(array(), 0, 'Nominal "' . $nama . '" harus lebih dari 0.');
+            }
+
+            $row = array('nama' => $nama, 'nominal' => $nominal, 'keterangan' => $ket !== '' ? $ket : null);
+            if ($this->_biaya_po_per_m2_siap()) {
+                $row['hitung_per'] = $per;
+                $row['luas_m2']    = $per === 'm2' ? $luas : null;
+                $row['harga']      = $per === 'm2' ? $harga : null;
+            }
+            $rows[] = $row;
+            $total += $nominal;
+        }
+        return array($rows, round($total, 2), '');
+    }
+
+    private function _proses_po($id_so, $hdr, $lines, $id_user, $biaya = array())
     {
         $this->db->trans_begin();
         if (!$this->_kunci_so($id_so)) {
@@ -347,7 +429,8 @@ class Pemenuhan_model extends CI_Model
             //   Lebar/tinggi kosong -> Total Harga = Qty x Harga
             $lebar  = max(0, (int) ($l['lebar_mm'] ?? 0));
             $tinggi = max(0, (int) ($l['tinggi_mm'] ?? 0));
-            $luas   = round($lebar * $tinggi / 1000000, 4);
+            // Luas per unit dibulatkan 2 angka di belakang koma (sama dengan penawaran: 1,649 -> 1,65)
+            $luas   = round($lebar * $tinggi / 1000000, 2);
             $per    = $luas > 0 ? 'm2' : 'unit';
             if ($harga <= 0) {
                 return $this->_gagal('Harga beli "' . $nama . '" belum diisi.');
@@ -372,8 +455,39 @@ class Pemenuhan_model extends CI_Model
             return $this->_gagal('Isi qty minimal satu barang.');
         }
 
+        list($biaya_rows, $total_biaya, $err_biaya) = $this->_saring_biaya_po($biaya);
+        if ($err_biaya !== '') {
+            return $this->_gagal($err_biaya);
+        }
+        if ($biaya_rows && !$this->ada_tabel_biaya_po()) {
+            return $this->_gagal('Tabel biaya tambahan PO belum ada. Jalankan database/pm_po_biaya.sql dulu.');
+        }
+        $total_barang = round($total, 2);
+        $dpp          = round($total_barang + $total_biaya, 2);
+
+        // PPN 11% dari (subtotal barang + biaya tambahan), dibulatkan ke rupiah (sama dengan penawaran)
+        $pakai_ppn = !empty($hdr['pakai_ppn']);
+        if ($pakai_ppn && !$this->ada_kolom_ppn_po()) {
+            return $this->_gagal('Kolom PPN di PO belum ada. Jalankan database/pm_po_ppn.sql dulu.');
+        }
+        $ppn_persen  = $pakai_ppn ? self::TARIF_PPN_PO : 0;
+        $ppn_nominal = $pakai_ppn ? round($dpp * $ppn_persen / 100) : 0;
+        $total       = round($dpp + $ppn_nominal, 2);
+
+        $kolom_po = array();
+        if ($this->db->field_exists('subtotal_barang', 'pm_po')) {
+            $kolom_po['subtotal_barang'] = $total_barang;
+        }
+        if ($this->db->field_exists('total_biaya', 'pm_po')) {
+            $kolom_po['total_biaya'] = $total_biaya;
+        }
+        if ($this->ada_kolom_ppn_po()) {
+            $kolom_po['ppn_persen']  = $ppn_persen;
+            $kolom_po['ppn_nominal'] = $ppn_nominal;
+        }
+
         $no = $this->nomor('pm_po', 'PO', $hdr['tanggal'], true);
-        $ok = $this->db->insert('pm_po', array(
+        $ok = $this->db->insert('pm_po', $kolom_po + array(
             'no_po'        => $no['no'],
             'no_urut'      => $no['no_urut'],
             'tahun'        => $no['tahun'],
@@ -396,6 +510,12 @@ class Pemenuhan_model extends CI_Model
             $r['id_po'] = $id_po;
             if (!$this->db->insert('pm_po_detail', $r)) {
                 return $this->_gagal('Gagal menyimpan detail PO.');
+            }
+        }
+        foreach ($biaya_rows as $b) {
+            $b['id_po'] = $id_po;
+            if (!$this->db->insert('pm_po_biaya', $b)) {
+                return $this->_gagal('Gagal menyimpan biaya tambahan PO.');
             }
         }
         $this->sinkron_status_so($id_so);
@@ -1284,7 +1404,10 @@ class Pemenuhan_model extends CI_Model
             ->where('b.id_po', $h->id)
             ->order_by('b.tanggal', 'ASC')->order_by('b.id', 'ASC')
             ->get()->result();
-        return array('header' => $h, 'items' => $items, 'penerimaan' => $terima, 'pembayaran' => $bayar);
+        $biaya = $this->ada_tabel_biaya_po()
+            ? $this->db->where('id_po', $h->id)->order_by('id', 'ASC')->get('pm_po_biaya')->result()
+            : array();
+        return array('header' => $h, 'items' => $items, 'biaya' => $biaya, 'penerimaan' => $terima, 'pembayaran' => $bayar);
     }
 
     // ================= 2c. PEMBAYARAN KE SUPPLIER (finance) =================

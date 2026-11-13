@@ -10,6 +10,12 @@ $dropship = $h->jenis === 'dropship';
   <meta charset="utf-8">
   <title>Surat Jalan <?= html_escape($h->no_sj) ?></title>
   <?= $css ?>
+  <style>
+    /* Tanda tangan 4 kolom sejajar (khusus surat jalan) */
+    .ttd.ttd-4 { display:flex; justify-content:space-between; gap:12px; }
+    .ttd.ttd-4 .col { flex:1 1 0; width:auto; min-width:0; text-align:center; }
+    .ttd.ttd-4 .col .nama { white-space:nowrap; }
+  </style>
 </head>
 <body>
   <?= $toolbar ?>
@@ -70,8 +76,9 @@ $dropship = $h->jenis === 'dropship';
       <div class="catatan">Diterima oleh: <strong><?= html_escape($h->penerima) ?></strong></div>
     <?php endif; ?>
 
-    <div class="ttd">
-      <div class="col"><div>Hormat kami,</div><div class="garis"></div><div class="nama">Gudang / Admin</div></div>
+    <div class="ttd ttd-4">
+      <div class="col"><div>Dibuat oleh,</div><div class="garis"></div><div class="nama">Admin / Gudang</div></div>
+      <div class="col"><div>Disetujui oleh,</div><div class="garis"></div><div class="nama">Mr. Chung / Mr. Wangting</div></div>
       <div class="col"><div>Pengirim / Sopir,</div><div class="garis"></div><div class="nama">&nbsp;</div></div>
       <div class="col"><div>Penerima,</div><div class="garis"></div><div class="nama"><?= $isi($h->penerima) ? html_escape($h->penerima) : '&nbsp;' ?></div></div>
     </div>

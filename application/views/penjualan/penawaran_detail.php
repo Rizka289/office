@@ -110,7 +110,10 @@ $rp = function ($v) {
   return 'Rp ' . number_format((float) $v, 0, ',', '.');
 };
 $approved = (($header->status ?? 'draft') === 'approved');
+$batal    = (($header->status ?? 'draft') === 'batal');
 $is_manual = (($header->tipe ?? 'rumus') === 'manual');
+$is_konsinyasi = (($header->jenis_penjualan ?? 'biasa') === 'konsinyasi');
+$masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], true) ? (int) $header->masa_konsinyasi : 60;
 ?>
 
 <div class="pnw-detail-page">
@@ -133,25 +136,41 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
       <h5 class="mb-0">
         <?= html_escape($header->no_surat); ?>
         <?php if ($is_manual): ?><span class="badge bg-info text-dark ms-2 align-middle">Manual</span><?php endif; ?>
-        <?php if ($approved): ?>
+        <?php if ($is_konsinyasi): ?><span class="badge text-white ms-2 align-middle" style="background:#6f42c1">Konsinyasi / Sample &middot; <?= $masa_konsinyasi; ?> hari</span><?php endif; ?>
+        <?php if ($batal): ?>
+          <span class="badge bg-danger ms-2 align-middle"><i class="bi bi-x-circle me-1"></i>Batal</span>
+        <?php elseif ($approved): ?>
           <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
         <?php else: ?>
           <span class="badge bg-warning text-dark ms-2 align-middle"><?= translate('b_setuju') ?></span>
         <?php endif; ?>
       </h5>
       <div class="text-muted small"><?= translate('detail_penawaran') ?></div>
+      <?php if ($is_konsinyasi): ?>
+        <div class="small mt-1" style="color:#6f42c1">
+          <i class="bi bi-box-arrow-right me-1"></i>
+          Barang dikirim sebagai titipan / sample. Customer hanya membayar barang yang laku, barang yang tidak laku diambil kembali. Masa konsinyasi <strong><?= $masa_konsinyasi; ?> hari</strong> sejak tanggal surat jalan.
+        </div>
+      <?php endif; ?>
       <?php if ($approved): ?>
         <div class="text-muted status-lock mt-1">
           <i class="bi bi-info-circle me-1"></i>
           <?= translate('ket_approved') . (!empty($header->approved_at) ? ' ' . translate('pada') . ' ' . date('d M Y H:i', strtotime($header->approved_at)) : '') ?>, <?= translate('info_penawaran'); ?>
         </div>
       <?php endif; ?>
+      <?php if ($batal): ?>
+        <div class="text-danger status-lock mt-1">
+          <i class="bi bi-x-circle me-1"></i>
+          Penawaran dibatalkan<?= !empty($header->dibatalkan_at) ? ' pada ' . date('d M Y H:i', strtotime($header->dibatalkan_at)) : ''; ?><?= !empty($header->alasan_batal) ? ' &mdash; alasan: <strong>' . html_escape($header->alasan_batal) . '</strong>' : ''; ?>
+        </div>
+      <?php endif; ?>
     </div>
     <div class="d-flex gap-2 flex-wrap">
-      <?php if (!$approved): ?>
+      <?php if (!$approved && !$batal): ?>
         <a href="<?= site_url('penawaran/edit/' . (int) $header->id); ?>" class="btn btn-warning">
           <i class="bi bi-pencil-square me-1"></i> <?= translate('update') ?>
         </a>
+        <?php if (in_array($this->session->userdata('role'), ['atasan', 'super_admin'], true)): ?>
         <?= form_open('penawaran/approve/' . (int) $header->id, [
           'class'    => 'd-inline',
           'onsubmit' => "return confirm('Approve penawaran ini? Setelah di-approve, data tidak bisa diedit lagi.');"
@@ -160,9 +179,35 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
           <i class="bi bi-check2-circle me-1"></i> <?= translate('setuju') ?>
         </button>
         <?= form_close(); ?>
+        <?php else: ?>
+        <span class="btn btn-outline-secondary disabled"><i class="bi bi-hourglass-split me-1"></i> Menunggu approval atasan</span>
+        <?php endif; ?>
+      <?php endif; ?>
+      <?php if (!empty($boleh_batal)): ?>
+        <?php if ($batal): ?>
+          <?= form_open('penawaran/aktifkan/' . (int) $header->id, [
+            'class'    => 'd-inline',
+            'onsubmit' => "return confirm('Aktifkan kembali penawaran ini? Status kembali ke draft dan perlu di-approve ulang.');"
+          ]); ?>
+          <button type="submit" class="btn btn-outline-success">
+            <i class="bi bi-arrow-counterclockwise me-1"></i> Aktifkan kembali
+          </button>
+          <?= form_close(); ?>
+        <?php else: ?>
+          <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalBatalPenawaran">
+            <i class="bi bi-x-circle me-1"></i> Batalkan
+          </button>
+        <?php endif; ?>
+      <?php endif; ?>
+      <?php if (!empty($boleh_hapus)): ?>
+        <?php
+          $pesan_hapus = $approved
+            ? 'Penawaran ' . $header->no_surat . ' SUDAH DI-APPROVE. Yakin hapus (mis. customer batal order)? Data yang dihapus tidak bisa dikembalikan.'
+            : 'Hapus penawaran ' . $header->no_surat . '? Data yang dihapus tidak bisa dikembalikan.';
+        ?>
         <?= form_open('penawaran/delete/' . (int) $header->id, [
           'class'    => 'd-inline',
-          'onsubmit' => "return confirm('Hapus penawaran " . html_escape($header->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+          'onsubmit' => 'return confirm(' . html_escape(json_encode($pesan_hapus)) . ');'
         ]); ?>
         <button type="submit" class="btn btn-outline-danger">
           <i class="bi bi-trash me-1"></i> <?= translate('hapus') ?>
@@ -174,6 +219,13 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
           <i class="bi bi-printer me-1"></i> <?= translate('cetak') ?>
         </button>
         <ul class="dropdown-menu dropdown-menu-end">
+          <?php if ($is_konsinyasi): ?>
+          <li>
+            <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id); ?>">
+              Penawaran konsinyasi (S&amp;K <?= $masa_konsinyasi; ?> hari)
+            </a>
+          </li>
+          <?php else: ?>
           <li>
             <h6 class="dropdown-header"><?= translate('termin_pembayran') ?>(S&amp;K)</h6>
           </li>
@@ -187,6 +239,7 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
              <?= translate('lbl_100%') ?>
             </a>
           </li>
+          <?php endif; ?>
         </ul>
       </div>
       <a href="<?= site_url('penawaran'); ?>" class="btn btn-outline-secondary">
@@ -362,7 +415,7 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
     </div>
     <?php if ($pph > 0): ?>
       <div class="summary-row">
-        <span><?= translate('pph') ?> <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)</span>
+        <span><?= translate('pph') ?> <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)<?= !empty($header->pph_ongkir) ? ' <small class="text-muted">· termasuk ongkir</small>' : ''; ?></span>
         <span>- <?= $rp($pph); ?></span>
       </div>
     <?php endif; ?>
@@ -371,5 +424,32 @@ $is_manual = (($header->tipe ?? 'rumus') === 'manual');
       <span><?= $rp($grand); ?></span>
     </div>
   </div>
+
+  <?php if (!empty($boleh_batal) && !$batal): ?>
+    <!-- Modal: batalkan penawaran (customer tidak jadi deal) -->
+    <div class="modal fade" id="modalBatalPenawaran" tabindex="-1" aria-labelledby="modalBatalPenawaranLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <?= form_open('penawaran/batal/' . (int) $header->id, ['class' => 'modal-content']); ?>
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalBatalPenawaranLabel">Batalkan penawaran <?= html_escape($header->no_surat); ?></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          </div>
+          <div class="modal-body">
+            <p class="small text-muted mb-2">
+              Penawaran akan ditandai <strong>Batal</strong> (tidak dihapus), sehingga tetap tersimpan sebagai riwayat.
+              Kalau nanti customer jadi deal, penawaran bisa diaktifkan kembali.
+            </p>
+            <label for="alasan_batal" class="form-label">Alasan batal <span class="text-danger">*</span></label>
+            <textarea name="alasan_batal" id="alasan_batal" class="form-control" rows="3" maxlength="255" required
+              placeholder="Contoh: harga tidak deal, customer pilih vendor lain, proyek ditunda"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
+            <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i> Batalkan penawaran</button>
+          </div>
+        <?= form_close(); ?>
+      </div>
+    </div>
+  <?php endif; ?>
 
 </div>

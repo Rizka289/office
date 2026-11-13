@@ -38,8 +38,11 @@ class Penawaran extends MY_Controller
             'q'      => $this->input->get('q', TRUE),
             'dari'   => $this->input->get('dari', TRUE),
             'sampai' => $this->input->get('sampai', TRUE),
+            'status' => in_array($this->input->get('status', TRUE), ['pending', 'approved', 'batal'], TRUE)
+                ? $this->input->get('status', TRUE) : '',
         ];
 
+        $data['filter_status'] = $filter['status'];
         $data['filter_q']      = $filter['q'];
         $data['filter_dari']   = $filter['dari'];
         $data['filter_sampai'] = $filter['sampai'];
@@ -89,12 +92,14 @@ class Penawaran extends MY_Controller
         $data['total_data']         = $total_data;
         $data['nomor_awal']         = $offset + 1;
         $data['jumlah_ditampilkan'] = count($penawaran_list);
+        $data['boleh_hapus']        = $this->_boleh_hapus();
         $ringkasan      = $this->Penawaran_model->get_ringkasan_bulan_ini();
 
         $data['penawaran_list'] = $penawaran_list;
         $data['total_semua']    = $ringkasan['total'];     // semua penawaran bulan ini
         $data['total_approved'] = $ringkasan['approved'];  // sudah approved bulan ini
-        $data['total_belum']    = $ringkasan['belum'];     // belum approved bulan ini
+        $data['total_belum']    = $ringkasan['belum'];     // belum approved bulan ini (tidak termasuk batal)
+        $data['total_batal']    = $ringkasan['batal'];     // batal / tidak jadi deal bulan ini
         $data['total_nilai']    = $ringkasan['nilai'];     // nilai uang yang approved bulan ini
         // $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_per_bulan(12); untuk rsekap 12 bulan
         $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_bulan_ini_saja();
@@ -119,6 +124,8 @@ class Penawaran extends MY_Controller
         $data['active_menu'] = 'penawaran';
         $data['header']      = $penawaran['header'];
         $data['items']       = $penawaran['items'];
+        $data['boleh_hapus'] = $this->_boleh_hapus();
+        $data['boleh_batal'] = $this->_boleh_batal();
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/penawaran_detail', $data);
@@ -730,6 +737,26 @@ class Penawaran extends MY_Controller
         return $this->_dpp_jasa($biaya_pasang, $items) > 0;
     }
 
+    // Kolom penawaran.pph_ongkir sudah ada? (migrasi database/pph_ongkir.sql)
+    private function _kolom_pph_ongkir()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $ada = $this->db->field_exists('pph_ongkir', 'penawaran');
+        }
+        return $ada;
+    }
+
+    // Dasar pengenaan PPh = jasa pemasangan (+ ongkir kalau customer juga memotong PPh atas ongkir)
+    private function _dpp_pph($biaya_pasang, $biaya_ongkir, array $items, $pph_ongkir)
+    {
+        $dpp = $this->_dpp_jasa($biaya_pasang, $items);
+        if ($pph_ongkir) {
+            $dpp += max(0, (float) $biaya_ongkir);
+        }
+        return round($dpp, 2);
+    }
+
     private function _hitung_total($subtotal, array $items = [], $ppn_persen = null, $pph_persen = null)
     {
         if ($ppn_persen === null) {
@@ -741,22 +768,28 @@ class Penawaran extends MY_Controller
         $biaya_ongkir = $this->input->post('pakai_ongkir')
             ? max(0, (float) $this->input->post('biaya_ongkir')) : null;
 
-        // PPh hanya boleh kalau ada pemasangan (dicek ulang di server, tidak percaya form)
+        // Ongkir ikut dipotong PPh oleh customer? (hanya berarti kalau ongkir dipakai & PPh aktif)
+        $pph_ongkir = ($biaya_ongkir !== null && $this->input->post('pakai_pph') && $this->input->post('pph_ongkir')) ? 1 : 0;
+
+        // PPh hanya boleh kalau ada dasar PPh: jasa pemasangan, atau ongkir yang dipotong PPh
+        // (dicek ulang di server, tidak percaya form)
         if ($pph_persen === null) {
             $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
         }
-        if (!$this->_ada_pemasangan($biaya_pasang, $items)) {
+        $dpp_pph = $this->_dpp_pph($biaya_pasang, $biaya_ongkir, $items, $pph_ongkir);
+        if ($dpp_pph <= 0) {
             $pph_persen = 0;
+            $pph_ongkir = 0;
         }
 
         $dasar_pajak = $subtotal + (float) $biaya_pasang + (float)$biaya_ongkir;
 
         // PPN 11% dari seluruh nilai (barang + jasa + ongkir).
-        // PPh 23 (2%) HANYA dari nilai jasa pemasangan/instalasi.
+        // PPh 23 (2%) dari nilai jasa pemasangan/instalasi (+ ongkir kalau dicentang).
         $ppn_nominal = round($dasar_pajak * $ppn_persen / 100);
-        $pph_nominal = round($this->_dpp_jasa($biaya_pasang, $items) * $pph_persen / 100);
+        $pph_nominal = round($dpp_pph * $pph_persen / 100);
 
-        return [
+        $hasil = [
             'subtotal'     => $subtotal,
             'biaya_pasang' => $biaya_pasang,
             'biaya_ongkir' => $biaya_ongkir,
@@ -767,12 +800,21 @@ class Penawaran extends MY_Controller
             // PPh dipotong customer -> MENGURANGI tagihan
             'grand_total'  => $dasar_pajak + $ppn_nominal - $pph_nominal,
         ];
+        if ($this->_kolom_pph_ongkir()) {
+            $hasil['pph_ongkir'] = $pph_ongkir;
+        }
+        return $hasil;
     }
+
+    // Pilihan masa konsinyasi (hari, dihitung sejak tanggal surat jalan)
+    const MASA_KONSINYASI = [30, 60];
+    const MASA_KONSINYASI_DEFAULT = 60;
 
     // Jenis penjualan dari form: biasa / konsinyasi (titip jual).
     // Kolom hanya diisi kalau migrasi database/konsinyasi.sql sudah dijalankan.
-    // $lama = nilai sebelumnya (edit), dipakai kalau field tidak terkirim.
-    private function _jenis_penjualan($lama = 'biasa')
+    // $lama / $masa_lama = nilai sebelumnya (edit), dipakai kalau field tidak terkirim.
+    // Masa konsinyasi (30 / 60 hari) disimpan kalau kolom masa_konsinyasi sudah ada.
+    private function _jenis_penjualan($lama = 'biasa', $masa_lama = null)
     {
         if (!$this->db->field_exists('jenis_penjualan', 'penawaran')) {
             return [];
@@ -781,7 +823,18 @@ class Penawaran extends MY_Controller
         if ($v === null) {
             $v = $lama;
         }
-        return ['jenis_penjualan' => $v === 'konsinyasi' ? 'konsinyasi' : 'biasa'];
+        $jenis = ($v === 'konsinyasi') ? 'konsinyasi' : 'biasa';
+        $hasil = ['jenis_penjualan' => $jenis];
+
+        if ($this->db->field_exists('masa_konsinyasi', 'penawaran')) {
+            $masa = $this->input->post('masa_konsinyasi');
+            $masa = ($masa === null) ? (int) $masa_lama : (int) $masa;
+            if (!in_array($masa, self::MASA_KONSINYASI, TRUE)) {
+                $masa = self::MASA_KONSINYASI_DEFAULT;
+            }
+            $hasil['masa_konsinyasi'] = ($jenis === 'konsinyasi') ? $masa : null;
+        }
+        return $hasil;
     }
 
     public function simpan()
@@ -844,6 +897,11 @@ class Penawaran extends MY_Controller
             redirect('penawaran/detail/' . $id);
         }
 
+        if (($penawaran['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah dibatalkan. Aktifkan kembali dulu kalau ingin diedit.');
+            redirect('penawaran/detail/' . $id);
+        }
+
         $data['title']          = translate('penawaran');
         $data['page_title']     = translate('penawaran');
         $data['active_menu']    = 'penawaran';
@@ -877,6 +935,11 @@ class Penawaran extends MY_Controller
             redirect('penawaran/detail/' . $id);
         }
 
+        if (($penawaran['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah dibatalkan. Aktifkan kembali dulu kalau ingin diedit.');
+            redirect('penawaran/detail/' . $id);
+        }
+
         $tanggal     = $this->input->post('tanggal', TRUE) ?: $penawaran['header']->tanggal;
         $id_customer = (int) $this->input->post('id_customer') ?: $penawaran['header']->id_customer;
         $catatan     = $this->input->post('catatan', TRUE);
@@ -895,7 +958,7 @@ class Penawaran extends MY_Controller
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
-        ], $this->_jenis_penjualan($penawaran['header']->jenis_penjualan ?? 'biasa'), $this->_hitung_total($subtotal, $items));
+        ], $this->_jenis_penjualan($penawaran['header']->jenis_penjualan ?? 'biasa', $penawaran['header']->masa_konsinyasi ?? null), $this->_hitung_total($subtotal, $items));
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
             // Hapus file foto yang tidak dipakai lagi (diganti / item dihapus)
@@ -933,8 +996,17 @@ class Penawaran extends MY_Controller
             redirect('penawaran');
         }
 
-        if (($penawaran['header']->status ?? 'draft') === 'approved') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa dihapus.');
+        // Hanya super_admin & admin penawaran (staff_purchasing) yang boleh menghapus
+        if (!$this->_boleh_hapus()) {
+            $this->session->set_flashdata('error', 'Anda tidak punya akses untuk menghapus penawaran.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        // Penawaran approved BOLEH dihapus (mis. customer batal order),
+        // asalkan belum dibuatkan Sales Order yang masih aktif.
+        $no_so = $this->_so_aktif($id);
+        if ($no_so !== null) {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah dibuatkan Sales Order ' . $no_so . '. Batalkan SO tersebut dulu sebelum menghapus penawaran.');
             redirect('penawaran/detail/' . $id);
         }
 
@@ -950,6 +1022,27 @@ class Penawaran extends MY_Controller
         redirect('penawaran/detail/' . $id);
     }
 
+    // Role yang boleh menghapus penawaran (draft maupun approved)
+    private function _boleh_hapus()
+    {
+        return in_array($this->session->userdata('role'), ['super_admin', 'staff_purchasing'], TRUE);
+    }
+
+    // No. SO aktif (bukan batal) yang dibuat dari penawaran ini, atau null kalau tidak ada
+    private function _so_aktif($id_penawaran)
+    {
+        if (!$this->db->table_exists('sales_order') || !$this->db->field_exists('id_penawaran', 'sales_order')) {
+            return null;
+        }
+        $this->db->select('no_so')->from('sales_order')->where('id_penawaran', (int) $id_penawaran);
+        if ($this->db->field_exists('status', 'sales_order')) {
+            // Sama dengan Sales_order_model: SO berstatus NULL/kosong tetap dianggap aktif
+            $this->db->where("COALESCE(status, '') <> 'batal'", null, false);
+        }
+        $row = $this->db->limit(1)->get()->row();
+        return $row ? $row->no_so : null;
+    }
+
     public function approve($id)
     {
         if ($this->input->method(TRUE) !== 'POST') {
@@ -958,12 +1051,124 @@ class Penawaran extends MY_Controller
 
         $id = (int)$id;
 
+        // Yang boleh approve hanya atasan / super_admin (staff purchasing hanya membuat)
+        if (!in_array($this->session->userdata('role'), ['atasan', 'super_admin'], TRUE)) {
+            $this->session->set_flashdata('error', 'Hanya atasan yang dapat meng-approve penawaran.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $cek = $this->Penawaran_model->get_penawaran_detail($id);
+        if ($cek && ($cek['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', 'Penawaran yang sudah dibatalkan tidak bisa di-approve. Aktifkan kembali dulu.');
+            redirect('penawaran/detail/' . $id);
+        }
+
         if ($this->Penawaran_model->approve_penawaran($id, $this->session->userdata('user_id') ?? 0)) {
             $this->session->set_flashdata('success', 'Penawaran berhasil di-approve. Data tidak bisa diedit lagi.');
         } else {
             $this->session->set_flashdata('error', 'Penawaran tidak ditemukan atau sudah di-approve.');
         }
 
+        redirect('penawaran/detail/' . $id);
+    }
+
+    // Role yang boleh membatalkan / mengaktifkan kembali penawaran
+    private function _boleh_batal()
+    {
+        return in_array($this->session->userdata('role'), ['super_admin', 'atasan', 'staff_purchasing'], TRUE);
+    }
+
+    // Tandai penawaran BATAL (customer tidak jadi deal). Data tetap tersimpan sebagai riwayat.
+    // Bisa untuk penawaran draft maupun approved, asal belum ada Sales Order aktif.
+    public function batal($id)
+    {
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_404();
+        }
+
+        $id        = (int) $id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('penawaran');
+        }
+        if (!$this->_boleh_batal()) {
+            $this->session->set_flashdata('error', 'Anda tidak punya akses untuk membatalkan penawaran.');
+            redirect('penawaran/detail/' . $id);
+        }
+        if (($penawaran['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah berstatus batal.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $alasan = trim((string) $this->input->post('alasan_batal', TRUE));
+        if ($alasan === '') {
+            $this->session->set_flashdata('error', 'Alasan pembatalan wajib diisi.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $no_so = $this->_so_aktif($id);
+        if ($no_so !== null) {
+            $this->session->set_flashdata('error', 'Penawaran ini sudah dibuatkan Sales Order ' . $no_so . '. Batalkan SO tersebut dulu.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $data = ['status' => 'batal'];
+        if ($this->db->field_exists('alasan_batal', 'penawaran')) {
+            $data['alasan_batal'] = mb_substr($alasan, 0, 255);
+        }
+        if ($this->db->field_exists('dibatalkan_at', 'penawaran')) {
+            $data['dibatalkan_at'] = date('Y-m-d H:i:s');
+        }
+        if ($this->db->field_exists('dibatalkan_oleh', 'penawaran')) {
+            $data['dibatalkan_oleh'] = (int) ($this->session->userdata('user_id') ?? 0) ?: null;
+        }
+
+        if ($this->db->where('id', $id)->update('penawaran', $data)) {
+            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' ditandai BATAL.');
+        } else {
+            $err = $this->db->error();
+            $this->session->set_flashdata('error', 'Gagal membatalkan penawaran' . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
+        }
+        redirect('penawaran/detail/' . $id);
+    }
+
+    // Aktifkan kembali penawaran yang batal (mis. customer jadi deal).
+    // Status kembali ke DRAFT supaya harga bisa direvisi & di-approve ulang oleh atasan.
+    public function aktifkan($id)
+    {
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_404();
+        }
+
+        $id        = (int) $id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            redirect('penawaran');
+        }
+        if (!$this->_boleh_batal()) {
+            $this->session->set_flashdata('error', 'Anda tidak punya akses untuk mengaktifkan kembali penawaran.');
+            redirect('penawaran/detail/' . $id);
+        }
+        if (($penawaran['header']->status ?? 'draft') !== 'batal') {
+            $this->session->set_flashdata('error', 'Penawaran ini tidak berstatus batal.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $data = ['status' => 'draft'];
+        foreach (['alasan_batal', 'dibatalkan_at', 'dibatalkan_oleh', 'approved_at'] as $kolom) {
+            if ($this->db->field_exists($kolom, 'penawaran')) {
+                $data[$kolom] = null;
+            }
+        }
+
+        if ($this->db->where('id', $id)->update('penawaran', $data)) {
+            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' aktif kembali (status draft, perlu approval ulang).');
+        } else {
+            $err = $this->db->error();
+            $this->session->set_flashdata('error', 'Gagal mengaktifkan penawaran' . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
+        }
         redirect('penawaran/detail/' . $id);
     }
 }

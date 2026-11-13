@@ -25,6 +25,8 @@ $pasang_on  = ($biaya_pasang_db !== null);
 $ongkir_on  = ($biaya_ongkir_db !== null);
 $pasang_val = $pasang_on ? (string) round((float) $biaya_pasang_db) : '';
 $ongkir_val = $ongkir_on ? (string) round((float) $biaya_ongkir_db) : '';
+// Ongkir ikut dipotong PPh oleh customer (kolom penawaran.pph_ongkir, lihat database/pph_ongkir.sql)
+$pph_ongkir_on = $is_edit && $ongkir_on && !empty($pen->pph_ongkir) && (float) $pen->pph_persen > 0;
 
 $items_js = [];
 if ($is_edit && !empty($items_edit)) {
@@ -371,14 +373,30 @@ if ($is_edit && !empty($items_edit)) {
               <option value="konsinyasi" <?= $jenis_val === 'konsinyasi' ? 'selected' : ''; ?>>Konsinyasi / titip jual (sample)</option>
             </select>
           </div>
-          <div class="col-md-8 d-flex align-items-end">
+          <?php
+            $ada_kolom_masa = $this->db->field_exists('masa_konsinyasi', 'penawaran');
+            $masa_val = ($is_edit && in_array((int) ($pen->masa_konsinyasi ?? 0), [30, 60], true)) ? (int) $pen->masa_konsinyasi : 60;
+          ?>
+          <?php if ($ada_kolom_masa): ?>
+            <div class="col-md-3" id="wrap_masa_konsinyasi" style="<?= $jenis_val === 'konsinyasi' ? '' : 'display:none'; ?>">
+              <label for="masa_konsinyasi" class="form-label">Masa konsinyasi</label>
+              <select id="masa_konsinyasi" name="masa_konsinyasi" class="form-select" <?= $pajak_lock; ?>>
+                <option value="30" <?= $masa_val === 30 ? 'selected' : ''; ?>>30 hari</option>
+                <option value="60" <?= $masa_val === 60 ? 'selected' : ''; ?>>60 hari</option>
+              </select>
+            </div>
+          <?php endif; ?>
+          <div class="<?= $ada_kolom_masa ? 'col-md-5' : 'col-md-8'; ?> d-flex align-items-end">
             <div class="form-text" id="info_konsinyasi" style="<?= $jenis_val === 'konsinyasi' ? '' : 'display:none'; ?>">
-              <i class="bi bi-info-circle me-1"></i>Barang dititip ke customer dengan harga di penawaran ini. Tanpa DP; yang ditagih hanya barang yang laku, sisanya ditarik kembali ke gudang.
+              <i class="bi bi-info-circle me-1"></i>Barang dititip ke customer dengan harga di penawaran ini. Tanpa DP; yang ditagih hanya barang yang laku, sisanya ditarik kembali ke gudang. Masa konsinyasi dihitung sejak tanggal surat jalan.
             </div>
           </div>
           <script>
             document.getElementById('jenis_penjualan').addEventListener('change', function () {
-              document.getElementById('info_konsinyasi').style.display = this.value === 'konsinyasi' ? '' : 'none';
+              var tampil = this.value === 'konsinyasi' ? '' : 'none';
+              document.getElementById('info_konsinyasi').style.display = tampil;
+              var wm = document.getElementById('wrap_masa_konsinyasi');
+              if (wm) wm.style.display = tampil;
             });
           </script>
         <?php endif; ?>
@@ -425,6 +443,10 @@ if ($is_edit && !empty($items_edit)) {
           <div id="wrapOngkir" class="<?= $ongkir_on ? '' : 'd-none'; ?>">
             <label for="biaya_ongkir" class="form-label"><?= translate('biaya_ongkir') ?></label>
             <input type="number" min="0" step="1" id="biaya_ongkir" name="biaya_ongkir" class="form-control" placeholder="Rp" value="<?= html_escape($ongkir_val); ?>" <?= $ongkir_on ? '' : 'disabled'; ?>>
+            <div class="form-check form-switch mt-2 mb-0">
+              <input class="form-check-input" type="checkbox" role="switch" id="pph_ongkir" name="pph_ongkir" value="1" <?= $pph_ongkir_on ? 'checked' : ''; ?> <?= ($ongkir_on && $pajak_lock === '') ? '' : 'disabled'; ?>>
+              <label class="form-check-label small" for="pph_ongkir">Ongkir ikut dipotong PPh oleh customer</label>
+            </div>
           </div>
         </div>
       </div>
@@ -444,7 +466,7 @@ if ($is_edit && !empty($items_edit)) {
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
             <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong customer)</label>
           </div>
-          <div class="form-text" id="infoPph">PPh <?= html_escape($tarif_pph); ?>% hanya bisa dipilih kalau ada biaya pemasangan / instalasi, dihitung dari nilai jasa pemasangan saja, dan mengurangi grand total.</div>
+          <div class="form-text" id="infoPph">PPh <?= html_escape($tarif_pph); ?>% hanya bisa dipilih kalau ada biaya pemasangan / instalasi (atau ongkir yang ikut dipotong PPh). Dihitung dari nilai jasa pemasangan<span id="infoPphOngkir" class="d-none"> + ongkir</span>, dan mengurangi grand total.</div>
         </div>
       </div>
     </div>
@@ -463,7 +485,7 @@ if ($is_edit && !empty($items_edit)) {
             <span class="text-muted"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong)</span><span id="sumPph">Rp 0</span>
+            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong)<span id="sumDppPph" class="d-block" style="font-size:.75rem"></span></span><span id="sumPph">Rp 0</span>
           </div>
           <div class="total-box mt-3">
             <div class="text-muted small"><?= translate('grand_total') ?></div>
@@ -800,6 +822,7 @@ if ($is_edit && !empty($items_edit)) {
     var inpOngkir = document.getElementById('biaya_ongkir');
     var wrapPasang = document.getElementById('wrapPasang');
     var wrapOngkir = document.getElementById('wrapOngkir');
+    var chkPphOngkir = document.getElementById('pph_ongkir');
     var TARIF_PPN = <?= (float) $tarif_ppn; ?>;
     var TARIF_PPH = <?= (float) $tarif_pph; ?>;
     var IS_MANUAL = <?= $is_manual ? 'true' : 'false'; ?>;
@@ -1299,16 +1322,28 @@ if ($is_edit && !empty($items_edit)) {
       var totalInstalasiSemua = rows.reduce(function(s, card) {
         return s + (parseFloat(card.dataset.instalasi) || 0);
       }, 0);
-      var adaPasang = pasang > 0 || totalInstalasiSemua > 0;
+      // Ongkir ikut dipotong PPh? (switch hanya aktif kalau ongkir dipakai)
+      if (chkPph.dataset.kunci !== '1') {
+        chkPphOngkir.disabled = !chkOngkir.checked;
+      }
+      if (!chkOngkir.checked) chkPphOngkir.checked = false;
+      var ongkirKenaPph = chkPphOngkir.checked ? ongkir : 0;
+
+      var adaPasang = pasang > 0 || totalInstalasiSemua > 0 || ongkirKenaPph > 0;
       if (chkPph.dataset.kunci !== '1') {
         chkPph.disabled = !adaPasang;
       }
       if (!adaPasang) chkPph.checked = false;
 
       var ppn = chkPpn.checked ? Math.round(dasar * TARIF_PPN / 100) : 0;
-      // PPh 23 hanya dari nilai jasa pemasangan (biaya pasang + instalasi), bukan seluruh subtotal
-      var dasarJasa = pasang + totalInstalasiSemua;
+      // PPh 23 dari nilai jasa pemasangan (biaya pasang + instalasi) + ongkir kalau dicentang,
+      // bukan dari seluruh subtotal barang
+      var dasarJasa = pasang + totalInstalasiSemua + ongkirKenaPph;
       var pph = chkPph.checked ? Math.round(dasarJasa * TARIF_PPH / 100) : 0;
+      document.getElementById('infoPphOngkir').classList.toggle('d-none', !(ongkirKenaPph > 0));
+      document.getElementById('sumDppPph').textContent = pph > 0
+        ? 'dari ' + rupiah(dasarJasa) + (ongkirKenaPph > 0 ? ' (jasa + ongkir)' : ' (jasa)')
+        : '';
       // PPh dipotong customer -> mengurangi grand total
       var grand = dasar + ppn - pph;
 
@@ -1334,6 +1369,14 @@ if ($is_edit && !empty($items_edit)) {
     });
     inpPasang.addEventListener('input', segarkan);
     inpOngkir.addEventListener('input', segarkan);
+    chkPphOngkir.addEventListener('change', function() {
+      // Centang "ongkir kena PPh" -> otomatis nyalakan PPh juga
+      if (chkPphOngkir.checked && !chkPph.checked) {
+        segarkan();
+        if (!chkPph.disabled) chkPph.checked = true;
+      }
+      segarkan();
+    });
 
     wrap.addEventListener('input', function(e) {
       if (e.target.classList.contains('it-barang-search')) {

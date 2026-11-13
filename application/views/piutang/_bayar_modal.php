@@ -27,7 +27,7 @@
             <select name="jenis" id="bp_jenis" class="form-select form-select-sm">
               <option value="dp">DP</option>
               <option value="pelunasan">Pelunasan</option>
-              <option value="lainnya">Lainnya / cicilan</option>
+              <option value="lainnya">Lainnya</option>
             </select>
           </div>
           <div class="col-12">

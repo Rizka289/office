@@ -48,15 +48,49 @@ $rp = function ($n) {
     </div>
   <?php endif; ?>
 
-  <!-- KPI Ringkasan -->
+  <!-- Periode ringkasan: kotak KPI & tabel di bawah selalu memakai periode yang sama -->
+  <?php
+    $periode   = $periode ?? 'semua';
+    $q_periode = function ($p) use ($filter_q) {
+      $qs = array('periode' => $p);
+      if (!empty($filter_q)) { $qs['q'] = $filter_q; }
+      return site_url('sales_order') . '?' . http_build_query($qs);
+    };
+    $tombol_periode = array('bulan_ini' => 'Bulan ini', 'bulan_lalu' => 'Bulan lalu', 'tahun_ini' => 'Tahun ini', 'semua' => 'Semua');
+  ?>
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+    <div class="small text-muted">
+      <i class="bi bi-calendar3 me-1"></i>Ringkasan periode:
+      <span class="fw-semibold text-dark"><?= html_escape($label_periode ?? 'Semua periode'); ?></span>
+      <?php if (!empty($filter_q)): ?>
+        · pencarian "<span class="fw-semibold text-dark"><?= html_escape($filter_q); ?></span>"
+      <?php endif; ?>
+    </div>
+    <div class="btn-group btn-group-sm" role="group" aria-label="Pilih periode">
+      <?php foreach ($tombol_periode as $kode => $teks): ?>
+        <a href="<?= $q_periode($kode); ?>" class="btn <?= $periode === $kode ? 'btn-success' : 'btn-outline-secondary'; ?>"><?= $teks; ?></a>
+      <?php endforeach; ?>
+    </div>
+  </div>
+
+  <!-- KPI Ringkasan
+       1) SO dibuat      : menurut TANGGAL SO pada periode
+       2) Uang masuk     : menurut TANGGAL BAYAR pada periode (termasuk pelunasan SO bulan-bulan lalu)
+       3) Piutang        : SEMUA SO belum lunas s/d hari ini (tidak ikut periode)
+       4) Sisa tagihan   : sisa dari SO yang dibuat pada periode (sama dengan tabel di bawah) -->
+  <?php
+    $um = isset($uang_masuk) ? $uang_masuk : array('total' => 0, 'dp' => 0, 'pelunasan' => 0, 'lainnya' => 0, 'pph' => 0);
+    $pt = isset($piutang) ? $piutang : array('total' => 0, 'jml_so' => 0, 'lama' => 0, 'jml_lama' => 0);
+    $boleh_piutang = in_array($this->session->userdata('role'), array('super_admin', 'atasan', 'finance'), true);
+  ?>
   <div class="row g-3 mb-3">
     <div class="col-6 col-lg-3">
       <div class="kpi-card">
         <div class="kpi-icon bg-total"><i class="bi bi-cart-check"></i></div>
         <div>
-          <div class="kpi-value fw-bold fs-5"><?= (int) ($total_so ?? 0); ?></div>
-          <div class="kpi-label text-muted small"><?= translate('lbl_t_so') ?></div>
-          <div class="text-muted small"><?= $rp($total_nilai ?? 0); ?></div>
+          <div class="kpi-value fw-bold fs-5"><?= $rp($total_nilai ?? 0); ?></div>
+          <div class="kpi-label text-muted small">Nilai SO dibuat</div>
+          <div class="text-muted small"><?= (int) ($total_so ?? 0); ?> SO · menurut tgl SO</div>
         </div>
       </div>
     </div>
@@ -64,26 +98,37 @@ $rp = function ($n) {
       <div class="kpi-card">
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
-          <div class="kpi-value fw-bold fs-5"><?= $rp($total_dp ?? 0); ?></div>
-          <div class="kpi-label text-muted small"><?= translate('lbl_dp') ?></div>
+          <div class="kpi-value fw-bold fs-5"><?= $rp($um['total']); ?></div>
+          <div class="kpi-label text-muted small">Uang masuk</div>
+          <div class="text-muted small" title="Dihitung dari tanggal pembayaran, termasuk pelunasan SO bulan sebelumnya">
+            DP <?= $rp($um['dp']); ?> · Pelunasan <?= $rp($um['pelunasan']); ?><?= $um['lainnya'] > 0 ? ' · Lainnya ' . $rp($um['lainnya']) : ''; ?>
+          </div>
+          <?php if ($um['pph'] > 0): ?>
+            <div class="text-muted" style="font-size:.72rem">+ bukti potong PPh <?= $rp($um['pph']); ?></div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg-3">
       <div class="kpi-card">
-        <div class="kpi-icon bg-terima"><i class="bi bi-check2-circle"></i></div>
+        <div class="kpi-icon bg-sisa"><i class="bi bi-hourglass-split"></i></div>
         <div>
-          <div class="kpi-value fw-bold fs-5"><?= $rp($total_diterima ?? 0); ?></div>
-          <div class="kpi-label text-muted small">Total diterima</div>
+          <div class="kpi-value fw-bold fs-5"><?= $rp($pt['total']); ?></div>
+          <div class="kpi-label text-muted small">
+            Total piutang s/d hari ini
+            <?php if ($boleh_piutang): ?><a href="<?= site_url('piutang'); ?>" class="ms-1" title="Buka menu Piutang"><i class="bi bi-box-arrow-up-right"></i></a><?php endif; ?>
+          </div>
+          <div class="text-muted small"><?= (int) $pt['jml_so']; ?> SO belum lunas<?php if ($pt['lama'] > 0): ?> · <?= $rp($pt['lama']); ?> dari periode sebelumnya<?php endif; ?></div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg-3">
       <div class="kpi-card">
-        <div class="kpi-icon bg-sisa"><i class="bi bi-wallet2"></i></div>
+        <div class="kpi-icon bg-terima"><i class="bi bi-wallet2"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($sisa_diterima ?? 0); ?></div>
-          <div class="kpi-label text-muted small"><?= translate('lbl_tagihan') ?></div>
+          <div class="kpi-label text-muted small">Sisa tagihan SO periode ini</div>
+          <div class="text-muted small"><?= (int) ($jml_belum_lunas ?? 0); ?> SO belum lunas</div>
         </div>
       </div>
     </div>
@@ -92,6 +137,10 @@ $rp = function ($n) {
   <!-- Toolbar: filter + tombol tambah -->
   <div class="toolbar-card">
     <?= form_open('sales_order', array('method' => 'get', 'class' => 'row g-2 align-items-end')); ?>
+    <?php if ($periode !== 'custom'): ?>
+      <!-- Pertahankan periode yang sedang dipilih saat mencari tanpa mengisi tanggal -->
+      <input type="hidden" name="periode" value="<?= html_escape($periode); ?>">
+    <?php endif; ?>
     <div class="col-md-3">
       <label class="form-label small text-muted mb-1"><?= translate('cari') ?></label>
       <div class="input-group">
@@ -185,7 +234,10 @@ $rp = function ($n) {
             <tr class="empty-row">
               <td colspan="11">
                 <i class="bi bi-inbox"></i>
-                Belum ada data Sales Order<?= (!empty($filter_q)) ? ' untuk pencarian "' . html_escape($filter_q) . '"' : ''; ?>.
+                Belum ada data Sales Order<?= (!empty($filter_q)) ? ' untuk pencarian "' . html_escape($filter_q) . '"' : ''; ?> pada periode <?= html_escape($label_periode ?? '-'); ?>.
+                <?php if (($periode ?? '') !== 'semua'): ?>
+                  <a href="<?= $q_periode('semua'); ?>">Tampilkan semua periode</a>
+                <?php endif; ?>
               </td>
             </tr>
           <?php endif; ?>

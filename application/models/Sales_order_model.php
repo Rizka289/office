@@ -144,6 +144,87 @@ class Sales_order_model extends CI_Model
     }
 
     // ------------------------------------------------------------------
+    // UANG MASUK pada periode = dihitung dari TANGGAL BAYAR (sales_order_pembayaran.tanggal),
+    // bukan tanggal SO. Jadi pelunasan bulan ini untuk SO bulan lalu ikut terhitung bulan ini.
+    // PPh (bukti potong) bukan uang tunai -> dipisah.
+    // $dari / $sampai kosong = semua periode.
+    // ------------------------------------------------------------------
+    public function get_uang_masuk($dari = '', $sampai = '', $q = '')
+    {
+        $this->db->select("sp.jenis, COALESCE(SUM(sp.nominal), 0) AS total, COUNT(DISTINCT sp.id_so) AS jml_so", false)
+            ->from('sales_order_pembayaran sp')
+            ->join('sales_order so', 'so.id = sp.id_so', 'inner')
+            ->join('customer c', 'c.id = so.id_customer', 'left')
+            ->where("COALESCE(so.status, '') <> 'batal'", null, false);
+        if ($dari !== '') {
+            $this->db->where('sp.tanggal >=', $dari);
+        }
+        if ($sampai !== '') {
+            $this->db->where('sp.tanggal <=', $sampai . ' 23:59:59');
+        }
+        if ($q !== '') {
+            $this->db->group_start()
+                ->like('so.no_so', $q)
+                ->or_like('so.no_po_customer', $q)
+                ->or_like('c.nama', $q)
+                ->group_end();
+        }
+        $rows = $this->db->group_by('sp.jenis')->get()->result();
+
+        $hasil = array('total' => 0, 'dp' => 0, 'pelunasan' => 0, 'lainnya' => 0, 'pph' => 0);
+        foreach ($rows as $r) {
+            $n = (float) $r->total;
+            if ($r->jenis === 'pph') {
+                $hasil['pph'] += $n;          // bukan uang tunai
+                continue;
+            }
+            $hasil['total'] += $n;
+            if ($r->jenis === 'dp') {
+                $hasil['dp'] += $n;
+            } elseif ($r->jenis === 'pelunasan' || $r->jenis === 'termin') {
+                $hasil['pelunasan'] += $n;
+            } else {
+                $hasil['lainnya'] += $n;
+            }
+        }
+        return $hasil;
+    }
+
+    // ------------------------------------------------------------------
+    // PIUTANG BERJALAN = semua SO (bukan batal) yang masih ada sisa tagihan
+    // SAMPAI HARI INI, dari bulan mana pun. Tidak ikut filter periode.
+    // $batas_lama: SO dengan tanggal < $batas_lama dihitung sebagai "dari periode sebelumnya".
+    // ------------------------------------------------------------------
+    public function get_piutang_berjalan($batas_lama = '', $q = '')
+    {
+        $this->db->select("so.id, so.tanggal,
+                (so.grand_total - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+                    WHERE sp.id_so = so.id)) AS sisa", false)
+            ->from('sales_order so')
+            ->join('customer c', 'c.id = so.id_customer', 'left')
+            ->where("COALESCE(so.status, '') <> 'batal'", null, false);
+        if ($q !== '') {
+            $this->db->group_start()
+                ->like('so.no_so', $q)
+                ->or_like('so.no_po_customer', $q)
+                ->or_like('c.nama', $q)
+                ->group_end();
+        }
+        $rows = $this->db->having('sisa >', 0.5)->get()->result();
+
+        $hasil = array('total' => 0, 'jml_so' => 0, 'lama' => 0, 'jml_lama' => 0);
+        foreach ($rows as $r) {
+            $hasil['total'] += (float) $r->sisa;
+            $hasil['jml_so']++;
+            if ($batas_lama !== '' && substr((string) $r->tanggal, 0, 10) < $batas_lama) {
+                $hasil['lama'] += (float) $r->sisa;
+                $hasil['jml_lama']++;
+            }
+        }
+        return $hasil;
+    }
+
+    // ------------------------------------------------------------------
     // Salin penawaran (4 tabel) -> sales_order (4 tabel) dalam satu transaksi.
     //
     // PERBAIKAN:
@@ -169,6 +250,12 @@ class Sales_order_model extends CI_Model
     {
         $e = $this->db->error();
         $this->db->trans_rollback();
+        if ((int) ($e['code'] ?? 0) === 1062 && strpos((string) $e['message'], 'uk_so_penawaran') !== false) {
+            log_message('error', 'Sales_order_model: ' . $e['message']);
+            return array(false, 'Penawaran ini pernah dibuatkan SO yang sudah dibatalkan, tetapi database masih '
+                . 'mengunci 1 penawaran = 1 SO (index uk_so_penawaran). Jalankan database/fix_so_penawaran_batal.sql '
+                . 'di phpMyAdmin, lalu simpan ulang.');
+        }
         if (!empty($e['code'])) {
             log_message('error', 'Sales_order_model: ' . $pesan . ' | DB ' . $e['code'] . ': ' . $e['message']);
             $pesan .= ' (DB ' . $e['code'] . ': ' . $e['message'] . ')';
@@ -321,21 +408,65 @@ class Sales_order_model extends CI_Model
         return array(true, 'Sales Order dibatalkan. Penawarannya bisa dibuatkan SO baru.');
     }
 
-    // Ubah info SO yang masih boleh berubah: No. PO customer, target tanggal kirim & catatan.
+    // Ubah info SO yang masih boleh berubah: tanggal SO, No. PO customer, target tanggal kirim & catatan.
     // Kolom lain (item, harga, termin, grand total) sengaja TIDAK bisa diubah.
+    //
+    // Tanggal SO ikut menentukan nomor SO (urut/SO-OPJI/BULAN/TAHUN):
+    //   - beda hari, bulan & tahun sama -> nomor tetap
+    //   - beda bulan, tahun sama        -> nomor urut tetap, bagian BULAN diganti
+    //   - beda tahun                    -> dapat nomor urut baru di tahun tersebut
     public function ubah_info($id, $d)
     {
-        $so = $this->db->select('id, status')->get_where('sales_order', array('id' => (int) $id))->row();
+        $debug_lama         = $this->db->db_debug;
+        $this->db->db_debug = false;
+        $this->db->trans_begin();
+
+        $q  = $this->db->query('SELECT id, no_so, no_urut, tahun, tanggal, status FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id));
+        $so = $q ? $q->row() : null;
         if (!$so || in_array($so->status, array('batal', 'selesai'), true)) {
+            $this->db->trans_rollback();
+            $this->db->db_debug = $debug_lama;
             return array(false, 'SO tidak ditemukan atau sudah batal / selesai, data tidak bisa diubah.');
         }
-        $ok = $this->db->where('id', (int) $id)->update('sales_order', array(
+
+        $data = array(
             'no_po_customer' => $d['no_po_customer'],
             'tgl_kirim'      => $d['tgl_kirim'] !== '' ? $d['tgl_kirim'] : null,
             'catatan'        => isset($d['catatan']) ? $d['catatan'] : '',
-        ));
-        return $ok ? array(true, 'No. PO customer, tanggal kirim dan catatan diperbarui.')
-                   : array(false, 'Gagal memperbarui data SO.');
+        );
+
+        $pesan_no   = '';
+        $tgl_lama   = substr((string) $so->tanggal, 0, 10);
+        $tgl_baru   = isset($d['tanggal']) ? (string) $d['tanggal'] : '';
+        if ($tgl_baru !== '' && $tgl_baru !== $tgl_lama) {
+            $data['tanggal'] = $tgl_baru;
+            $tahun_baru      = (int) date('Y', strtotime($tgl_baru));
+            $bulan_baru      = date('m', strtotime($tgl_baru));
+
+            if ($tahun_baru === (int) $so->tahun && (int) $so->no_urut > 0) {
+                $no_baru = sprintf('%02d/SO-OPJI/%s/%d', (int) $so->no_urut, $bulan_baru, $tahun_baru);
+            } else {
+                $no              = $this->generate_no($tgl_baru, true);
+                $no_baru         = $no['no_so'];
+                $data['no_urut'] = $no['no_urut'];
+                $data['tahun']   = $no['tahun'];
+            }
+            if ($no_baru !== $so->no_so) {
+                $data['no_so'] = $no_baru;
+                $pesan_no      = ' Nomor SO berubah dari ' . $so->no_so . ' menjadi ' . $no_baru . '.';
+            }
+        }
+
+        $ok = $this->db->where('id', (int) $id)->update('sales_order', $data);
+        if (!$ok || $this->db->trans_status() === false) {
+            $hasil = $this->_gagal('Gagal memperbarui data SO.');
+            $this->db->db_debug = $debug_lama;
+            return $hasil;
+        }
+        $this->db->trans_commit();
+        $this->db->db_debug = $debug_lama;
+
+        return array(true, 'Data SO diperbarui.' . $pesan_no);
     }
 
     // ================= PEMBAYARAN (DP / pelunasan) =================

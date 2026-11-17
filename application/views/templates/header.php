@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= isset($page_title) ? $page_title . ' - Dashboard' : 'Dashboard'; ?></title>
+    <title><?= isset($page_title) ? $page_title . ' - Dashboard' : translate('i18n_dashboard'); ?></title>
     <!-- Bootstrap 5 & Bootstrap Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
@@ -108,6 +108,14 @@
             background: rgba(255, 255, 255, .08);
         }
 
+        .sidebar .nav-section {
+            padding: .6rem 1.25rem .2rem 2.8rem;
+            font-size: .68rem;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            color: rgba(255, 255, 255, .45);
+        }
+
         .sidebar .arrow-icon {
             font-size: .75rem;
             transition: transform 0.3s ease;
@@ -141,6 +149,10 @@
         .profile-menu {
             position: relative;
         }
+
+        .notif-bell { width:38px; height:38px; display:flex; align-items:center; justify-content:center; padding:0; }
+        .notif-menu { width:330px; max-width:calc(100vw - 24px); }
+        .notif-menu .notif-scroll { max-height:360px; overflow-y:auto; }
 
         .profile-menu .profile-dropdown {
             position: absolute;
@@ -253,27 +265,27 @@
 
         [
             'key'   => 'master',
-            'label' => function_exists('translate') ? translate('menu_master') : 'Master Data',
+            'label' => translate('menu_master'),
             'icon'  => 'bi-database-fill-gear',
-            'roles' => ['super_admin'], // hanya super_admin yang lihat grup Master Data
+            'roles' => ['super_admin', 'staff_purchasing'], // purchasing hanya melihat menu Supplier (item lain tetap super_admin)
             'items' => [
                 [
                     'key'   => 'user',
-                    'label' => function_exists('translate') ? translate('menu_user') : 'User',
+                    'label' => translate('menu_user'),
                     'icon'  => 'bi-people',
                     'url'   => 'user',
                     'roles' => ['super_admin'],
                 ],
                 [
                     'key'   => 'supplier',
-                    'label' => function_exists('translate') ? translate('menu_supplier') : 'Supplier',
+                    'label' => translate('menu_supplier'),
                     'icon'  => 'bi-people',
                     'url'   => 'supplier',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
                 [
                     'key'   => 'customer',
-                    'label' => function_exists('translate') ? translate('menu_customer') : 'Customer',
+                    'label' => translate('menu_customer'),
                     'icon'  => 'bi-people',
                     'url'   => 'customer',
                     'roles' => ['super_admin'],
@@ -283,27 +295,27 @@
 
         [
             'key'   => 'produk',
-            'label' => function_exists('translate') ? translate('master_produk') : 'Master Produk',
+            'label' => translate('master_produk'),
             'icon'  => 'bi bi-clipboard-check-fill',
             'roles' => ['super_admin'], // hanya super_admin yang lihat grup Master Data
             'items' => [
                 [
                     'key'   => 'kategori',
-                    'label' => function_exists('translate') ? translate('kategori_barang') : 'Kategori Barang',
+                    'label' => translate('kategori_barang'),
                     'icon'  => 'bi-list-check',
                     'url'   => 'kategori_barang',
                     'roles' => ['super_admin'],
                 ],
                 [
                     'key'   => 'barang',
-                    'label' => function_exists('translate') ? translate('master_barang') : 'Barang',
+                    'label' => translate('master_barang'),
                     'icon'  => 'bi-list-check',
                     'url'   => 'barang',
                     'roles' => ['super_admin'],
                 ],
                 [
                     'key'   => 'location',
-                    'label' => function_exists('translate') ? translate('app_rak') : 'Lokasi Rak',
+                    'label' => translate('app_rak'),
                     'icon'  => 'bi bi-archive',
                     'url'   => 'locations',
                     'roles' => ['super_admin'],
@@ -311,67 +323,161 @@
             ],
         ],
         [
-            'key'   => 'purchasing',
-            'label' => function_exists('translate') ? translate('purchasing') : 'Purchasing',
-            'icon'  => 'bi bi-basket2',
-            'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
+            'key'   => 'penjualan',
+            'label' => translate('penjualan'),
+            'icon'  => 'bi bi-cart3',
+            'roles' => ['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'], // yang boleh lihat grup ini
             'items' => [
                 [
-                    'key'   => 'purchase_order',
-                    'label' => function_exists('translate') ? translate('app_purchasing') : 'Pesanan Pembelian',
-                    'icon'  => 'bi-box',
-                    'url'   => 'purchase_order',
-                    'roles' => ['super_admin', 'staff_purchasing'],
+                    'key'   => 'penawaran',
+                    'label' => translate('penawaran'),
+                    'icon'  => 'bi-tags',
+                    'url'   => 'penawaran',
+                    'roles' => ['super_admin', 'atasan', 'staff_purchasing'],
                 ],
-                 [
-                    'key'   => 'penerimaan_barang',
-                    'label' => function_exists('translate') ? translate('penerimaan_barang') : 'Penerimaan Barang',
-                    'icon'  => 'bi bi-card-checklist',
-                    'url'   => 'penerimaan_barang',
-                    'roles' => ['super_admin', 'staff_purchasing','staff_gudang'],
+                [
+                    'key'   => 'sales_order',
+                    'label' => translate('pesanan_penjualan'),
+                    'icon'  => 'bi-box',
+                    'url'   => 'sales_order',
+                    'roles' => ['super_admin', 'atasan', 'finance', 'staff_purchasing'],
+                ],
+                [
+                    // SO berjalan: atur sumber item, buat PO / SPK / SJ
+                    'key'   => 'pemenuhan',
+                    'label' => translate('app_purchasing'),
+                    'icon'  => 'bi-diagram-3',
+                    'url'   => 'pemenuhan',
+                    'roles' => ['super_admin', 'atasan', 'staff_purchasing', 'staff_gudang'],
                 ],
             ],
         ],
         [
-            'key'   => 'penjualan',
-            'label' => function_exists('translate') ? translate('penjualan') : 'Penjualan',
-            'icon'  => 'bi bi-cart3',
-            'roles' => ['super_admin', 'staff_purchasing'], // yang boleh lihat grup ini
+            'key'   => 'purchasing',
+            'label' => translate('purchasing'),
+            'icon'  => 'bi bi-basket2',
+            'roles' => ['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'],
             'items' => [
                 [
-                    'key'   => 'penawaran',
-                    'label' => function_exists('translate') ? translate('penawaran') : 'Pesanan Penjualan',
-                    'icon'  => 'bi-tags',
-                    'url'   => 'penawaran',
-                    'roles' => ['super_admin', 'staff_purchasing'],
+                    'key'   => 'po',
+                    'label' => translate('i18n_purchase_order'),
+                    'icon'  => 'bi-cart',
+                    'url'   => 'pemenuhan/po',
+                    'roles' => ['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'],
                 ],
                 [
-                    'key'   => 'sales_order',
-                    'label' => function_exists('translate') ? translate('pesanan_penjualan') : 'Pesanan Penjualan',
-                    'icon'  => 'bi-box',
-                    'url'   => 'sales_order',
-                    'roles' => ['super_admin', 'staff_purchasing'],
+                    'key'   => 'po_terima',
+                    'label' => translate('penerimaan_barang'),
+                    'icon'  => 'bi-box-arrow-in-down',
+                    'url'   => 'pemenuhan/penerimaan',
+                    'roles' => ['super_admin', 'staff_purchasing', 'staff_gudang'],
                 ],
-               
+            ],
+        ],
+        [
+            'key'   => 'pengiriman',
+            'label' => translate('i18n_pengiriman'),
+            'icon'  => 'bi bi-truck',
+            'roles' => ['super_admin', 'atasan', 'staff_purchasing', 'staff_gudang'],
+            'items' => [
+                [
+                    'key'   => 'pm_sj',
+                    'label' => translate('i18n_surat_jalan'),
+                    'icon'  => 'bi-box-seam',
+                    'url'   => 'pemenuhan/sj_list',
+                    'roles' => ['super_admin', 'atasan', 'staff_purchasing', 'staff_gudang'],
+                ],
+            ],
+        ],
+        [
+            'key'   => 'keuangan',
+            'label' => translate('i18n_keuangan_2'),
+            'icon'  => 'bi bi-cash-coin',
+            'roles' => ['super_admin', 'atasan', 'finance'],
+            // 'section' = sub-judul kecil di dalam grup (Uang Masuk / Uang Keluar / Laporan)
+            'items' => [
+                // ---------- UANG MASUK ----------
+                [
+                    // Piutang = SO belum lunas (DP -> kirim -> pelunasan). Lihat controllers/Piutang.php
+                    'section' => translate('i18n_menu_uang_masuk'),
+                    'key'   => 'piutang',
+                    'label' => translate('i18n_piutang_customer'),
+                    'icon'  => 'bi-receipt',
+                    'url'   => 'piutang',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    'section' => translate('i18n_menu_uang_masuk'),
+                    'key'   => 'piutang_terima',
+                    'label' => translate('i18n_penerimaan_pembayaran'),
+                    'icon'  => 'bi-wallet2',
+                    'url'   => 'piutang/penerimaan',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    // Uang masuk BUKAN dari penjualan: modal/investasi, pinjaman, bunga, jual aset. Lihat controllers/Kas_masuk.php
+                    'section' => translate('i18n_menu_uang_masuk'),
+                    'key'   => 'kas_masuk',
+                    'label' => translate('i18n_km_menu'),
+                    'icon'  => 'bi-piggy-bank',
+                    'url'   => 'kas_masuk',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                // ---------- UANG KELUAR ----------
+                [
+                    'section' => translate('i18n_menu_uang_keluar'),
+                    'key'   => 'hutang',
+                    'label' => translate('i18n_hutang_supplier'),
+                    'icon'  => 'bi-cash-stack',
+                    'url'   => 'pemenuhan/hutang',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    // Pengeluaran kantor di luar PO (listrik, gaji, ATK, dll). Lihat controllers/Biaya.php
+                    'section' => translate('i18n_menu_uang_keluar'),
+                    'key'   => 'biaya',
+                    'label' => translate('i18n_biaya_operasional'),
+                    'icon'  => 'bi-wallet',
+                    'url'   => 'biaya',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                // ---------- LAPORAN ----------
+                [
+                    'section' => translate('i18n_menu_laporan'),
+                    'key'   => 'biaya_rekap',
+                    'label' => translate('i18n_rekap_biaya'),
+                    'icon'  => 'bi-bar-chart',
+                    'url'   => 'biaya/rekap',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
+                [
+                    // Semua uang masuk vs keluar per bulan + saldo. Lihat controllers/Arus_kas.php
+                    'section' => translate('i18n_menu_laporan'),
+                    'key'   => 'arus_kas',
+                    'label' => translate('i18n_ak_judul'),
+                    'icon'  => 'bi-graph-up-arrow',
+                    'url'   => 'arus_kas',
+                    'roles' => ['super_admin', 'atasan', 'finance'],
+                ],
             ],
         ],
         [
             'key'   => 'inventory',
-            'label' => function_exists('translate') ? translate('inventory') : 'Inventory',
+            'label' => translate('inventory'),
             'icon'  => 'bi bi-box-seam-fill',
             'roles' => ['super_admin', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
             'items' => [
                
                 [
                     'key'   => 'stok_barang',
-                    'label' => function_exists('translate') ? translate('sb') : 'Stok',
+                    'label' => translate('sb'),
                     'icon'  => 'bi bi-clipboard-fill',
                     'url'   => 'stok',
                     'roles' => ['super_admin', 'staff_purchasing'],
                 ],
                 [
                     'key'   => 'stok_riwayat',
-                    'label' => function_exists('translate') ? translate('ks') : 'Stok',
+                    'label' => translate('ks'),
                     'icon'  => 'bi bi-clipboard-fill',
                     'url'   => 'stok_riwayat',
                     'roles' => ['super_admin', 'staff_purchasing'],
@@ -387,14 +493,20 @@
         ],
         [
             'key'   => 'produksi',
-            'label' => function_exists('translate') ? translate('produksi') : 'Produksi',
+            'label' => translate('produksi'),
             'icon'  => 'bi bi-box-seam-fill',
-            'roles' => ['super_admin', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
+            'roles' => ['super_admin', 'atasan', 'staff_purchasing','staff_gudang'], // yang boleh lihat grup ini
             'items' => [
-               
+                [
+                    'key'   => 'pm_spk',
+                    'label' => translate('i18n_spk_pesanan'),
+                    'icon'  => 'bi bi-hammer',
+                    'url'   => 'pemenuhan/spk_list',
+                    'roles' => ['super_admin', 'atasan', 'staff_purchasing', 'staff_gudang'],
+                ],
                 [
                     'key'   => 'spk',
-                    'label' => function_exists('translate') ? translate('spk') : 'Spk',
+                    'label' => translate('spk'),
                     'icon'  => 'bi bi-clipboard-fill',
                     'url'   => 'spk',
                     'roles' => ['super_admin', 'staff_purchasing'],
@@ -410,7 +522,71 @@
     // $active_menu dikirim dari controller lewat $data['active_menu']
     $active_menu = isset($active_menu) ? $active_menu : '';
 
-    function render_navigation($menu_id, $menu_groups, $current_role, $active_menu = '')
+    /**
+     * NOTIFIKASI per role (lonceng di topbar + badge di menu).
+     * Tambah notifikasi role lain cukup di blok ini.
+     *   atasan / super_admin : Penawaran & PO menunggu persetujuan
+     */
+    $notif_list  = array();   // tiap item: judul, sub, url, waktu
+    $notif_badge = array();   // key menu => jumlah
+    $notif_count = array('penawaran' => 0, 'po' => 0); // jumlah per jenis (untuk ringkasan dropdown)
+    if (in_array($current_role, array('atasan', 'super_admin'), true)) {
+        $CI        =& get_instance();
+        $db_debug  = $CI->db->db_debug;
+        $CI->db->db_debug = false; // kalau tabel/kolom belum ada, header tetap tampil
+
+        // 1) Penawaran yang belum di-approve (status draft / selain 'approved')
+        $qp = $CI->db->query(
+            "SELECT pen.id, pen.no_surat, pen.grand_total, pen.tanggal, cus.nama AS nama_customer, u.nama AS nama_pembuat
+               FROM penawaran pen
+               LEFT JOIN customer cus ON cus.id = pen.id_customer
+               LEFT JOIN users u      ON u.id = pen.id_user
+              WHERE pen.status IS NULL OR pen.status <> 'approved'
+              ORDER BY pen.id ASC"
+        );
+        foreach ($qp ? $qp->result() : array() as $r) {
+            $notif_list[] = array(
+                'ikon'  => 'bi-tags-fill text-primary',
+                'judul' => (translate('i18n_penawaran') . ' ') . $r->no_surat . (' ' . translate('i18n_menunggu_approval_2')),
+                'sub'   => trim(($r->nama_customer ?: '-') . (' ' . translate('i18n_rp_2') . ' ') . number_format((float) $r->grand_total, 0, ',', '.')
+                    . ($r->nama_pembuat ? (' ' . translate('i18n_oleh') . ' ') . $r->nama_pembuat : '')),
+                'url'   => site_url('penawaran/detail/' . (int) $r->id),
+                'waktu' => $r->tanggal ? date('d M Y', strtotime($r->tanggal)) : '',
+            );
+            $notif_count['penawaran']++;
+        }
+
+        // 2) PO yang masih draft
+        $q = $CI->db->query(
+            "SELECT po.id, po.no_po, po.total, po.tanggal, s.nama AS nama_supplier, so.no_so, u.nama AS nama_pembuat
+               FROM pm_po po
+               LEFT JOIN supplier s     ON s.id = po.id_supplier
+               LEFT JOIN sales_order so ON so.id = po.id_so
+               LEFT JOIN users u        ON u.id = po.id_user
+              WHERE po.status = 'draft'
+              ORDER BY po.id ASC"
+        );
+        $CI->db->db_debug = $db_debug;
+        foreach ($q ? $q->result() : array() as $r) {
+            $notif_list[] = array(
+                'ikon'  => 'bi-hourglass-split text-warning',
+                'judul' => 'PO ' . $r->no_po . (' ' . translate('i18n_menunggu_approval_2')),
+                'sub'   => trim(($r->nama_supplier ?: '-') . (' ' . translate('i18n_rp_2') . ' ') . number_format((float) $r->total, 0, ',', '.')
+                    . ($r->nama_pembuat ? (' ' . translate('i18n_oleh') . ' ') . $r->nama_pembuat : '')),
+                'url'   => site_url('pemenuhan/po_detail/' . (int) $r->id),
+                'waktu' => $r->tanggal ? date('d M Y', strtotime($r->tanggal)) : '',
+            );
+            $notif_count['po']++;
+        }
+        if ($notif_count['penawaran']) {
+            $notif_badge['penawaran'] = $notif_count['penawaran'];
+        }
+        if ($notif_count['po']) {
+            $notif_badge['po'] = $notif_count['po'];
+        }
+    }
+
+    function render_navigation($menu_id, $menu_groups, $current_role, $active_menu = '', $notif_badge = array())
     {
         // Cari lebih dulu grup mana yang MEMUAT active_menu, supaya grup itu
         // yang otomatis terbuka -- bukan selalu grup pertama.
@@ -450,15 +626,22 @@
             ?>
                 <li class="nav-item">
                     <a class="nav-link <?= $group_is_open ? '' : 'collapsed'; ?>" data-bs-toggle="collapse" href="#<?= $group_dom_id; ?>" role="button" aria-expanded="<?= $group_is_open ? 'true' : 'false'; ?>" aria-controls="<?= $group_dom_id; ?>">
-                        <div><i class="bi <?= $group['icon']; ?> main-icon"></i> <?= $group['label']; ?></div>
+                        <?php $group_badge = 0; foreach ($visible_items as $vi) { $group_badge += (int) ($notif_badge[$vi['key']] ?? 0); } ?>
+                        <div><i class="bi <?= $group['icon']; ?> main-icon"></i> <?= $group['label']; ?>
+                            <?php if ($group_badge > 0 && !$group_is_open): ?><span class="badge rounded-pill text-bg-danger ms-1"><?= $group_badge; ?></span><?php endif; ?>
+                        </div>
                         <i class="bi bi-chevron-right arrow-icon"></i>
                     </a>
                     <div class="collapse <?= $group_is_open ? 'show' : ''; ?>" id="<?= $group_dom_id; ?>" data-bs-parent="#<?= $menu_id; ?>">
                         <ul class="sub-menu">
-                            <?php foreach ($visible_items as $item): ?>
+                            <?php $last_section = null; foreach ($visible_items as $item): ?>
+                                <?php if (!empty($item['section']) && $item['section'] !== $last_section): $last_section = $item['section']; ?>
+                                    <li class="nav-section"><?= $item['section']; ?></li>
+                                <?php endif; ?>
                                 <li>
                                     <a class="nav-sub-link <?= $active_menu === $item['key'] ? 'active' : ''; ?>" href="<?= site_url($item['url']); ?>">
                                         <i class="bi <?= $item['icon']; ?>"></i> <?= $item['label']; ?>
+                                        <?php if (!empty($notif_badge[$item['key']])): ?><span class="badge rounded-pill text-bg-danger ms-1"><?= (int) $notif_badge[$item['key']]; ?></span><?php endif; ?>
                                     </a>
                                 </li>
                             <?php endforeach; ?>
@@ -480,7 +663,7 @@
             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
         </div>
         <hr class="text-white-50 mx-3">
-        <?php render_navigation('menuMobile', $menu_groups, $current_role, $active_menu); ?>
+        <?php render_navigation('menuMobile', $menu_groups, $current_role, $active_menu, $notif_badge); ?>
     </div>
 
     <div class="container-fluid">
@@ -490,7 +673,7 @@
                 <div class="brand">
                     <a href="<?= site_url('dashboard'); ?>">PT Oupai Pintu<br>Jendela Indonesia</a>
                 </div>
-                <?php render_navigation('menuDesktop', $menu_groups, $current_role, $active_menu); ?>
+                <?php render_navigation('menuDesktop', $menu_groups, $current_role, $active_menu, $notif_badge); ?>
                 <div class="p-3 small text-white-50 border-top border-white border-opacity-25">
                     &copy; 2026 PT Oupai Pintu Jendela Indonesia
                 </div>
@@ -505,7 +688,7 @@
                             <i class="bi bi-list fs-4"></i>
                         </button>
                         <div>
-                            <h5 class="mb-0"><?= isset($page_title) ? $page_title : 'Dashboard'; ?></h5>
+                            <h5 class="mb-0"><?= isset($page_title) ? $page_title : translate('i18n_dashboard'); ?></h5>
                             <?php if (isset($page_subtitle)): ?>
                                 <small class="text-muted d-none d-sm-block"><?= $page_subtitle; ?></small>
                             <?php endif; ?>
@@ -513,6 +696,67 @@
                     </div>
 
                     <div class="d-flex align-items-center gap-2">
+                        <?php
+                        // Pilihan bahasa (id / en / zh) - teks diambil dari tabel interfaces
+                        $lang_aktif = get_current_lang('id');
+                        $lang_list  = array('id' => 'Indonesia', 'en' => 'English', 'zh' => '中文');
+                        $lang_kode  = array('id' => 'ID', 'en' => 'EN', 'zh' => '中文');
+                        if (!isset($lang_list[$lang_aktif])) { $lang_aktif = 'id'; }
+                        ?>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="<?= translate('i18n_bahasa') ?>">
+                                <i class="bi bi-translate me-1"></i><?= $lang_kode[$lang_aktif]; ?>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <?php foreach ($lang_list as $kode => $nama_bahasa): ?>
+                                    <li>
+                                        <a class="dropdown-item d-flex justify-content-between gap-3 <?= $kode === $lang_aktif ? 'active' : ''; ?>" href="<?= site_url('language/switch_lang/' . $kode); ?>">
+                                            <span><?= $nama_bahasa; ?></span><small class="<?= $kode === $lang_aktif ? '' : 'text-muted'; ?>"><?= strtoupper($kode); ?></small>
+                                        </a>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                        <?php if (in_array($current_role, array('atasan', 'super_admin'), true)): ?>
+                            <div class="dropdown">
+                                <button class="btn btn-light position-relative rounded-circle notif-bell" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="<?= translate('i18n_notifikasi') ?>">
+                                    <i class="bi bi-bell<?= $notif_list ? '-fill text-warning' : ''; ?>"></i>
+                                    <?php if ($notif_list): ?>
+                                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill text-bg-danger"><?= count($notif_list) > 99 ? '99+' : count($notif_list); ?></span>
+                                    <?php endif; ?>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end p-0 shadow notif-menu">
+                                    <div class="px-3 py-2 border-bottom fw-semibold d-flex justify-content-between">
+                                        <span><?= translate('i18n_perlu_persetujuan') ?></span>
+                                        <span class="text-muted small"><?= (int) $notif_count['penawaran']; ?> <?= translate('i18n_penawaran_3') ?> <?= (int) $notif_count['po']; ?> <?= translate('i18n_po') ?></span>
+                                    </div>
+                                    <?php if (!$notif_list): ?>
+                                        <div class="px-3 py-4 text-center text-muted small"><i class="bi bi-check2-circle d-block fs-4 mb-1"></i><?= translate('i18n_tidak_ada_penawaran_po_yang_menunggu') ?></div>
+                                    <?php else: ?>
+                                        <div class="notif-scroll">
+                                            <?php foreach (array_slice($notif_list, 0, 10) as $n): ?>
+                                                <a href="<?= $n['url']; ?>" class="dropdown-item d-flex gap-2 py-2 border-bottom text-wrap">
+                                                    <i class="bi <?= $n['ikon']; ?> mt-1"></i>
+                                                    <div class="lh-sm">
+                                                        <div class="fw-semibold small"><?= html_escape($n['judul']); ?></div>
+                                                        <div class="text-muted" style="font-size:.75rem"><?= html_escape($n['sub']); ?></div>
+                                                        <div class="text-muted" style="font-size:.7rem"><?= html_escape($n['waktu']); ?></div>
+                                                    </div>
+                                                </a>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <div class="d-flex">
+                                            <?php if ($notif_count['penawaran']): ?>
+                                                <a href="<?= site_url('penawaran?status=pending'); ?>" class="dropdown-item text-center small py-2 text-primary"><?= translate('i18n_semua_penawaran') ?></a>
+                                            <?php endif; ?>
+                                            <?php if ($notif_count['po']): ?>
+                                                <a href="<?= site_url('pemenuhan/po?status=draft'); ?>" class="dropdown-item text-center small py-2 text-primary"><?= translate('i18n_semua_po') ?></a>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        <?php endif; ?>
                         <div class="profile-menu" tabindex="0">
                             <div class="profile-trigger d-flex align-items-center gap-2" style="cursor: pointer;">
                                 <!-- Foto Profil di Topbar -->
@@ -524,7 +768,7 @@
                                 ?>
 
                                 <?php if ($topbar_foto): ?>
-                                    <img src="<?= $topbar_foto; ?>" alt="Profile" class="rounded-circle" style="width:34px; height:34px; object-fit:cover;">
+                                    <img src="<?= $topbar_foto; ?>" alt="<?= translate('i18n_profile') ?>" class="rounded-circle" style="width:34px; height:34px; object-fit:cover;">
                                 <?php else: ?>
                                     <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width:34px;height:34px;">
                                         <i class="bi bi-person-fill"></i>
@@ -532,14 +776,14 @@
                                 <?php endif; ?>
 
                                 <div class="d-none d-md-block text-end lh-sm">
-                                    <div class="fw-semibold" style="font-size:.85rem;"><?= $this->session->userdata('nama') ?: 'User'; ?></div>
+                                    <div class="fw-semibold" style="font-size:.85rem;"><?= $this->session->userdata('nama') ?: translate('i18n_user'); ?></div>
                                     <div class="text-muted" style="font-size:.72rem;"><?= $this->session->userdata('username'); ?></div>
                                 </div>
                             </div>
                             <div class="profile-dropdown">
                                 <div class="profile-dropdown-inner">
-                                    <a href="<?= site_url('profile'); ?>" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= function_exists('translate') ? translate('profile') : 'Profil'; ?></a>
-                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= function_exists('translate') ? translate('app_logout') : 'Keluar'; ?></a>
+                                    <a href="<?= site_url('profile'); ?>" class="profile-dropdown-item"><i class="bi bi-person"></i> <?= translate('profile'); ?></a>
+                                    <a href="<?= site_url('login/logout'); ?>" class="profile-dropdown-item text-danger"><i class="bi bi-box-arrow-right"></i> <?= translate('app_logout'); ?></a>
                                 </div>
                             </div>
                         </div>

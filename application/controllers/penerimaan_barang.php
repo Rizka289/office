@@ -66,8 +66,8 @@ class Penerimaan_barang extends MY_Controller
     // Halaman Form Penerimaan Baru
     public function tambah()
     {
-        $data['page_title']    = 'Penerimaan Barang Baru';
-        $data['page_subtitle'] = 'Input barang masuk dari PO';
+        $data['page_title']    = translate('i18n_penerimaan_barang_baru');
+        $data['page_subtitle'] = translate('i18n_input_barang_masuk_dari_po');
         $data['active_menu']   = 'penerimaan_barang';
         $data['no_penerimaan'] = $this->Penerimaan_barang_model->generate_no_penerimaan();
 
@@ -95,9 +95,9 @@ class Penerimaan_barang extends MY_Controller
 
         if (empty($_POST) && $content_length > 0) {
             $post_max = $this->_bytes_ini(ini_get('post_max_size'));
-            $pesan    = 'Data gagal dikirim karena ukuran total upload terlalu besar ('
-                . round($content_length / 1048576, 2) . ' MB) melebihi batas server ('
-                . round($post_max / 1048576, 2) . ' MB). Kurangi jumlah/ukuran foto, '
+            $pesan    = translate('i18n_data_gagal_dikirim_karena_ukuran_total')
+                . round($content_length / 1048576, 2) . (' ' . translate('i18n_mb_melebihi_batas_server'))
+                . round($post_max / 1048576, 2) . (' ' . translate('i18n_mb_kurangi_jumlah_ukuran_foto') . ' ')
                 . 'atau naikkan post_max_size & upload_max_filesize di php.ini lalu restart Apache.';
 
             log_message('error', 'Penerimaan_barang::simpan() - ' . $pesan);
@@ -112,7 +112,7 @@ class Penerimaan_barang extends MY_Controller
         $po_data = $this->Penerimaan_barang_model->get_po_by_no($no_po);
 
         if (!$po_data) {
-            $this->session->set_flashdata('error', 'No. PO "' . html_escape($no_po) . '" tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_no_po') . html_escape($no_po) . translate('i18n_q_tidak_ditemukan'));
             redirect('penerimaan_barang/tambah');
             return;
         }
@@ -121,7 +121,7 @@ class Penerimaan_barang extends MY_Controller
         $status_po = is_array($po_data) ? ($po_data['status'] ?? '') : ($po_data->status ?? '');
         $status_po = strtolower(trim((string) $status_po));
         if (!empty($status_po) && $status_po !== 'menunggu') {
-            $this->session->set_flashdata('error', 'PO "' . html_escape($no_po) . '" tidak bisa diproses karena status QC-nya sudah "' . html_escape($status_po) . '" (harus "menunggu").');
+            $this->session->set_flashdata('error', 'PO "' . html_escape($no_po) . translate('i18n_q_tidak_bisa_diproses_qc') . html_escape($status_po) . translate('i18n_q_harus_menunggu'));
             redirect('penerimaan_barang/tambah');
             return;
         }
@@ -141,7 +141,7 @@ class Penerimaan_barang extends MY_Controller
 
         if (!$this->Penerimaan_barang_model->user_exists($id_user)) {
             log_message('error', 'Penerimaan_barang::simpan() - id_user tidak valid/tidak ditemukan: ' . var_export($id_user, TRUE) . '. Cek session key "user_id" & pastikan user tsb ada di tabel users.');
-            $this->session->set_flashdata('error', 'Sesi user tidak valid (user tidak ditemukan di database). Silakan logout lalu login kembali sebelum menyimpan penerimaan.');
+            $this->session->set_flashdata('error', translate('i18n_sesi_user_tidak_valid_user_tidak'));
             redirect('penerimaan_barang/tambah');
             return;
         }
@@ -165,7 +165,7 @@ class Penerimaan_barang extends MY_Controller
         $lokasi_arr       = $this->input->post('id_location')     ?: [];
 
         if (empty($id_barang_arr) || !is_array($id_barang_arr)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item barang yang diterima.');
+            $this->session->set_flashdata('error', translate('i18n_minimal_harus_ada_1_item_barang_yang'));
             redirect('penerimaan_barang/tambah');
             return;
         }
@@ -195,7 +195,7 @@ class Penerimaan_barang extends MY_Controller
                 $info_sisa = $this->Penerimaan_barang_model->get_sisa_qty_po_detail($id_po_detail_row);
 
                 if ($info_sisa && $qty > $info_sisa['sisa']) {
-                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': qty diterima (' . $qty . ') melebihi sisa PO yang belum diterima (sisa: ' . $info_sisa['sisa'] . ', sudah diterima sebelumnya: ' . $info_sisa['sudah_diterima'] . ' dari total pesanan ' . $info_sisa['qty_pesan'] . ').';
+                    $errors_foto[] = translate('i18n_baris_ke') . ($i + 1) . translate('i18n_qty_diterima') . $qty . (translate('i18n_melebihi_sisa_po_yang_belum_diterima') . ' ') . $info_sisa['sisa'] . (translate('i18n_sudah_diterima_sebelumnya') . ' ') . $info_sisa['sudah_diterima'] . (' ' . translate('i18n_dari_total_pesanan') . ' ') . $info_sisa['qty_pesan'] . ').';
                     continue;
                 }
             }
@@ -207,12 +207,12 @@ class Penerimaan_barang extends MY_Controller
                 $jml_file = $this->_hitung_file_terkirim($foto_files, $i);
 
                 if ($jml_file < 1) {
-                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': minimal 1 foto wajib diupload untuk barang berkondisi "Rusak".';
+                    $errors_foto[] = translate('i18n_baris_ke') . ($i + 1) . translate('i18n_minimal_1_foto_wajib_diupload_untuk');
                     continue;
                 }
 
                 if ($jml_file > self::MAX_FOTO_PER_ITEM) {
-                    $errors_foto[] = 'Baris ke-' . ($i + 1) . ': maksimal ' . self::MAX_FOTO_PER_ITEM . ' foto per barang (dikirim ' . $jml_file . ').';
+                    $errors_foto[] = translate('i18n_baris_ke') . ($i + 1) . (translate('i18n_maksimal') . ' ') . self::MAX_FOTO_PER_ITEM . (' ' . translate('i18n_foto_per_barang_dikirim') . ' ') . $jml_file . ').';
                     continue;
                 }
             }
@@ -221,7 +221,7 @@ class Penerimaan_barang extends MY_Controller
             $id_location = !empty($lokasi_arr[$i]) ? (int) $lokasi_arr[$i] : $default_location_id;
 
             if (empty($id_location) || !$this->Penerimaan_barang_model->location_exists($id_location)) {
-                $errors_foto[] = 'Baris ke-' . ($i + 1) . ': lokasi penyimpanan wajib dipilih dan harus valid.';
+                $errors_foto[] = translate('i18n_baris_ke') . ($i + 1) . translate('i18n_lokasi_penyimpanan_wajib_dipilih_dan');
                 continue;
             }
 
@@ -252,7 +252,7 @@ class Penerimaan_barang extends MY_Controller
                 $fotos = $this->_upload_foto_kondisi($foto_files, $row['index']);
 
                 if ($fotos === FALSE) {
-                    $errors_foto[] = 'Baris ke-' . ($row['index'] + 1) . ': gagal upload foto (format harus jpg/jpeg/png, maks 2MB per file).';
+                    $errors_foto[] = translate('i18n_baris_ke') . ($row['index'] + 1) . translate('i18n_gagal_upload_foto_format_harus_jpg_jpeg');
 
                     continue;
                 }
@@ -272,7 +272,7 @@ class Penerimaan_barang extends MY_Controller
         }
 
         if (empty($items)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item barang yang valid (barang, qty > 0, dan lokasi valid).');
+            $this->session->set_flashdata('error', translate('i18n_minimal_harus_ada_1_item_barang_yang_2'));
             redirect('penerimaan_barang/tambah');
             return;
         }
@@ -283,7 +283,7 @@ class Penerimaan_barang extends MY_Controller
         if ($id_penerimaan) {
 
 
-            $this->session->set_flashdata('success', 'Penerimaan barang berhasil disimpan.');
+            $this->session->set_flashdata('success', translate('i18n_penerimaan_barang_berhasil_disimpan'));
             redirect('penerimaan_barang/detail/' . $id_penerimaan);
         } else {
             // Hapus file fisik jika insert DB gagal
@@ -291,11 +291,11 @@ class Penerimaan_barang extends MY_Controller
 
 
             $detail_error = $this->Penerimaan_barang_model->get_last_error();
-            $pesan_user   = 'Gagal menyimpan data penerimaan barang.';
+            $pesan_user   = translate('i18n_gagal_menyimpan_data_penerimaan_barang');
             if ($detail_error) {
                 log_message('error', 'Penerimaan_barang::simpan() - ' . $detail_error);
 
-                $pesan_user .= ' Detail: ' . html_escape($detail_error);
+                $pesan_user .= (' ' . translate('i18n_detail') . ' ') . html_escape($detail_error);
             }
 
             $this->session->set_flashdata('error', $pesan_user);
@@ -452,7 +452,7 @@ class Penerimaan_barang extends MY_Controller
             return;
         }
 
-        $data['page_title']    = 'Detail Penerimaan Barang';
+        $data['page_title']    = translate('i18n_detail_penerimaan_barang');
         $data['page_subtitle'] = 'RCV-' . $detail['header']->no_penerimaan;
         $data['active_menu']   = 'penerimaan_barang';
         $data['penerimaan']    = $detail['header'];
@@ -506,7 +506,7 @@ class Penerimaan_barang extends MY_Controller
         $no_po = $this->input->get('no_po', TRUE);
 
         if (empty($no_po)) {
-            echo json_encode(['status' => false, 'message' => 'Nomor PO tidak boleh kosong.']);
+            echo json_encode(['status' => false, 'message' => translate('i18n_nomor_po_tidak_boleh_kosong')]);
             return;
         }
 
@@ -523,7 +523,7 @@ class Penerimaan_barang extends MY_Controller
             if (!empty($status_po) && $status_po !== 'menunggu') {
                 echo json_encode([
                     'status'  => false,
-                    'message' => 'PO tidak dapat diproses karena status QC adalah "' . $status_raw . '" (harus "menunggu").'
+                    'message' => translate('i18n_po_tidak_dapat_diproses_karena_status_qc') . $status_raw . translate('i18n_q_harus_menunggu')
                 ]);
                 return;
             }
@@ -553,7 +553,7 @@ class Penerimaan_barang extends MY_Controller
                 'items'    => $items
             ]);
         } else {
-            echo json_encode(['status' => false, 'message' => 'PO "' . htmlspecialchars($no_po) . '" tidak ditemukan di database.']);
+            echo json_encode(['status' => false, 'message' => 'PO "' . htmlspecialchars($no_po) . translate('i18n_q_tidak_ditemukan_di_database')]);
         }
     }
 }

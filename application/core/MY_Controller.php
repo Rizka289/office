@@ -9,6 +9,9 @@
  */
 class MY_Controller extends CI_Controller
 {
+    // Role yang dikenal sistem (samakan dengan User::$role_valid)
+    const ROLE_VALID = ['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'];
+
     // kode bahasa => nama folder di application/language/
     protected $available_languages = [
         'id' => 'indonesia',
@@ -74,8 +77,25 @@ class MY_Controller extends CI_Controller
         $allowed_roles = is_array($allowed_roles) ? $allowed_roles : [$allowed_roles];
         $user_role     = $this->session->userdata('role');
 
+        // Role di database tidak dikenal sistem (mis. 'purchasing' bukan 'staff_purchasing'):
+        // jangan biarkan user terjebak di halaman Akses Ditolak -> logout & kembali ke login.
+        if (!in_array($user_role, self::ROLE_VALID, TRUE)) {
+            $this->session->unset_userdata(['user_id', 'username', 'nama', 'role', 'foto', 'logged_in']);
+            $this->session->set_flashdata('error', translate('i18n_role_akun') . html_escape((string) $user_role) . translate('i18n_q_tidak_dikenali_sistem'));
+            redirect('login');
+            return;
+        }
+
         if (!in_array($user_role, $allowed_roles, TRUE)) {
-            show_error(lang('app_access_denied') ?: 'Anda tidak memiliki akses ke halaman ini.', 403, 'Akses Ditolak');
+            // translate() mengembalikan key-nya sendiri kalau terjemahan tidak ada
+            $pesan = lang('app_access_denied');
+            if (!$pesan || $pesan === 'app_access_denied') {
+                $pesan = translate('i18n_anda_tidak_memiliki_akses_ke_halaman_ini');
+            }
+            $pesan .= '<br><br>'
+                . '<a href="' . site_url('dashboard') . '" style="margin-right:12px">' . translate('i18n_kembali_ke_dashboard') . '</a>'
+                . '<a href="' . site_url('login/logout') . '">' . translate('i18n_keluar_ganti_akun') . '</a>';
+            show_error($pesan, 403, translate('i18n_akses_ditolak'));
         }
     }
 

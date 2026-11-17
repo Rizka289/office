@@ -16,7 +16,8 @@ class Penawaran_model extends CI_Model
         $row = $this->db->select("
                 COUNT(*) AS total,
                 SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
-                SUM(CASE WHEN status = 'approved' THEN 0 ELSE 1 END) AS belum,
+                SUM(CASE WHEN COALESCE(status, '') IN ('approved', 'batal') THEN 0 ELSE 1 END) AS belum,
+                SUM(CASE WHEN status = 'batal' THEN 1 ELSE 0 END) AS batal,
                 COALESCE(SUM(CASE WHEN status = 'approved' THEN grand_total ELSE 0 END), 0) AS nilai
             ", false)
             ->where('DATE(tanggal) >=', date('Y-m-01'))
@@ -28,6 +29,7 @@ class Penawaran_model extends CI_Model
             'total'    => (int) ($row->total ?? 0),
             'approved' => (int) ($row->approved ?? 0),
             'belum'    => (int) ($row->belum ?? 0),
+            'batal'    => (int) ($row->batal ?? 0),
             'nilai'    => (float) ($row->nilai ?? 0),
         ];
     }
@@ -39,7 +41,8 @@ class Penawaran_model extends CI_Model
                 DATE_FORMAT(tanggal, '%Y-%m') AS periode,
                 COUNT(*) AS total,
                 SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
-                SUM(CASE WHEN status = 'approved' THEN 0 ELSE 1 END) AS belum,
+                SUM(CASE WHEN COALESCE(status, '') IN ('approved', 'batal') THEN 0 ELSE 1 END) AS belum,
+                SUM(CASE WHEN status = 'batal' THEN 1 ELSE 0 END) AS batal,
                 COALESCE(SUM(CASE WHEN status = 'approved' THEN grand_total ELSE 0 END), 0) AS nilai
             ", false)
             ->group_by('periode')
@@ -71,6 +74,18 @@ class Penawaran_model extends CI_Model
         if (!empty($filter['sampai'])) {
             $this->db->where('DATE(pen.tanggal) <=', $filter['sampai']);
         }
+
+        // status: 'pending' = belum di-approve (bukan batal), 'approved' = sudah di-approve,
+        //         'batal' = tidak jadi deal
+        if (!empty($filter['status'])) {
+            if ($filter['status'] === 'approved') {
+                $this->db->where('pen.status', 'approved');
+            } elseif ($filter['status'] === 'batal') {
+                $this->db->where('pen.status', 'batal');
+            } elseif ($filter['status'] === 'pending') {
+                $this->db->where("COALESCE(pen.status, '') NOT IN ('approved', 'batal')", null, false);
+            }
+        }
     }
 
     // Jumlah total penawaran (sesuai filter) untuk pagination
@@ -93,6 +108,10 @@ class Penawaran_model extends CI_Model
             pen.tanggal,
             pen.grand_total,
             pen.status,
+            pen.tipe,
+            ' . ($this->db->field_exists('jenis_penjualan', 'penawaran') ? 'pen.jenis_penjualan,' : '') . '
+            ' . ($this->db->field_exists('masa_konsinyasi', 'penawaran') ? 'pen.masa_konsinyasi,' : '') . '
+            ' . ($this->db->field_exists('alasan_batal', 'penawaran') ? 'pen.alasan_batal,' : '') . '
             cus.nama AS customer,
             (
                 SELECT COALESCE(SUM(pd.qty), 0)
@@ -145,7 +164,7 @@ class Penawaran_model extends CI_Model
             b.nama   AS nama_barang,
             b.gambar AS gambar_barang,
             b.kategori_rumus AS rumus,
-            b.keterangan As keterangan
+            b.keterangan AS keterangan_barang
         ');
         $this->db->from('penawaran_detail pd');
         $this->db->join('barang b', 'b.id = pd.id_barang', 'left');
@@ -235,6 +254,34 @@ class Penawaran_model extends CI_Model
         return $map;
     }
 
+    // Daftar nama file foto (foto item + foto aksesoris, penawaran manual) milik 1 penawaran.
+    public function get_foto_list($id_penawaran)
+    {
+        $daftar = [];
+
+        if ($this->db->field_exists('foto', 'penawaran_detail')) {
+            $rows = $this->db->select('foto')
+                ->where('id_penawaran', (int) $id_penawaran)
+                ->where("foto IS NOT NULL AND foto <> ''", null, false)
+                ->get('penawaran_detail')
+                ->result();
+            $daftar = array_merge($daftar, array_column($rows, 'foto'));
+        }
+
+        if ($this->db->field_exists('foto', 'penawaran_detail_aksesoris')) {
+            $rows = $this->db->query(
+                "SELECT a.foto
+                 FROM penawaran_detail_aksesoris a
+                 JOIN penawaran_detail d ON d.id = a.id_penawaran_detail
+                 WHERE d.id_penawaran = ? AND a.foto IS NOT NULL AND a.foto <> ''",
+                [(int) $id_penawaran]
+            )->result();
+            $daftar = array_merge($daftar, array_column($rows, 'foto'));
+        }
+
+        return array_values(array_unique($daftar));
+    }
+
     // Hapus semua aksesoris milik detail-detail dari 1 penawaran.
     private function _hapus_aksesoris_by_penawaran($id_penawaran)
     {
@@ -285,6 +332,9 @@ class Penawaran_model extends CI_Model
 
             foreach ($aksesoris_list as $aks) {
                 $aks['id_penawaran_detail'] = $id_detail;
+                if (!empty($aks['foto']) && !in_array('foto', $kolom_aks, true)) {
+                    log_message('error', 'penawaran_detail_aksesoris: kolom foto belum ada, foto aksesoris tidak tersimpan.');
+                }
                 $aks = array_intersect_key($aks, array_flip($kolom_aks));
                 $this->db->insert('penawaran_detail_aksesoris', $aks);
             }
@@ -312,7 +362,7 @@ class Penawaran_model extends CI_Model
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = 'Transaksi database gagal, penawaran tidak disimpan.';
+            $this->last_error = translate('i18n_transaksi_database_gagal_penawaran_tidak');
             return false;
         }
 
@@ -330,11 +380,15 @@ class Penawaran_model extends CI_Model
 
         $row = $this->db->query('SELECT status FROM penawaran WHERE id = ? FOR UPDATE', [$id])->row();
 
-        if (!$row || $row->status === 'approved') {
+        if (!$row || in_array($row->status, ['approved', 'batal'], true)) {
             $this->db->trans_complete();
-            $this->last_error = !$row
-                ? 'Data penawaran tidak ditemukan.'
-                : 'Penawaran sudah di-approve dan tidak bisa diubah.';
+            if (!$row) {
+                $this->last_error = translate('i18n_data_penawaran_tidak_ditemukan');
+            } elseif ($row->status === 'batal') {
+                $this->last_error = translate('i18n_penawaran_sudah_dibatalkan_aktifkan');
+            } else {
+                $this->last_error = translate('i18n_penawaran_sudah_di_approve_dan_tidak');
+            }
             return false;
         }
 
@@ -351,17 +405,17 @@ class Penawaran_model extends CI_Model
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = 'Transaksi database gagal, perubahan tidak disimpan.';
+            $this->last_error = translate('i18n_transaksi_database_gagal_perubahan_tidak');
             return false;
         }
 
         return true;
     }
 
-    // Hapus penawaran yang MASIH belum di-approve: item (penawaran_detail)
-    // lalu header (penawaran), dalam 1 transaksi. Status dicek ulang di
-    // dalam transaksi dengan FOR UPDATE, jadi kalau di saat yang sama
-    // penawaran ini di-approve, penghapusan akan ditolak.
+    // Hapus penawaran (draft, approved, maupun batal): item (penawaran_detail)
+    // lalu header (penawaran), dalam 1 transaksi.
+    // Hak akses (super_admin / staff_purchasing) dan syarat "belum ada SO aktif"
+    // dicek di controller Penawaran::delete().
     public function hapus_penawaran($id)
     {
         $id = (int) $id;
@@ -370,11 +424,9 @@ class Penawaran_model extends CI_Model
 
         $row = $this->db->query('SELECT status FROM penawaran WHERE id = ? FOR UPDATE', [$id])->row();
 
-        if (!$row || $row->status === 'approved') {
+        if (!$row) {
             $this->db->trans_complete();
-            $this->last_error = !$row
-                ? 'Data penawaran tidak ditemukan.'
-                : 'Penawaran sudah di-approve dan tidak bisa dihapus.';
+            $this->last_error = translate('i18n_data_penawaran_tidak_ditemukan');
             return false;
         }
 
@@ -388,7 +440,7 @@ class Penawaran_model extends CI_Model
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = 'Transaksi database gagal, penawaran tidak dihapus.';
+            $this->last_error = translate('i18n_transaksi_database_gagal_penawaran_tidak_2');
             return false;
         }
 
@@ -401,7 +453,7 @@ class Penawaran_model extends CI_Model
     public function approve_penawaran($id, $id_user)
     {
         $this->db->where('id', (int) $id);
-        $this->db->where('status <>', 'approved');
+        $this->db->where("COALESCE(status, '') NOT IN ('approved', 'batal')", null, false);
         $this->db->update('penawaran', [
             'status'      => 'approved',
             'approved_by' => (int) $id_user,
@@ -417,7 +469,8 @@ class Penawaran_model extends CI_Model
                 DATE_FORMAT(tanggal, '%Y-%m') AS periode,
                 COUNT(*) AS total,
                 SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) AS approved,
-                SUM(CASE WHEN status = 'approved' THEN 0 ELSE 1 END) AS belum,
+                SUM(CASE WHEN COALESCE(status, '') IN ('approved', 'batal') THEN 0 ELSE 1 END) AS belum,
+                SUM(CASE WHEN status = 'batal' THEN 1 ELSE 0 END) AS batal,
                 COALESCE(SUM(CASE WHEN status = 'approved' THEN grand_total ELSE 0 END), 0) AS nilai
             ", false)
             ->where('DATE(tanggal) >=', date('Y-m-01'))

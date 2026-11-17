@@ -38,7 +38,7 @@ class Stok_opname extends CI_Controller {
         $created_by  = $this->session->userdata('user_id');
 
         if (empty($created_by)) {
-            $this->session->set_flashdata('error', 'Sesi login habis, silakan login ulang.');
+            $this->session->set_flashdata('error', translate('i18n_sesi_login_habis_silakan_login_ulang'));
             redirect('login');
         }
 
@@ -47,13 +47,13 @@ class Stok_opname extends CI_Controller {
         }
 
         if (empty($id_barang) || empty($id_location)) {
-            $this->session->set_flashdata('error', 'Barang dan Lokasi wajib diisi!');
+            $this->session->set_flashdata('error', translate('i18n_barang_dan_lokasi_wajib_diisi'));
             redirect('stok_opname');
         }
 
         // Opsi wajib dan harus salah satu dari daftar valid
         if (!in_array($opsi, $this->opsi_valid, true)) {
-            $this->session->set_flashdata('error', 'Opsi wajib dipilih!');
+            $this->session->set_flashdata('error', translate('i18n_opsi_wajib_dipilih'));
             redirect('stok_opname');
         }
 
@@ -67,25 +67,25 @@ class Stok_opname extends CI_Controller {
         }
 
         if (mb_strlen($ukuran) > 100) {
-            $this->session->set_flashdata('error', 'Ukuran maksimal 100 karakter!');
+            $this->session->set_flashdata('error', translate('i18n_ukuran_maksimal_100_karakter'));
             redirect('stok_opname');
         }
 
         // Jangan sampai input kosong dianggap 0 (bisa mengosongkan stok)
         if ($qty_raw === null || $qty_raw === '' || !is_numeric($qty_raw)) {
-            $this->session->set_flashdata('error', 'Jumlah wajib diisi dengan angka!');
+            $this->session->set_flashdata('error', translate('i18n_jumlah_wajib_diisi_dengan_angka'));
             redirect('stok_opname');
         }
 
         $qty = (int) $qty_raw;
 
         if ($qty < 0) {
-            $this->session->set_flashdata('error', 'Jumlah tidak boleh negatif!');
+            $this->session->set_flashdata('error', translate('i18n_jumlah_tidak_boleh_negatif'));
             redirect('stok_opname');
         }
 
         if ($mode === 'tambah' && $qty === 0) {
-            $this->session->set_flashdata('error', 'Jumlah stok yang ditambahkan harus lebih dari 0!');
+            $this->session->set_flashdata('error', translate('i18n_jumlah_stok_yang_ditambahkan_harus_lebih'));
             redirect('stok_opname');
         }
 
@@ -101,9 +101,9 @@ class Stok_opname extends CI_Controller {
         ]);
 
         if ($simpan) {
-            $this->session->set_flashdata('success', 'Stok berhasil disimpan!');
+            $this->session->set_flashdata('success', translate('i18n_stok_berhasil_disimpan'));
         } else {
-            $this->session->set_flashdata('error', 'Gagal memproses stok.');
+            $this->session->set_flashdata('error', translate('i18n_gagal_memproses_stok'));
         }
 
         redirect('stok_opname');

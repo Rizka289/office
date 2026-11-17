@@ -1,37 +1,67 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 
-// Fungsi translation dengan session caching untuk optimasi performa
-// Mengurangi query database dengan menyimpan semua translation di session
+// Fungsi translation: ambil teks dari tabel `interfaces` sesuai bahasa aktif (id / en / zh).
+// Seluruh tabel dibaca SEKALI per request lalu disimpan di static cache,
+// jadi ratusan pemanggilan translate() di satu halaman tetap hanya 1 query.
+// Kalau key belum ada di tabel, yang tampil adalah key-nya sendiri.
 function translate($key)
 {
+    static $cache = array();
+
     /** @var Controller */
     $CI = &get_instance();
-    $lang = $CI->session->userdata('site_lang') ?? 'en';
-
-    // Cek apakah data translation sudah ada di session
-    $session_key = 'translation_cache_' . $lang;
-    // $translation_cache = $CI->session->userdata($session_key);
-    $translation_cache = null;
-    // Jika belum ada di session, load semua data translation
-    if (!$translation_cache) {
-        $translation_cache = [];
-        $query = $CI->db->get('interfaces');
-
-        foreach ($query->result() as $row) {
-            if (isset($row->$lang)) {
-                $translation_cache[$row->key] = $row->$lang;
-            }
-        }
-
-        // Simpan ke session untuk penggunaan selanjutnya
-        $CI->session->set_userdata($session_key, $translation_cache);
-
-        log_message('debug', 'Translation cache loaded to session for language: ' . $lang);
+    $lang = $CI->session->userdata('site_lang');
+    if (!in_array($lang, array('id', 'en', 'zh'), true)) {
+        $lang = 'id'; // default bahasa Indonesia (sama dengan halaman login)
     }
 
-    // Return translation dari session cache
-    return isset($translation_cache[$key]) ? $translation_cache[$key] : $key;
+    if (!isset($cache[$lang])) {
+        $cache[$lang] = array();
+        $query = $CI->db->select('`key`, `' . $lang . '`', false)->get('interfaces');
+        foreach ($query->result_array() as $row) {
+            $cache[$lang][$row['key']] = $row[$lang];
+        }
+        log_message('debug', 'Translation cache loaded for language: ' . $lang);
+    }
+
+    $text = isset($cache[$lang][$key]) ? $cache[$lang][$key] : null;
+    if (($text === null || $text === '') && $lang !== 'id') {
+        // fallback ke bahasa Indonesia kalau terjemahan kosong
+        $id = translate_fallback_id($key);
+        return $id !== null ? $id : $key;
+    }
+    return $text !== null && $text !== '' ? $text : $key;
 }
+
+// Ambil teks bahasa Indonesia (dipakai sebagai cadangan kalau kolom en/zh kosong)
+function translate_fallback_id($key)
+{
+    static $id_cache = null;
+    if ($id_cache === null) {
+        $CI = &get_instance();
+        $id_cache = array();
+        foreach ($CI->db->select('`key`, `id`', false)->get('interfaces')->result_array() as $row) {
+            $id_cache[$row['key']] = $row['id'];
+        }
+    }
+    return isset($id_cache[$key]) && $id_cache[$key] !== '' ? $id_cache[$key] : null;
+}
+
+// Escape teks supaya aman ditaruh di dalam string JavaScript ('...' atau "...")
+// maupun di atribut HTML seperti onclick="...". Tanda kutip, <, >, & diubah ke \uXXXX.
+function js_esc($text)
+{
+    $json = json_encode((string) $text, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+    return substr($json, 1, -1);
+}
+
+// translate() untuk dipakai di dalam string JavaScript, contoh:
+//   alert("...") di view: tulis tj("message_sukses") di dalam tag echo PHP
+function tj($key)
+{
+    return js_esc(translate($key));
+}
+
 function lang($key){
     return translate($key);
 }

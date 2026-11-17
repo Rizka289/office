@@ -4,17 +4,26 @@ defined('BASEPATH') or exit('No direct script access allowed');
 class Penawaran extends MY_Controller
 {
     const TARIF_PPN = 11;
-    const TARIF_PPH = 2.5;
+    // PPh 23 atas jasa pemasangan: hanya boleh dipakai kalau ada biaya pemasangan,
+    // dan DIPOTONG customer (mengurangi grand total), bukan ditambahkan.
+    const TARIF_PPH = 2;
     const DEFAULT_TIPE_MOTOR_ROLLING  = 'Electra 600';
     const DEFAULT_POWER_ROLLING       = '250 W';
     const DEFAULT_VOLTAGE_ROLLING     = '220 V - 50 Hz';
     const DEFAULT_KELENGKAPAN_ROLLING = "3 Bh Remote hand / 3 Bh Remote hand / 3个手持遥控器\n1 Bh Remote dinding / 1个壁挂遥控器\nRantai Emergency / 紧急链条";
     const DEFAULT_BOOKS_PENUTUP_ROLLING = "Hollow 30 x 30 x 1.0 mm / 角钢 30 x 30 x 1.0 毫米\nPlat besi galvanis 0.5 mm / 镀锌铁板 0.5 毫米";
 
+    // Folder foto item penawaran manual (relatif terhadap FCPATH & base_url)
+    const FOLDER_FOTO = 'uploads/penawaran/';
+
+    // Pesan error upload foto (ditampilkan setelah redirect)
+    private $foto_errors = [];
+
     public function __construct()
     {
         parent::__construct();
-        $this->requireRole('super_admin');
+        // purchasing = admin penawaran; atasan ikut melihat & approve penawaran
+        $this->requireRole(['super_admin', 'atasan', 'staff_purchasing']);
         $this->load->model('Penawaran_model');
         $this->load->helper('url');
     }
@@ -29,8 +38,11 @@ class Penawaran extends MY_Controller
             'q'      => $this->input->get('q', TRUE),
             'dari'   => $this->input->get('dari', TRUE),
             'sampai' => $this->input->get('sampai', TRUE),
+            'status' => in_array($this->input->get('status', TRUE), ['pending', 'approved', 'batal'], TRUE)
+                ? $this->input->get('status', TRUE) : '',
         ];
 
+        $data['filter_status'] = $filter['status'];
         $data['filter_q']      = $filter['q'];
         $data['filter_dari']   = $filter['dari'];
         $data['filter_sampai'] = $filter['sampai'];
@@ -38,7 +50,7 @@ class Penawaran extends MY_Controller
         // Pagination: 5 data per halaman (halaman dipilih lewat ?page=N)
         $this->load->library('pagination');
 
-        $per_page   = 5;
+        $per_page   = 20;
         $total_data = $this->Penawaran_model->count_penawaran($filter);
         $total_page = max(1, (int) ceil($total_data / $per_page));
         $page       = min(max(1, (int) $this->input->get('page')), $total_page);
@@ -80,12 +92,14 @@ class Penawaran extends MY_Controller
         $data['total_data']         = $total_data;
         $data['nomor_awal']         = $offset + 1;
         $data['jumlah_ditampilkan'] = count($penawaran_list);
+        $data['boleh_hapus']        = $this->_boleh_hapus();
         $ringkasan      = $this->Penawaran_model->get_ringkasan_bulan_ini();
 
         $data['penawaran_list'] = $penawaran_list;
         $data['total_semua']    = $ringkasan['total'];     // semua penawaran bulan ini
         $data['total_approved'] = $ringkasan['approved'];  // sudah approved bulan ini
-        $data['total_belum']    = $ringkasan['belum'];     // belum approved bulan ini
+        $data['total_belum']    = $ringkasan['belum'];     // belum approved bulan ini (tidak termasuk batal)
+        $data['total_batal']    = $ringkasan['batal'];     // batal / tidak jadi deal bulan ini
         $data['total_nilai']    = $ringkasan['nilai'];     // nilai uang yang approved bulan ini
         // $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_per_bulan(12); untuk rsekap 12 bulan
         $data['rekap_bulanan']  = $this->Penawaran_model->get_rekap_bulan_ini_saja();
@@ -101,7 +115,7 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
@@ -110,6 +124,8 @@ class Penawaran extends MY_Controller
         $data['active_menu'] = 'penawaran';
         $data['header']      = $penawaran['header'];
         $data['items']       = $penawaran['items'];
+        $data['boleh_hapus'] = $this->_boleh_hapus();
+        $data['boleh_batal'] = $this->_boleh_batal();
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/penawaran_detail', $data);
@@ -145,14 +161,19 @@ class Penawaran extends MY_Controller
         $data['list_barang']   = $this->Penawaran_model->get_all_barang();
         $data['tarif_ppn']     = self::TARIF_PPN;
         $data['tarif_pph']     = self::TARIF_PPH;
+        $data['tipe']          = ($this->input->get('tipe') === 'manual') ? 'manual' : 'rumus';
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/add_penawaran', $data);
         $this->load->view('templates/footer', $data);
     }
 
-    private function _kumpulkan_item()
+    private function _kumpulkan_item($tipe = 'rumus')
     {
+        if ($tipe === 'manual') {
+            return $this->_kumpulkan_item_manual();
+        }
+
         $id_barang      = $this->input->post('id_barang', TRUE)      ?: [];
         $jenis_item     = $this->input->post('jenis_item', TRUE)     ?: [];
         $warna          = $this->input->post('warna', TRUE)          ?: [];
@@ -176,12 +197,15 @@ class Penawaran extends MY_Controller
         $lebar_m2       = $this->input->post('lebar_m2_books', TRUE) ?: [];
         $tinggi_m2      = $this->input->post('tinggi_m2_books', TRUE) ?: [];
         $qty_m2         = $this->input->post('qty_books', TRUE)      ?: [];
+        $tebal         = $this->input->post('tebal', TRUE)      ?: [];
         $harga_books    = $this->input->post('harga_m2_books', TRUE) ?: [];
         $qty_instalasi = $this->input->post('qty_instalasi', TRUE) ?: [];
         $harga_instalasi = $this->input->post('harga_m2_instalasi', TRUE) ?: [];
         $kaca_nama      = $this->input->post('kaca_nama', TRUE)      ?: [];
         $kaca_luas      = $this->input->post('kaca_luas', TRUE)      ?: [];
         $kaca_harga     = $this->input->post('kaca_harga', TRUE)     ?: [];
+        // Rumus ukuran rolling door per item: l200_t600 (lebar +200, tinggi +600) | t500 (lebar tetap, tinggi +500)
+        $rumus_ukuran   = $this->input->post('rumus_ukuran', TRUE)   ?: [];
 
         $master_barang = $this->Penawaran_model->get_barang_by_ids($id_barang);
 
@@ -213,8 +237,12 @@ class Penawaran extends MY_Controller
                 $kategori_rumus = 'unit_fix';
             }
 
-            $luas_riil = round(($l / 1000) * ($t / 1000), 4);
-            $luas_billing = $this->_luas_billing($kategori_rumus, $luas_riil, $l, $t);
+            $ru = $this->_is_rolling_door($kategori_rumus) ? $this->_rumus_ukuran_valid($rumus_ukuran[$i] ?? '') : null;
+
+            // Luas dibulatkan 2 angka di belakang koma (mis. 1,649 -> 1,65),
+            // dihitung dari mm² langsung supaya tidak terjadi pembulatan ganda.
+            $luas_riil    = round(($l * $t) / 1000000, 2);
+            $luas_billing = round($this->_luas_billing($kategori_rumus, $luas_riil, $l, $t, $ru), 2);
 
             $total = ($kategori_rumus === 'unit_fix')
                 ? $q * $harga_m2
@@ -275,7 +303,7 @@ class Penawaran extends MY_Controller
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
                 $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));
-                $books_luas  = round(($books_l / 1000) * ($books_t / 1000), 4);
+                $books_luas  = round(($books_l * $books_t) / 1000000, 2);
                 $books_q     = max(0, (int) ($qty_m2[$i] ?? 0));
                 $books_h     = max(0, (float) ($harga_books[$i] ?? 0));
                 $books_total = round($books_luas * $books_q * $books_h, 2);
@@ -320,10 +348,12 @@ class Penawaran extends MY_Controller
                 'finishing'       => $fin_val,
                 'komponen_kusen'  => trim($komponen_kusen[$i] ?? ''),
                 'komponen_daun'   => trim($komponen_daun[$i] ?? ''),
+                'tebal'           => trim($tebal[$i] ?? ''),
                 'lebar_mm'        => $l,
                 'tinggi_mm'       => $t,
-                'luas_m2'         => round($luas_riil, 4),
-                'luas_billing_m2' => round($luas_billing, 4),
+                'rumus_ukuran'    => $ru,
+                'luas_m2'         => $luas_riil,
+                'luas_billing_m2' => $luas_billing,
                 'qty'             => $q,
                 'harga_unit'      => $harga_m2,
                 'total_harga'     => round($total, 2),
@@ -350,6 +380,269 @@ class Penawaran extends MY_Controller
         return [$items, $subtotal];
     }
 
+    // ------------------------------------------------------------------
+    // MODE MANUAL: semua isian diketik langsung (tanpa master barang).
+    // - Nama barang boleh kosong; item tetap disimpan kalau ada aksesoris / detail kaca.
+    // - Ukuran diinput Lebar x Tinggi (mm) -> Luas (m2) dihitung otomatis,
+    //   tapi Luas boleh diketik sendiri (luas_m2[]) dan ketikan itu yang dipakai.
+    // - Satuan harga per item (satuan_harga[]): 'm2' atau 'unit'.
+    //   m2   : Total barang = Luas x Qty x Harga per m2
+    //          (kalau lebar/tinggi dikosongkan sehingga luas = 0, total = Qty x Harga).
+    //   unit : Total barang = Qty x Harga per unit (luas tidak dipakai).
+    // - Total item = total barang + aksesoris + detail kaca.
+    // - Foto per item (foto[]) dan foto per aksesoris (aks_foto[i][]).
+    //   Foto lama dibawa lewat foto_lama[] dan aks_foto_lama[i][].
+    // ------------------------------------------------------------------
+    private function _kumpulkan_item_manual()
+    {
+        $jenis_item    = $this->input->post('jenis_item', TRUE)    ?: [];
+        $warna         = $this->input->post('warna', TRUE)         ?: [];
+        $finishing     = $this->input->post('finishing', TRUE)     ?: [];
+        $komponen      = $this->input->post('komponen', TRUE)      ?: [];
+        $lebar_mm      = $this->input->post('lebar_mm', TRUE)      ?: [];
+        $tinggi_mm     = $this->input->post('tinggi_mm', TRUE)     ?: [];
+        $luas_input    = $this->input->post('luas_m2', TRUE)       ?: [];
+        $qty           = $this->input->post('qty', TRUE)           ?: [];
+        $harga_unit    = $this->input->post('harga_unit', TRUE)    ?: [];
+        // Satuan harga per item: 'm2' (Luas x Qty x Harga/m²) | 'unit' (Qty x Harga/unit)
+        $satuan_harga  = $this->input->post('satuan_harga', TRUE)  ?: [];
+        $tebal         = $this->input->post('tebal', TRUE)    ?: [];
+        $komponen_kusen    = $this->input->post('komponen_kusen', TRUE)    ?: [];
+        $komponen_daun    = $this->input->post('komponen_daun', TRUE)    ?: [];
+        $keterangan    = $this->input->post('keterangan', TRUE)    ?: [];
+        $foto_lama     = $this->input->post('foto_lama', TRUE)     ?: [];
+        $aks_nama      = $this->input->post('aks_nama', TRUE)      ?: [];
+        $aks_qty       = $this->input->post('aks_qty', TRUE)       ?: [];
+        $aks_harga     = $this->input->post('aks_harga', TRUE)     ?: [];
+        $aks_foto_lama = $this->input->post('aks_foto_lama', TRUE) ?: [];
+        $kaca_nama     = $this->input->post('kaca_nama', TRUE)     ?: [];
+        $kaca_luas     = $this->input->post('kaca_luas', TRUE)     ?: [];
+        $kaca_harga    = $this->input->post('kaca_harga', TRUE)    ?: [];
+
+        $items    = [];
+        $subtotal = 0;
+
+        foreach ($jenis_item as $i => $jenis) {
+            $jenis = trim((string) $jenis);
+            $h     = max(0, (float) ($harga_unit[$i] ?? 0));
+            $q     = max(1, (int) ($qty[$i] ?? 1));
+            $sat   = (($satuan_harga[$i] ?? 'm2') === 'unit') ? 'unit' : 'm2';
+            $l     = max(0, (int) ($lebar_mm[$i] ?? 0));
+            $t     = max(0, (int) ($tinggi_mm[$i] ?? 0));
+            // Luas manual boleh diketik sendiri (mis. "1,65"). Kalau kosong / 0,
+            // dihitung dari Lebar x Tinggi. Selalu dibulatkan 2 angka di belakang koma.
+            $luas_ketik = round(max(0, $this->_ke_angka($luas_input[$i] ?? '')), 2);
+            $luas       = ($luas_ketik > 0) ? $luas_ketik : round(($l * $t) / 1000000, 2);
+
+            // Aksesoris (+ foto per aksesoris)
+            $aks_list  = [];
+            $total_aks = 0;
+            $aks_nama_item = $aks_nama[$i] ?? [];
+            if (is_array($aks_nama_item)) {
+                foreach ($aks_nama_item as $k => $nm) {
+                    $nm = trim((string) $nm);
+                    if ($nm === '') continue;
+                    $aq = max(1, (int) ($aks_qty[$i][$k] ?? 1));
+                    $ah = max(0, (float) ($aks_harga[$i][$k] ?? 0));
+
+                    // Foto aksesoris: upload baru > foto lama (saat edit) > kosong
+                    $aks_foto = $this->_upload_foto_aks($i, $k);
+                    if ($aks_foto === null) {
+                        $aks_foto = $this->_foto_valid($aks_foto_lama[$i][$k] ?? '');
+                    }
+
+                    $aks_list[] = [
+                        'nama'        => $nm,
+                        'qty'         => $aq,
+                        'harga'       => $ah,
+                        'total_harga' => round($aq * $ah, 2),
+                        'foto'        => $aks_foto,
+                    ];
+                    $total_aks += $aq * $ah;
+                }
+            }
+
+            // Detail kaca: luas x harga per m²
+            $kaca_list  = [];
+            $total_kaca = 0;
+            $kaca_nama_item = $kaca_nama[$i] ?? [];
+            if (is_array($kaca_nama_item)) {
+                foreach ($kaca_nama_item as $k => $nm) {
+                    $nm = trim((string) $nm);
+                    if ($nm === '') continue;
+                    $kl = max(0, $this->_ke_angka($kaca_luas[$i][$k] ?? 0));
+                    $kh = max(0, (float) ($kaca_harga[$i][$k] ?? 0));
+                    $kt = round($kl * $kh, 2);
+                    $kaca_list[] = [
+                        'nama'        => $nm,
+                        'luas'        => round($kl, 4),
+                        'harga'       => $kh,
+                        'total_harga' => $kt,
+                    ];
+                    $total_kaca += $kt;
+                }
+            }
+
+            // Item kosong (tanpa barang, tanpa aksesoris, tanpa kaca) dilewati
+            if ($jenis === '' && $h <= 0 && empty($aks_list) && empty($kaca_list)) {
+                continue;
+            }
+
+            // "Ada barang" = nama diisi atau harga diisi. Kalau tidak, item ini
+            // hanya membawa aksesoris/kaca (qty, ukuran & harga barang = 0).
+            $ada_barang = ($jenis !== '' || $h > 0);
+            if ($jenis === '' && $h > 0) {
+                $jenis = 'Item';
+            }
+
+            // Rumus barang manual:
+            // - Harga per unit : Qty x Harga (luas hanya informasi, tidak ikut dihitung).
+            // - Harga per m²   : Luas x Qty x Harga/m². Kalau ukuran tidak diisi (luas 0),
+            //                    pakai Qty x Harga supaya total tidak 0.
+            $total_barang = 0;
+            if ($ada_barang) {
+                $total_barang = ($sat === 'unit' || $luas <= 0) ? ($q * $h) : ($luas * $q * $h);
+            }
+            $total = round($total_barang, 2) + $total_aks + $total_kaca;
+
+            // Foto item: upload baru > foto lama (saat edit) > kosong
+            $foto = null;
+            if ($ada_barang) {
+                $foto = $this->_upload_foto($i);
+                if ($foto === null) {
+                    $foto = $this->_foto_valid($foto_lama[$i] ?? '');
+                }
+            }
+
+            $items[] = [
+                'id_barang'          => null,
+                'jenis_item'         => $jenis,
+                'warna'              => trim($warna[$i] ?? ''),
+                'komponen'           => trim($komponen[$i] ?? ''),
+                'finishing'          => trim($finishing[$i] ?? ''),
+                'tebal'              =>  trim($tebal[$i] ?? ''),
+                'komponen_kusen'     =>  trim($komponen_kusen[$i] ?? ''),
+                'komponen_daun'      =>  trim($komponen_daun[$i] ?? ''),
+                'lebar_mm'           => $ada_barang ? $l : 0,
+                'tinggi_mm'          => $ada_barang ? $t : 0,
+                'luas_m2'            => $ada_barang ? $luas : 0,
+                'luas_billing_m2'    => $ada_barang ? $luas : 0,
+                'qty'                => $ada_barang ? $q : 0,
+                'harga_unit'         => $ada_barang ? $h : 0,
+                'satuan_harga'       => $sat,
+                'total_harga'        => round($total, 2),
+                'keterangan'         => trim($keterangan[$i] ?? ''),
+                'tipe_motor'         => '',
+                'input_power'        => '',
+                'voltage'            => '',
+                'books_penutup'      => '',
+                'lebar_m2_books'     => 0,
+                'tinggi_m2_books'    => 0,
+                'luas_m2_books'      => 0,
+                'qty_books'          => 0,
+                'harga_m2_books'     => 0,
+                'harga_m2_instalasi' => 0,
+                'qty_instalasi'      => 0,
+                'kelengkapan'        => '',
+                'foto'               => $foto,
+                'aksesoris'          => $aks_list,
+                'kaca'               => $kaca_list,
+            ];
+
+            $subtotal += $total;
+        }
+
+        // Kolom satuan_harga belum dibuat -> total tetap benar, tapi pilihan "per unit"
+        // tidak tersimpan (saat edit akan kembali ke per m²). Beri tahu user.
+        if (in_array('unit', array_column($items, 'satuan_harga'), true)
+            && !$this->db->field_exists('satuan_harga', 'penawaran_detail')) {
+            $this->foto_errors[] = translate('i18n_kolom_satuan_harga_belum_ada_di_tabel');
+        }
+
+        return [$items, $subtotal];
+    }
+
+    // Upload foto untuk item ke-$i (input file bernama foto[]). Return nama file atau null.
+    private function _upload_foto($i)
+    {
+        if (!isset($_FILES['foto']['name'][$i])) {
+            return null;
+        }
+        return $this->_simpan_upload([
+            'name'     => $_FILES['foto']['name'][$i],
+            'type'     => $_FILES['foto']['type'][$i] ?? '',
+            'tmp_name' => $_FILES['foto']['tmp_name'][$i] ?? '',
+            'error'    => $_FILES['foto']['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $_FILES['foto']['size'][$i] ?? 0,
+        ], (translate('i18n_foto_item') . ' ') . ($i + 1));
+    }
+
+    // Upload foto aksesoris ke-$k milik item ke-$i (input file aks_foto[i][]).
+    private function _upload_foto_aks($i, $k)
+    {
+        if (!isset($_FILES['aks_foto']['name'][$i][$k])) {
+            return null;
+        }
+        return $this->_simpan_upload([
+            'name'     => $_FILES['aks_foto']['name'][$i][$k],
+            'type'     => $_FILES['aks_foto']['type'][$i][$k] ?? '',
+            'tmp_name' => $_FILES['aks_foto']['tmp_name'][$i][$k] ?? '',
+            'error'    => $_FILES['aks_foto']['error'][$i][$k] ?? UPLOAD_ERR_NO_FILE,
+            'size'     => $_FILES['aks_foto']['size'][$i][$k] ?? 0,
+        ], (translate('i18n_foto_aksesoris') . ' ') . ($k + 1) . (' ' . translate('i18n_item') . ' ') . ($i + 1) . ')');
+    }
+
+    // Proses 1 file upload. CI Upload hanya membaca $_FILES[field] tunggal,
+    // jadi entri file disalin dulu ke $_FILES['foto_upload'].
+    private function _simpan_upload(array $file, $label)
+    {
+        if (empty($file['name']) || (int) $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $folder = FCPATH . self::FOLDER_FOTO;
+        if (!is_dir($folder)) {
+            @mkdir($folder, 0755, true);
+        }
+
+        $_FILES['foto_upload'] = $file;
+
+        $this->load->library('upload');
+        $this->upload->initialize([
+            'upload_path'   => $folder,
+            'allowed_types' => 'jpg|jpeg|png',
+            'max_size'      => 3072, // KB
+            'encrypt_name'  => TRUE,
+        ], TRUE);
+
+        if ($this->upload->do_upload('foto_upload')) {
+            return $this->upload->data('file_name');
+        }
+
+        $this->foto_errors[] = $label . ': ' . strip_tags($this->upload->display_errors('', ''));
+        return null;
+    }
+
+    // Nama file foto lama yang valid (format aman & file benar-benar ada), selain itu null
+    private function _foto_valid($nama)
+    {
+        $nama = trim((string) $nama);
+        if ($nama === '' || !preg_match('/^[A-Za-z0-9_.-]+$/', $nama)) {
+            return null;
+        }
+        return is_file(FCPATH . self::FOLDER_FOTO . $nama) ? $nama : null;
+    }
+
+    private function _hapus_file_foto(array $daftar)
+    {
+        foreach ($daftar as $nama) {
+            $nama = $this->_foto_valid($nama);
+            if ($nama !== null) {
+                @unlink(FCPATH . self::FOLDER_FOTO . $nama);
+            }
+        }
+    }
+
     // Ubah "1,25" / "1.25" / "1.234,5" menjadi float
     private function _ke_angka($v)
     {
@@ -362,17 +655,44 @@ class Penawaran extends MY_Controller
         return (float) $v;
     }
 
+    // Rolling door: tahan api, baja, otomatis (ejaan "rooling" / tanpa "door_" juga dikenali)
     private function _is_rolling_door($kategori)
     {
-        return (bool) preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja)$/', (string) $kategori);
+        return (bool) preg_match('/^ro{1,2}l{1,2}ing_(door_)?(tahan_api|baja|otomatis)$/', (string) $kategori);
     }
 
-    private function _luas_billing($kategori, $luas_riil, $lebar_mm = 0, $tinggi_mm = 0)
+    // Pilihan rumus ukuran rolling door. Default (data lama / tidak dipilih) = lebar +200, tinggi +600.
+    const RUMUS_UKURAN_ROLLING = [
+        'l200_t600' => 'Lebar +200, tinggi +600',
+        't500'      => 'Lebar tetap, tinggi +500',
+    ];
+
+    private function _rumus_ukuran_valid($v)
     {
+        return isset(self::RUMUS_UKURAN_ROLLING[$v]) ? $v : 'l200_t600';
+    }
+
+    // Ukuran tagih rolling door (mm) sesuai rumus ukuran
+    private function _ukuran_rolling($lebar_mm, $tinggi_mm, $rumus_ukuran)
+    {
+        if ($rumus_ukuran === 't500') {
+            return [$lebar_mm, $tinggi_mm + 500];
+        }
+        return [$lebar_mm + 200, $tinggi_mm + 600];
+    }
+
+    private function _luas_billing($kategori, $luas_riil, $lebar_mm = 0, $tinggi_mm = 0, $rumus_ukuran = null)
+    {
+        // Rolling door (tahan api / baja / otomatis): luas dari ukuran tagih, minimal 10 m²
+        if ($this->_is_rolling_door($kategori)) {
+            list($lb, $tb) = $this->_ukuran_rolling($lebar_mm, $tinggi_mm, $this->_rumus_ukuran_valid((string) $rumus_ukuran));
+            return max(round(($lb * $tb) / 1000000, 2), 10.0);
+        }
         switch ($kategori) {
             case 'jendela_sliding':
                 return max($luas_riil, 1.3);
             case 'jendela_swing_b1':
+            case 'jendela_jungkit' :
                 return max($luas_riil, 1.4);
             case 'jendela_swing_b2':
                 $luas = max($luas_riil, 1.4);
@@ -386,33 +706,61 @@ class Penawaran extends MY_Controller
             case 'pintu_baja':
             case 'pintu_kayu':
             case 'pintu_alumunium':
+            case 'pintu_tahan_api':
                 return max($luas_riil, 2.0);
             case 'pintu_baja_double':
             case 'pintu_alumunium_double':
+            case 'pintu_tahan_api_double':
                 return max($luas_riil, 3.9);
-            case 'rolling_door_tahan_api':
-            case 'rolling_door_baja':
-            case 'rooling_door_tahan_api':
-            case 'rooling_door_baja':
-                $lebar_m  = ($lebar_mm + 200) / 1000;
-                $tinggi_m = ($tinggi_mm + 600) / 1000;
-                $luas = round($lebar_m * $tinggi_m, 4);
-                return max($luas, 10.0);
             default:
-                if ($this->_is_rolling_door($kategori)) {
-                    return max(round((($lebar_mm + 200) / 1000) * (($tinggi_mm + 600) / 1000), 4), 10.0);
-                }
                 return $luas_riil;
         }
     }
 
-    private function _hitung_total($subtotal, $ppn_persen = null, $pph_persen = null)
+    // Nilai JASA pemasangan = biaya pasang di header + biaya instalasi rolling door
+    // di semua item (luas billing x qty instalasi x tarif pasang per m²).
+    // Inilah dasar pengenaan PPh 23 (bukan seluruh subtotal barang).
+    private function _dpp_jasa($biaya_pasang, array $items)
+    {
+        $jasa = max(0, (float) $biaya_pasang);
+        foreach ($items as $it) {
+            $jasa += (float) ($it['luas_billing_m2'] ?? 0)
+                * (float) ($it['qty_instalasi'] ?? 0)
+                * (float) ($it['harga_m2_instalasi'] ?? 0);
+        }
+        return round($jasa, 2);
+    }
+
+    // Ada biaya pemasangan = nilai jasa pemasangan > 0
+    private function _ada_pemasangan($biaya_pasang, array $items)
+    {
+        return $this->_dpp_jasa($biaya_pasang, $items) > 0;
+    }
+
+    // Kolom penawaran.pph_ongkir sudah ada? (migrasi database/pph_ongkir.sql)
+    private function _kolom_pph_ongkir()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $ada = $this->db->field_exists('pph_ongkir', 'penawaran');
+        }
+        return $ada;
+    }
+
+    // Dasar pengenaan PPh = jasa pemasangan (+ ongkir kalau customer juga memotong PPh atas ongkir)
+    private function _dpp_pph($biaya_pasang, $biaya_ongkir, array $items, $pph_ongkir)
+    {
+        $dpp = $this->_dpp_jasa($biaya_pasang, $items);
+        if ($pph_ongkir) {
+            $dpp += max(0, (float) $biaya_ongkir);
+        }
+        return round($dpp, 2);
+    }
+
+    private function _hitung_total($subtotal, array $items = [], $ppn_persen = null, $pph_persen = null)
     {
         if ($ppn_persen === null) {
             $ppn_persen = $this->input->post('pakai_ppn') ? self::TARIF_PPN : 0;
-        }
-        if ($pph_persen === null) {
-            $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
         }
 
         $biaya_pasang = $this->input->post('pakai_pasang')
@@ -420,12 +768,28 @@ class Penawaran extends MY_Controller
         $biaya_ongkir = $this->input->post('pakai_ongkir')
             ? max(0, (float) $this->input->post('biaya_ongkir')) : null;
 
+        // Ongkir ikut dipotong PPh oleh customer? (hanya berarti kalau ongkir dipakai & PPh aktif)
+        $pph_ongkir = ($biaya_ongkir !== null && $this->input->post('pakai_pph') && $this->input->post('pph_ongkir')) ? 1 : 0;
+
+        // PPh hanya boleh kalau ada dasar PPh: jasa pemasangan, atau ongkir yang dipotong PPh
+        // (dicek ulang di server, tidak percaya form)
+        if ($pph_persen === null) {
+            $pph_persen = $this->input->post('pakai_pph') ? self::TARIF_PPH : 0;
+        }
+        $dpp_pph = $this->_dpp_pph($biaya_pasang, $biaya_ongkir, $items, $pph_ongkir);
+        if ($dpp_pph <= 0) {
+            $pph_persen = 0;
+            $pph_ongkir = 0;
+        }
+
         $dasar_pajak = $subtotal + (float) $biaya_pasang + (float)$biaya_ongkir;
 
+        // PPN 11% dari seluruh nilai (barang + jasa + ongkir).
+        // PPh 23 (2%) dari nilai jasa pemasangan/instalasi (+ ongkir kalau dicentang).
         $ppn_nominal = round($dasar_pajak * $ppn_persen / 100);
-        $pph_nominal = round($dasar_pajak * $pph_persen / 100);
+        $pph_nominal = round($dpp_pph * $pph_persen / 100);
 
-        return [
+        $hasil = [
             'subtotal'     => $subtotal,
             'biaya_pasang' => $biaya_pasang,
             'biaya_ongkir' => $biaya_ongkir,
@@ -433,8 +797,44 @@ class Penawaran extends MY_Controller
             'ppn_nominal'  => $ppn_nominal,
             'pph_persen'   => $pph_persen,
             'pph_nominal'  => $pph_nominal,
-            'grand_total'  => $dasar_pajak + $ppn_nominal + $pph_nominal,
+            // PPh dipotong customer -> MENGURANGI tagihan
+            'grand_total'  => $dasar_pajak + $ppn_nominal - $pph_nominal,
         ];
+        if ($this->_kolom_pph_ongkir()) {
+            $hasil['pph_ongkir'] = $pph_ongkir;
+        }
+        return $hasil;
+    }
+
+    // Pilihan masa konsinyasi (hari, dihitung sejak tanggal surat jalan)
+    const MASA_KONSINYASI = [30, 60];
+    const MASA_KONSINYASI_DEFAULT = 60;
+
+    // Jenis penjualan dari form: biasa / konsinyasi (titip jual).
+    // Kolom hanya diisi kalau migrasi database/konsinyasi.sql sudah dijalankan.
+    // $lama / $masa_lama = nilai sebelumnya (edit), dipakai kalau field tidak terkirim.
+    // Masa konsinyasi (30 / 60 hari) disimpan kalau kolom masa_konsinyasi sudah ada.
+    private function _jenis_penjualan($lama = 'biasa', $masa_lama = null)
+    {
+        if (!$this->db->field_exists('jenis_penjualan', 'penawaran')) {
+            return [];
+        }
+        $v = $this->input->post('jenis_penjualan');
+        if ($v === null) {
+            $v = $lama;
+        }
+        $jenis = ($v === 'konsinyasi') ? 'konsinyasi' : 'biasa';
+        $hasil = ['jenis_penjualan' => $jenis];
+
+        if ($this->db->field_exists('masa_konsinyasi', 'penawaran')) {
+            $masa = $this->input->post('masa_konsinyasi');
+            $masa = ($masa === null) ? (int) $masa_lama : (int) $masa;
+            if (!in_array($masa, self::MASA_KONSINYASI, TRUE)) {
+                $masa = self::MASA_KONSINYASI_DEFAULT;
+            }
+            $hasil['masa_konsinyasi'] = ($jenis === 'konsinyasi') ? $masa : null;
+        }
+        return $hasil;
     }
 
     public function simpan()
@@ -442,17 +842,19 @@ class Penawaran extends MY_Controller
         $tanggal     = $this->input->post('tanggal', TRUE);
         $id_customer = (int)$this->input->post('id_customer');
         $catatan     = $this->input->post('catatan', TRUE);
+        $tipe        = ($this->input->post('tipe') === 'manual') ? 'manual' : 'rumus';
+        $balik       = 'penawaran/tambah' . ($tipe === 'manual' ? '?tipe=manual' : '');
 
         if (empty($tanggal) || $id_customer <= 0) {
-            $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
-            redirect('penawaran/tambah');
+            $this->session->set_flashdata('error', translate('i18n_tanggal_dan_customer_harus_diisi'));
+            redirect($balik);
         }
 
-        list($items, $subtotal) = $this->_kumpulkan_item();
+        list($items, $subtotal) = $this->_kumpulkan_item($tipe);
 
         if (empty($items)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
-            redirect('penawaran/tambah');
+            $this->session->set_flashdata('error', translate('i18n_minimal_harus_ada_1_item_penawaran_yang'));
+            redirect($balik);
         }
 
         $header = array_merge([
@@ -460,18 +862,23 @@ class Penawaran extends MY_Controller
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
+            'tipe'        => $tipe,
             'status'      => 'draft',
             'id_user'     => $this->session->userdata('user_id') ?? 0,
-        ], $this->_hitung_total($subtotal));
+        ], $this->_jenis_penjualan(), $this->_hitung_total($subtotal, $items));
 
         $id_penawaran = $this->Penawaran_model->simpan_penawaran($header, $items);
 
+        if (!empty($this->foto_errors)) {
+            $this->session->set_flashdata('error', implode(' ', $this->foto_errors));
+        }
+
         if ($id_penawaran) {
-            $this->session->set_flashdata('success', 'Penawaran ' . $header['no_surat'] . ' berhasil disimpan.');
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $header['no_surat'] . (' ' . translate('i18n_berhasil_disimpan')));
             redirect('penawaran/detail/' . $id_penawaran);
         } else {
-            $this->session->set_flashdata('error', 'Gagal menyimpan penawaran. Silakan coba lagi.');
-            redirect('penawaran/tambah');
+            $this->session->set_flashdata('error', translate('i18n_gagal_menyimpan_penawaran_silakan_coba'));
+            redirect($balik);
         }
     }
 
@@ -481,12 +888,17 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
         if (($penawaran['header']->status ?? 'draft') === 'approved') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa diedit lagi.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_di_approve_data'));
+            redirect('penawaran/detail/' . $id);
+        }
+
+        if (($penawaran['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_dibatalkan_aktifkan'));
             redirect('penawaran/detail/' . $id);
         }
 
@@ -501,6 +913,7 @@ class Penawaran extends MY_Controller
         $data['list_barang']    = $this->Penawaran_model->get_all_barang();
         $data['tarif_ppn']      = self::TARIF_PPN;
         $data['tarif_pph']      = self::TARIF_PPH;
+        $data['tipe']           = (($penawaran['header']->tipe ?? 'rumus') === 'manual') ? 'manual' : 'rumus';
 
         $this->load->view('templates/header', $data);
         $this->load->view('penjualan/add_penawaran', $data);
@@ -513,12 +926,17 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
         if (($penawaran['header']->status ?? 'draft') === 'approved') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa diedit lagi.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_di_approve_data'));
+            redirect('penawaran/detail/' . $id);
+        }
+
+        if (($penawaran['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_dibatalkan_aktifkan'));
             redirect('penawaran/detail/' . $id);
         }
 
@@ -526,10 +944,13 @@ class Penawaran extends MY_Controller
         $id_customer = (int) $this->input->post('id_customer') ?: $penawaran['header']->id_customer;
         $catatan     = $this->input->post('catatan', TRUE);
 
-        list($items, $subtotal) = $this->_kumpulkan_item();
+        $tipe          = (($penawaran['header']->tipe ?? 'rumus') === 'manual') ? 'manual' : 'rumus';
+        $foto_sebelum  = $this->Penawaran_model->get_foto_list($id);
+
+        list($items, $subtotal) = $this->_kumpulkan_item($tipe);
 
         if (empty($items)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
+            $this->session->set_flashdata('error', translate('i18n_minimal_harus_ada_1_item_penawaran_yang'));
             redirect('penawaran/edit/' . $id);
         }
 
@@ -537,14 +958,27 @@ class Penawaran extends MY_Controller
             'tanggal'     => $tanggal,
             'id_customer' => $id_customer,
             'catatan'     => $catatan,
-        ], $this->_hitung_total($subtotal));
+        ], $this->_jenis_penjualan($penawaran['header']->jenis_penjualan ?? 'biasa', $penawaran['header']->masa_konsinyasi ?? null), $this->_hitung_total($subtotal, $items));
 
         if ($this->Penawaran_model->update_penawaran($id, $header, $items)) {
-            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil diperbarui.');
+            // Hapus file foto yang tidak dipakai lagi (diganti / item dihapus)
+            $foto_baru = array_filter(array_column($items, 'foto'));
+            foreach ($items as $it_baru) {
+                foreach (($it_baru['aksesoris'] ?? []) as $ak_baru) {
+                    if (!empty($ak_baru['foto'])) {
+                        $foto_baru[] = $ak_baru['foto'];
+                    }
+                }
+            }
+            $this->_hapus_file_foto(array_diff($foto_sebelum, $foto_baru));
+            if (!empty($this->foto_errors)) {
+                $this->session->set_flashdata('error', implode(' ', $this->foto_errors));
+            }
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_berhasil_diperbarui')));
             redirect('penawaran/detail/' . $id);
         }
 
-        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal memperbarui penawaran.');
+        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: translate('i18n_gagal_memperbarui_penawaran'));
         redirect('penawaran/detail/' . $id);
     }
 
@@ -558,22 +992,55 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
-        if (($penawaran['header']->status ?? 'draft') === 'approved') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa dihapus.');
+        // Hanya super_admin & admin penawaran (staff_purchasing) yang boleh menghapus
+        if (!$this->_boleh_hapus()) {
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_akses_untuk_menghapus'));
             redirect('penawaran/detail/' . $id);
         }
 
+        // Penawaran approved BOLEH dihapus (mis. customer batal order),
+        // asalkan belum dibuatkan Sales Order yang masih aktif.
+        $no_so = $this->_so_aktif($id);
+        if ($no_so !== null) {
+            $this->session->set_flashdata('error', (translate('i18n_penawaran_ini_sudah_dibuatkan_sales') . ' ') . $no_so . '. Batalkan SO tersebut dulu sebelum menghapus penawaran.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $foto_list = $this->Penawaran_model->get_foto_list($id);
+
         if ($this->Penawaran_model->hapus_penawaran($id)) {
-            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil dihapus.');
+            $this->_hapus_file_foto($foto_list);
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_berhasil_dihapus')));
             redirect('penawaran');
         }
 
-        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal menghapus penawaran.');
+        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: translate('i18n_gagal_menghapus_penawaran'));
         redirect('penawaran/detail/' . $id);
+    }
+
+    // Role yang boleh menghapus penawaran (draft maupun approved)
+    private function _boleh_hapus()
+    {
+        return in_array($this->session->userdata('role'), ['super_admin', 'staff_purchasing'], TRUE);
+    }
+
+    // No. SO aktif (bukan batal) yang dibuat dari penawaran ini, atau null kalau tidak ada
+    private function _so_aktif($id_penawaran)
+    {
+        if (!$this->db->table_exists('sales_order') || !$this->db->field_exists('id_penawaran', 'sales_order')) {
+            return null;
+        }
+        $this->db->select('no_so')->from('sales_order')->where('id_penawaran', (int) $id_penawaran);
+        if ($this->db->field_exists('status', 'sales_order')) {
+            // Sama dengan Sales_order_model: SO berstatus NULL/kosong tetap dianggap aktif
+            $this->db->where("COALESCE(status, '') <> 'batal'", null, false);
+        }
+        $row = $this->db->limit(1)->get()->row();
+        return $row ? $row->no_so : null;
     }
 
     public function approve($id)
@@ -584,12 +1051,124 @@ class Penawaran extends MY_Controller
 
         $id = (int)$id;
 
-        if ($this->Penawaran_model->approve_penawaran($id, $this->session->userdata('user_id') ?? 0)) {
-            $this->session->set_flashdata('success', 'Penawaran berhasil di-approve. Data tidak bisa diedit lagi.');
-        } else {
-            $this->session->set_flashdata('error', 'Penawaran tidak ditemukan atau sudah di-approve.');
+        // Yang boleh approve hanya atasan / super_admin (staff purchasing hanya membuat)
+        if (!in_array($this->session->userdata('role'), ['atasan', 'super_admin'], TRUE)) {
+            $this->session->set_flashdata('error', translate('i18n_hanya_atasan_yang_dapat_meng_approve'));
+            redirect('penawaran/detail/' . $id);
         }
 
+        $cek = $this->Penawaran_model->get_penawaran_detail($id);
+        if ($cek && ($cek['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', translate('i18n_penawaran_yang_sudah_dibatalkan_tidak'));
+            redirect('penawaran/detail/' . $id);
+        }
+
+        if ($this->Penawaran_model->approve_penawaran($id, $this->session->userdata('user_id') ?? 0)) {
+            $this->session->set_flashdata('success', translate('i18n_penawaran_berhasil_di_approve_data_tidak'));
+        } else {
+            $this->session->set_flashdata('error', translate('i18n_penawaran_tidak_ditemukan_atau_sudah_di'));
+        }
+
+        redirect('penawaran/detail/' . $id);
+    }
+
+    // Role yang boleh membatalkan / mengaktifkan kembali penawaran
+    private function _boleh_batal()
+    {
+        return in_array($this->session->userdata('role'), ['super_admin', 'atasan', 'staff_purchasing'], TRUE);
+    }
+
+    // Tandai penawaran BATAL (customer tidak jadi deal). Data tetap tersimpan sebagai riwayat.
+    // Bisa untuk penawaran draft maupun approved, asal belum ada Sales Order aktif.
+    public function batal($id)
+    {
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_404();
+        }
+
+        $id        = (int) $id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
+            redirect('penawaran');
+        }
+        if (!$this->_boleh_batal()) {
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_akses_untuk_membatalkan'));
+            redirect('penawaran/detail/' . $id);
+        }
+        if (($penawaran['header']->status ?? 'draft') === 'batal') {
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_berstatus_batal'));
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $alasan = trim((string) $this->input->post('alasan_batal', TRUE));
+        if ($alasan === '') {
+            $this->session->set_flashdata('error', translate('i18n_alasan_pembatalan_wajib_diisi'));
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $no_so = $this->_so_aktif($id);
+        if ($no_so !== null) {
+            $this->session->set_flashdata('error', (translate('i18n_penawaran_ini_sudah_dibuatkan_sales') . ' ') . $no_so . '. Batalkan SO tersebut dulu.');
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $data = ['status' => 'batal'];
+        if ($this->db->field_exists('alasan_batal', 'penawaran')) {
+            $data['alasan_batal'] = mb_substr($alasan, 0, 255);
+        }
+        if ($this->db->field_exists('dibatalkan_at', 'penawaran')) {
+            $data['dibatalkan_at'] = date('Y-m-d H:i:s');
+        }
+        if ($this->db->field_exists('dibatalkan_oleh', 'penawaran')) {
+            $data['dibatalkan_oleh'] = (int) ($this->session->userdata('user_id') ?? 0) ?: null;
+        }
+
+        if ($this->db->where('id', $id)->update('penawaran', $data)) {
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_ditandai_batal')));
+        } else {
+            $err = $this->db->error();
+            $this->session->set_flashdata('error', translate('i18n_gagal_membatalkan_penawaran') . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
+        }
+        redirect('penawaran/detail/' . $id);
+    }
+
+    // Aktifkan kembali penawaran yang batal (mis. customer jadi deal).
+    // Status kembali ke DRAFT supaya harga bisa direvisi & di-approve ulang oleh atasan.
+    public function aktifkan($id)
+    {
+        if ($this->input->method(TRUE) !== 'POST') {
+            show_404();
+        }
+
+        $id        = (int) $id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+        if (!$penawaran) {
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
+            redirect('penawaran');
+        }
+        if (!$this->_boleh_batal()) {
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_akses_untuk'));
+            redirect('penawaran/detail/' . $id);
+        }
+        if (($penawaran['header']->status ?? 'draft') !== 'batal') {
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_tidak_berstatus_batal'));
+            redirect('penawaran/detail/' . $id);
+        }
+
+        $data = ['status' => 'draft'];
+        foreach (['alasan_batal', 'dibatalkan_at', 'dibatalkan_oleh', 'approved_at'] as $kolom) {
+            if ($this->db->field_exists($kolom, 'penawaran')) {
+                $data[$kolom] = null;
+            }
+        }
+
+        if ($this->db->where('id', $id)->update('penawaran', $data)) {
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_aktif_kembali_status_draft_perlu')));
+        } else {
+            $err = $this->db->error();
+            $this->session->set_flashdata('error', translate('i18n_gagal_mengaktifkan_penawaran') . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
+        }
         redirect('penawaran/detail/' . $id);
     }
 }

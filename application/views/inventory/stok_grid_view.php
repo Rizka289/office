@@ -9,7 +9,7 @@
         <div class="col-md-4">
             <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" id="searchStok" class="form-control" placeholder="Cari kode / nama / warna / ukuran / opsi / lokasi / keterangan ...">
+                <input type="text" id="searchStok" class="form-control" placeholder="<?= translate('i18n_cari_kode_nama_warna_ukuran_opsi_lokasi') ?>">
             </div>
         </div>
     </div>
@@ -32,7 +32,7 @@
             </thead>
             <tbody id="stokTableBody">
                 <tr>
-                    <td colspan="10" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="10" class="text-center text-muted"><?= translate('i18n_memuat_data') ?></td>
                 </tr>
             </tbody>
         </table>
@@ -41,7 +41,7 @@
     <!-- ================= INFO + PAGINATION ================= -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <small class="text-muted" id="stokInfo"></small>
-        <nav aria-label="Pagination Stok">
+        <nav aria-label="<?= translate('i18n_pagination_stok') ?>">
             <ul class="pagination pagination-sm mb-0" id="stokPagination"></ul>
         </nav>
     </div>
@@ -77,7 +77,7 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.append('<tr><td colspan="' + COLS + '" class="text-center text-muted">Data stok tidak ditemukan.</td></tr>');
+                $tbody.append('<tr><td colspan="' + COLS + '" class="text-center text-muted"><?= tj('i18n_data_stok_tidak_ditemukan') ?></td></tr>');
                 return;
             }
 
@@ -106,7 +106,7 @@
                     '<td>' + lokasi + '</td>' +
                     '<td><span class="badge bg-info text-dark">' + escapeHtml(stok.total_stok) + '</span></td>' +
                     '<td class="text-center">' +
-                    '<a class="btn btn-sm btn-outline-primary" href="' + href + '" title="Lihat riwayat"><i class="bi bi-eye"></i></a>' +
+                    '<a class="btn btn-sm btn-outline-primary" href="' + href + '" title="<?= tj('i18n_lihat_riwayat') ?>"><i class="bi bi-eye"></i></a>' +
                     '</td>' +
                     '</tr>';
                 $tbody.append(tr);
@@ -147,13 +147,13 @@
 
                         var start = response.total === 0 ? 0 : ((response.current_page - 1) * response.per_page) + 1;
                         var end = Math.min(response.current_page * response.per_page, response.total);
-                        $('#stokInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
+                        $('#stokInfo').text('<?= tj('i18n_menampilkan') ?> ' + start + '-' + end + ' <?= tj('i18n_dari_lc') ?> ' + response.total + ' <?= tj('i18n_data_lc') ?>');
                     } else {
-                        $('#stokTableBody').html('<tr><td colspan="' + COLS + '" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                        $('#stokTableBody').html('<tr><td colspan="' + COLS + '" class="text-center text-danger"><?= tj('i18n_gagal_memuat_data') ?></td></tr>');
                     }
                 },
                 error: function() {
-                    $('#stokTableBody').html('<tr><td colspan="' + COLS + '" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                    $('#stokTableBody').html('<tr><td colspan="' + COLS + '" class="text-center text-danger"><?= tj('i18n_terjadi_kesalahan_saat_memuat_data') ?></td></tr>');
                 }
             });
         }

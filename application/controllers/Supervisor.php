@@ -8,7 +8,7 @@ class Supervisor extends MY_Controller {
     }
 
     public function index() {
-        $data['title'] = 'Dashboard Supervisor';
+        $data['title'] = translate('i18n_dashboard_supervisor');
         $data['user']  = $this->session->userdata();
         $this->load->view('supervisor/dashboard', $data);
     }

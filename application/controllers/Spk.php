@@ -12,8 +12,8 @@ class Spk extends MY_Controller
 
     public function index()
     {
-        $data['title']       = 'Daftar SPK Produksi';
-        $data['page_title']  = 'Daftar Surat Perintah Kerja';
+        $data['title']       = translate('i18n_daftar_spk_produksi');
+        $data['page_title']  = translate('i18n_daftar_surat_perintah_kerja');
         $data['active_menu'] = 'spk';
 
         $filter = array(
@@ -39,8 +39,8 @@ class Spk extends MY_Controller
             show_404();
         }
 
-        $data['title']       = 'Detail ' . $spk['header']->no_spk;
-        $data['page_title']  = 'Detail Surat Perintah Kerja';
+        $data['title']       = (translate('i18n_detail_2') . ' ') . $spk['header']->no_spk;
+        $data['page_title']  = translate('i18n_detail_surat_perintah_kerja');
         $data['active_menu'] = 'spk';
         $data['spk']         = $spk;
         $data['list_barang_gudang'] = $this->Spk_model->get_all_stok();
@@ -52,8 +52,8 @@ class Spk extends MY_Controller
 
     public function tambah()
     {
-        $data['title']        = 'Buat SPK Baru';
-        $data['page_title']   = 'Buat Surat Perintah Kerja';
+        $data['title']        = translate('i18n_buat_spk_baru');
+        $data['page_title']   = translate('i18n_buat_surat_perintah_kerja');
         $data['active_menu']  = 'spk';
         $data['so_siap_list'] = $this->Spk_model->get_so_siap_spk();
 
@@ -73,7 +73,7 @@ class Spk extends MY_Controller
         $catatan_produksi = trim($this->input->post('catatan_produksi', true));
 
         if (!$id_so || !$tanggal_spk || !strtotime($tanggal_spk)) {
-            $this->session->set_flashdata('error', 'Sales Order dan tanggal SPK wajib diisi.');
+            $this->session->set_flashdata('error', translate('i18n_sales_order_dan_tanggal_spk_wajib_diisi'));
             redirect('spk/tambah');
             return;
         }
@@ -87,7 +87,7 @@ class Spk extends MY_Controller
         list($ok, $pesan) = $this->Spk_model->simpan_spk($id_so, $input, $this->_id_user());
 
         if ($ok) {
-            $this->session->set_flashdata('success', 'SPK ' . $pesan . ' berhasil dibuat dan status SO diubah menjadi Produksi.');
+            $this->session->set_flashdata('success', 'SPK ' . $pesan . (' ' . translate('i18n_berhasil_dibuat_dan_status_so_diubah')));
             redirect('spk');
         } else {
             $this->session->set_flashdata('error', $pesan);
@@ -114,7 +114,7 @@ class Spk extends MY_Controller
             || !$data_material['id_barang_bahan']
             || $data_material['qty_pakai'] <= 0
             || $data_material['tanggal_keluar'] === '') {
-            $this->session->set_flashdata('error', 'Barang, qty, dan tanggal keluar wajib diisi dengan benar.');
+            $this->session->set_flashdata('error', translate('i18n_barang_qty_dan_tanggal_keluar_wajib'));
             redirect('spk/detail/' . $id_spk);
             return;
         }
@@ -140,7 +140,7 @@ class Spk extends MY_Controller
         );
 
         if (!$id_spk || !$data['id_material'] || $data['qty_retur'] <= 0 || $data['tanggal_retur'] === '') {
-            $this->session->set_flashdata('error', 'Bahan, qty retur, dan tanggal wajib diisi dengan benar.');
+            $this->session->set_flashdata('error', translate('i18n_bahan_qty_retur_dan_tanggal_wajib_diisi'));
             redirect('spk/detail/' . $id_spk);
             return;
         }
@@ -158,7 +158,7 @@ class Spk extends MY_Controller
         $aksi     = $this->input->post('aksi', true);
 
         if (!$id_spk || !$id_tahap || !in_array($aksi, array('mulai', 'selesai', 'buka'), true)) {
-            $this->session->set_flashdata('error', 'Data tahapan tidak valid.');
+            $this->session->set_flashdata('error', translate('i18n_data_tahapan_tidak_valid'));
             redirect('spk/detail/' . $id_spk);
             return;
         }

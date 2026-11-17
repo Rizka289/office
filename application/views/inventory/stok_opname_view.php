@@ -264,14 +264,14 @@
 
                 <div class="so-form-group">
                     <label class="so-label"><i class="fas fa-sort-numeric-up"></i><span id="soQtyLabel"><?= translate('jml_stok') ?></span> <span class="text-danger">*</span></label>
-                    <input type="number" min="0" name="qty_fisik" id="soQty" class="form-control so-control" placeholder="Masukkan jumlah" required>
+                    <input type="number" min="0" name="qty_fisik" id="soQty" class="form-control so-control" placeholder="<?= translate('i18n_masukkan_jumlah') ?>" required>
                 </div>
 
                 <div class="so-form-group">
                     <label class="so-label"><i class="fas fa-ruler-combined"></i><?= translate('ukuran') ?></label>
                     <input type="text" name="ukuran" id="soUkuran" maxlength="100" autocomplete="off"
                         class="form-control so-control" placeholder="<?= translate('p_uk') ?>">
-                    <div class="so-info">Ukuran yang berbeda dihitung sebagai stok terpisah. Tidak berlaku untuk aksesoris.</div>
+                    <div class="so-info"><?= translate('i18n_ukuran_yang_berbeda_dihitung_sebagai') ?></div>
                 </div>
 
                 <div class="so-form-group">
@@ -335,7 +335,7 @@
             if (!hasil.length) {
                 var kosong = document.createElement('div');
                 kosong.className = 'so-empty';
-                kosong.textContent = 'Barang tidak ditemukan.';
+                kosong.textContent = '<?= tj('i18n_barang_tidak_ditemukan') ?>';
                 dropdown.appendChild(kosong);
                 dropdown.classList.remove('d-none');
                 return;

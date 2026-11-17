@@ -57,7 +57,7 @@ class Customer extends MY_Controller
         $alamat = $this->input->post('alamat', true);
 
         if (empty($nama) || empty($kontak) || empty($alamat)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_semua_field_wajib_diisi')]);
             return;
         }
 
@@ -84,7 +84,7 @@ class Customer extends MY_Controller
         $this->jsonResponse(
             $customers
                 ? ['status' => true, 'data' => $customers]
-                : ['status' => false, 'message' => 'Data tidak ditemukan!']
+                : ['status' => false, 'message' => translate('i18n_data_tidak_ditemukan_2')]
         );
     }
 
@@ -97,7 +97,7 @@ class Customer extends MY_Controller
         $alamat = $this->input->post('alamat', true);
 
         if (empty($id) || empty($nama) || empty($kontak) || empty($alamat)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Field nama, kontak, dan alamat wajib diisi!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_field_nama_kontak_dan_alamat_wajib_diisi')]);
             return;
         }
 
@@ -120,7 +120,7 @@ class Customer extends MY_Controller
     public function delete($id = NULL)
     {
         if (empty($id)) {
-            $this->jsonResponse(['status' => false, 'message' => 'ID tidak ditemukan!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_id_tidak_ditemukan')]);
             return;
         }
 
@@ -137,7 +137,7 @@ class Customer extends MY_Controller
         if ($code === 1451) { // foreign key constraint
             $msg = translate('p_customer_relasi');
         } else {
-            $msg = 'Gagal menghapus data dari database';
+            $msg = translate('i18n_gagal_menghapus_data_dari_database');
         }
 
         $this->jsonResponse(['status' => false, 'message' => $msg]);

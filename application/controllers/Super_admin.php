@@ -8,7 +8,7 @@ class Super_admin extends MY_Controller {
     }
 
     public function index() {
-        $data['title'] = 'Dashboard Super Admin';
+        $data['title'] = translate('i18n_dashboard_super_admin');
         $data['user']  = $this->session->userdata();
         $this->load->view('super_admin/dashboard', $data);
     }

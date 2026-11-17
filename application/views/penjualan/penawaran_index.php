@@ -148,6 +148,9 @@
         <div>
           <div class="kpi-value"><?= (int) ($total_belum ?? 0); ?></div>
           <div class="kpi-label"><?= translate('b_setuju') ?></div>
+          <?php if ((int) ($total_batal ?? 0) > 0): ?>
+            <div class="text-danger small"><i class="bi bi-x-circle me-1"></i><?= (int) $total_batal; ?> <?= translate('i18n_batal') ?></div>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -164,8 +167,8 @@
 
   <!-- Rekap penawaran per bulan -->
   <?php
-    $nama_bulan = ['01' => 'Januari', '02' => 'Februari', '03' => 'Maret', '04' => 'April', '05' => 'Mei', '06' => 'Juni',
-                   '07' => 'Juli', '08' => 'Agustus', '09' => 'September', '10' => 'Oktober', '11' => 'November', '12' => 'Desember'];
+    $nama_bulan = ['01' => translate('i18n_januari'), '02' => translate('i18n_februari'), '03' => translate('i18n_maret'), '04' => translate('i18n_april'), '05' => translate('i18n_mei'), '06' => translate('i18n_juni'),
+                   '07' => translate('i18n_juli'), '08' => translate('i18n_agustus'), '09' => translate('i18n_september'), '10' => translate('i18n_oktober'), '11' => translate('i18n_november'), '12' => translate('i18n_desember')];
   ?>
   <div class="table-wrap mb-3">
     <div class="px-3 py-2 fw-semibold border-bottom"><i class="bi bi-calendar3 me-1"></i><?= translate('label_index') ?></div>
@@ -177,6 +180,7 @@
             <th class="text-center"><?= translate('t_penawaran') ?></th>
             <th class="text-center"><?= translate('setuju') ?></th>
             <th class="text-center"><?= translate('b_setuju') ?></th>
+            <th class="text-center"><?= translate('btn_batal') ?></th>
             <th class="text-end"><?= translate('nilai_penawaran') ?></th>
           </tr>
         </thead>
@@ -189,11 +193,12 @@
                 <td class="text-center"><?= (int) $r->total; ?></td>
                 <td class="text-center"><?= (int) $r->approved; ?></td>
                 <td class="text-center"><?= (int) $r->belum; ?></td>
+                <td class="text-center"><?= (int) ($r->batal ?? 0); ?></td>
                 <td class="text-end">Rp <?= number_format((float) $r->nilai, 0, ',', '.'); ?></td>
               </tr>
             <?php endforeach; ?>
           <?php else: ?>
-            <tr class="empty-row"><td colspan="5"><i class="bi bi-inbox"></i>Belum ada data penawaran.</td></tr>
+            <tr class="empty-row"><td colspan="6"><i class="bi bi-inbox"></i><?= translate('i18n_belum_ada_data_penawaran') ?></td></tr>
           <?php endif; ?>
         </tbody>
       </table>
@@ -211,11 +216,21 @@
           value="<?= isset($filter_q) ? html_escape($filter_q) : ''; ?>">
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-12 col-md-2">
+      <label class="form-label small text-muted mb-1"><?= translate('status') ?></label>
+      <?php $fs = isset($filter_status) ? $filter_status : ''; ?>
+      <select name="status" class="form-select">
+        <option value="" <?= $fs === '' ? 'selected' : ''; ?>><?= translate('i18n_semua') ?></option>
+        <option value="pending" <?= $fs === 'pending' ? 'selected' : ''; ?>><?= translate('i18n_belum_approve') ?></option>
+        <option value="approved" <?= $fs === 'approved' ? 'selected' : ''; ?>><?= translate('i18n_sudah_approve') ?></option>
+        <option value="batal" <?= $fs === 'batal' ? 'selected' : ''; ?>><?= translate('btn_batal') ?></option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
       <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal1') ?></label>
       <input type="date" name="dari" class="form-control" value="<?= isset($filter_dari) ? $filter_dari : ''; ?>">
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-2">
       <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal2') ?></label>
       <input type="date" name="sampai" class="form-control" value="<?= isset($filter_sampai) ? $filter_sampai : ''; ?>">
     </div>
@@ -223,9 +238,15 @@
       <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-funnel"></i></button>
     </div>
     <div class="col-12 col-md-2 d-grid">
-      <a href="<?= site_url('penawaran/tambah'); ?>" class="btn btn-brand">
-        <i class="bi bi-plus-lg me-1"></i><?= translate('add') ?>
-      </a>
+      <div class="dropdown d-grid">
+        <button type="button" class="btn btn-brand dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-plus-lg me-1"></i><?= translate('add') ?>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="<?= site_url('penawaran/tambah'); ?>"><?= translate('i18n_penawaran_pakai_rumus') ?></a></li>
+          <li><a class="dropdown-item" href="<?= site_url('penawaran/tambah?tipe=manual'); ?>"><?= translate('i18n_penawaran_manual') ?></a></li>
+        </ul>
+      </div>
     </div>
     <?php echo form_close(); ?>
   </div>
@@ -252,13 +273,15 @@
             <?php foreach ($penawaran_list as $row): ?>
               <tr>
                 <td><?= $no++; ?></td>
-                <td class="fw-semibold"><?= html_escape($row->no_surat); ?></td>
+                <td class="fw-semibold"><?= html_escape($row->no_surat); ?><?php if (($row->tipe ?? 'rumus') === 'manual'): ?> <span class="badge bg-info text-dark"><?= translate('i18n_manual') ?></span><?php endif; ?><?php if (($row->jenis_penjualan ?? 'biasa') === 'konsinyasi'): ?> <span class="badge bg-purple text-white" style="background:#6f42c1" title="<?= translate('i18n_konsinyasi_sample_dibayar_sesuai_barang') ?>"><?= translate('i18n_konsinyasi') ?><?= in_array((int) ($row->masa_konsinyasi ?? 0), [30, 60], true) ? ' ' . (int) $row->masa_konsinyasi . 'h' : ''; ?></span><?php endif; ?></td>
                 <td><?= date('d M Y', strtotime($row->tanggal)); ?></td>
                 <td><?= html_escape($row->customer); ?></td>
                 <td class="text-center"><?= (int) $row->total_item; ?></td>
                 <td class="text-end">Rp <?= number_format((float) $row->grand_total, 0, ',', '.'); ?></td>
                 <td class="text-center">
-                  <?php if (($row->status ?? 'draft') === 'approved'): ?>
+                  <?php if (($row->status ?? 'draft') === 'batal'): ?>
+                    <span class="badge bg-danger" title="<?= html_escape($row->alasan_batal ?? ''); ?>"><i class="bi bi-x-circle me-1"></i><?= translate('btn_batal') ?></span>
+                  <?php elseif (($row->status ?? 'draft') === 'approved'): ?>
                     <span class="badge bg-success"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
                   <?php else: ?>
                     <span class="badge bg-warning text-dark"><?= translate('b_setuju') ?></span>
@@ -266,23 +289,31 @@
                 </td>
                 <td class="text-center">
                   <a href="<?= site_url('penawaran/detail/' . $row->id); ?>"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Lihat Detail">
+                    class="btn btn-icon-sm btn-outline-secondary" title="<?= translate('i18n_lihat_detail') ?>">
                     <i class="bi bi-eye"></i>
                   </a>
                   <a href="<?= site_url('penawaran/cetak/' . $row->id); ?>"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Cetak">
+                    class="btn btn-icon-sm btn-outline-secondary" title="<?= translate('cetak') ?>">
                     <i class="bi bi-printer"></i>
                   </a>
-                  <?php if (($row->status ?? 'draft') !== 'approved'): ?>
+                  <?php $row_approved = (($row->status ?? 'draft') === 'approved'); ?>
+                  <?php if (!$row_approved && ($row->status ?? 'draft') !== 'batal'): ?>
                     <a href="<?= site_url('penawaran/edit/' . $row->id); ?>"
-                      class="btn btn-icon-sm btn-outline-warning" title="Edit">
+                      class="btn btn-icon-sm btn-outline-warning" title="<?= translate('update') ?>">
                       <i class="bi bi-pencil-square"></i>
                     </a>
+                  <?php endif; ?>
+                  <?php if (!empty($boleh_hapus)): ?>
+                    <?php
+                      $pesan_hapus = $row_approved
+                        ? (translate('i18n_penawaran') . ' ') . $row->no_surat . (' ' . translate('i18n_sudah_di_approve_yakin_hapus_mis'))
+                        : (translate('i18n_hapus_penawaran') . ' ') . $row->no_surat . '? Data yang dihapus tidak bisa dikembalikan.';
+                    ?>
                     <?= form_open('penawaran/delete/' . (int) $row->id, [
                           'class'    => 'd-inline',
-                          'onsubmit' => "return confirm('Hapus penawaran " . html_escape($row->no_surat) . "? Data yang dihapus tidak bisa dikembalikan.');"
+                          'onsubmit' => 'return confirm(' . html_escape(json_encode($pesan_hapus)) . ');'
                         ]); ?>
-                      <button type="submit" class="btn btn-icon-sm btn-outline-danger" title="Hapus">
+                      <button type="submit" class="btn btn-icon-sm btn-outline-danger" title="<?= translate('hapus') ?>">
                         <i class="bi bi-trash"></i>
                       </button>
                     <?= form_close(); ?>
@@ -294,7 +325,7 @@
             <tr class="empty-row">
               <td colspan="8">
                 <i class="bi bi-inbox"></i>
-                Belum ada data penawaran<?= (isset($filter_q) && $filter_q !== '') ? ' untuk pencarian "' . html_escape($filter_q) . '"' : ''; ?>.
+                <?= translate('i18n_belum_ada_data_penawaran_2') ?><?= (isset($filter_q) && $filter_q !== '') ? ' untuk pencarian "' . html_escape($filter_q) . '"' : ''; ?>.
               </td>
             </tr>
           <?php endif; ?>
@@ -307,7 +338,7 @@
   <?php if (!empty($pagination)): ?>
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3">
       <div class="text-muted small">
-        Menampilkan <?= isset($jumlah_ditampilkan) ? $jumlah_ditampilkan : 0; ?> dari <?= isset($total_data) ? $total_data : 0; ?> data
+        <?= translate('i18n_menampilkan') ?> <?= isset($jumlah_ditampilkan) ? $jumlah_ditampilkan : 0; ?> <?= translate('i18n_dari') ?> <?= isset($total_data) ? $total_data : 0; ?> <?= translate('i18n_data') ?>
       </div>
       <nav>
         <?= $pagination; ?>

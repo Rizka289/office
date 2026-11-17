@@ -32,7 +32,7 @@
             </thead>
             <tbody id="tbodyKatBarang">
                 <tr>
-                    <td colspan="6" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="6" class="text-center text-muted"><?= translate('i18n_memuat_data') ?></td>
                 </tr>
             </tbody>
         </table>
@@ -55,7 +55,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalTambahKatBarangLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('kategori_barang') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formTambahKatBarang" autocomplete="off">
                 <div class="modal-body">
@@ -87,22 +87,22 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalEditKatBarangLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') . ' ' . translate('kategori_barang') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formEditKatBarang" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="id" id="edit_id">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
-                        <input type="text" name="kode" id="edit_kode" class="form-control form-control-sm" placeholder="Masukkan kode kategori" required>
+                        <input type="text" name="kode" id="edit_kode" class="form-control form-control-sm" placeholder="<?= translate('i18n_masukkan_kode_kategori') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama') ?></label>
-                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="Masukkan Nama Kategori" required>
+                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-sm" placeholder="<?= translate('i18n_masukkan_nama_kategori') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
-                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="Masukkan deskripsi" required></textarea>
+                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="<?= translate('i18n_masukkan_deskripsi') ?>" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -171,10 +171,10 @@
 
         // Penanganan error terpusat: bedakan 403 (CSRF), sesi habis / error PHP (bukan JSON), dll.
         function ajaxFail(xhr, textStatus, fallbackMsg) {
-            console.error('AJAX gagal:', xhr.status, textStatus, xhr.responseText);
+            console.error('<?= tj('i18n_ajax_gagal') ?>', xhr.status, textStatus, xhr.responseText);
 
             if (xhr.status === 403) {
-                alert('Token keamanan sudah tidak berlaku. Halaman akan dimuat ulang, silakan ulangi aksi Anda.');
+                alert('<?= tj('i18n_token_keamanan_sudah_tidak_berlaku') ?>');
                 location.reload();
                 return;
             }
@@ -183,11 +183,11 @@
             if (xhr.responseJSON && xhr.responseJSON.message) {
                 msg = xhr.responseJSON.message;
             } else if (textStatus === 'parsererror') {
-                msg = 'Respons server bukan JSON (sesi login mungkin habis atau ada error PHP). Coba muat ulang halaman.';
+                msg = '<?= tj('i18n_respons_server_bukan_json_sesi_login') ?>';
             } else if (xhr.status === 0) {
-                msg = 'Tidak bisa terhubung ke server.';
+                msg = '<?= tj('i18n_tidak_bisa_terhubung_ke_server') ?>';
             } else if (xhr.status >= 500) {
-                msg = 'Terjadi error di server (' + xhr.status + '). Cek application/logs.';
+                msg = '<?= tj('i18n_terjadi_error_di_server') ?>' + xhr.status + '<?= tj('i18n_cek_application_logs') ?>';
             }
             alert(msg);
         }
@@ -238,10 +238,10 @@
                 },
                 error: function(xhr, textStatus) {
                     if (seq !== loadSeq) return;
-                    console.error('Load data gagal:', xhr.status, textStatus, xhr.responseText);
+                    console.error('<?= tj('i18n_load_data_gagal') ?>', xhr.status, textStatus, xhr.responseText);
                     var msg = (textStatus === 'parsererror')
-                        ? 'Gagal memuat data (respons bukan JSON, sesi mungkin habis). Muat ulang halaman.'
-                        : 'Gagal memuat data (' + xhr.status + ').';
+                        ? '<?= tj('i18n_gagal_memuat_data_respons_bukan_json') ?>'
+                        : '<?= tj('i18n_gagal_memuat_data_2') ?>' + xhr.status + ').';
                     $('#tbodyKatBarang').html('<tr><td colspan="6" class="text-center text-danger">' + msg + '</td></tr>');
                 }
             });
@@ -269,8 +269,8 @@
                         '<td>' + escapeHtml(kat.deskripsi) + '</td>' +
                         '<td>' + escapeHtml(kat.created_at || '-') + '</td>' +
                         '<td class="text-center">' +
-                            '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + escapeHtml(kat.id) + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
-                            '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + escapeHtml(kat.id) + '" data-nama="' + escapeHtml(kat.nama_kategori) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                            '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + escapeHtml(kat.id) + '" title="<?= tj('update') ?>"><i class="bi bi-pencil"></i></button> ' +
+                            '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + escapeHtml(kat.id) + '" data-nama="' + escapeHtml(kat.nama_kategori) + '" title="<?= tj('hapus') ?>"><i class="bi bi-trash"></i></button>' +
                         '</td>' +
                     '</tr>';
                 $tbody.append(tr);
@@ -305,7 +305,7 @@
             }
             var start = ((page - 1) * perPage) + 1;
             var end   = start + countInPage - 1;
-            $('#infoKatBarang').text('Menampilkan ' + start + '-' + end + ' dari ' + total + ' data');
+            $('#infoKatBarang').text('<?= tj('i18n_menampilkan') ?> ' + start + '-' + end + ' <?= tj('i18n_dari_lc') ?> ' + total + ' <?= tj('i18n_data_lc') ?>');
         }
 
         // Klik nomor halaman pagination
@@ -336,7 +336,7 @@
         // 1. AJAX TAMBAH KATEGORI BARANG
         $('#formTambahKatBarang').on('submit', function(e) {
             e.preventDefault();
-            $('#btnSimpan').prop('disabled', true).text('Menyimpan...');
+            $('#btnSimpan').prop('disabled', true).text('<?= tj('i18n_menyimpan') ?>');
 
             apiPost("<?= site_url('kategori_barang/simpan'); ?>", $(this).serialize())
                 .done(function(response) {
@@ -349,7 +349,7 @@
                     }
                 })
                 .fail(function(xhr, textStatus) {
-                    ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat menyimpan data.');
+                    ajaxFail(xhr, textStatus, '<?= tj('i18n_terjadi_kesalahan_saat_menyimpan_data_2') ?>');
                 })
                 .always(function() {
                     $('#btnSimpan').prop('disabled', false).text(labelSimpan);
@@ -380,14 +380,14 @@
                 }
             })
             .fail(function(xhr, textStatus) {
-                ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat mengambil data.');
+                ajaxFail(xhr, textStatus, '<?= tj('i18n_terjadi_kesalahan_saat_mengambil_data') ?>');
             });
         });
 
         // 3. AJAX UPDATE KATEGORI BARANG
         $('#formEditKatBarang').on('submit', function(e) {
             e.preventDefault();
-            $('#btnUpdate').prop('disabled', true).text('Memperbarui...');
+            $('#btnUpdate').prop('disabled', true).text('<?= tj('i18n_memperbarui') ?>');
 
             apiPost("<?= site_url('kategori_barang/update'); ?>", $(this).serialize())
                 .done(function(response) {
@@ -399,7 +399,7 @@
                     }
                 })
                 .fail(function(xhr, textStatus) {
-                    ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat memperbarui data.');
+                    ajaxFail(xhr, textStatus, '<?= tj('i18n_terjadi_kesalahan_saat_memperbarui_data_2') ?>');
                 })
                 .always(function() {
                     $('#btnUpdate').prop('disabled', false).text(labelUpdate);
@@ -428,7 +428,7 @@
                     }
                 })
                 .fail(function(xhr, textStatus) {
-                    ajaxFail(xhr, textStatus, 'Terjadi kesalahan saat menghapus data.');
+                    ajaxFail(xhr, textStatus, '<?= tj('i18n_terjadi_kesalahan_saat_menghapus_data_2') ?>');
                 })
                 .always(function() {
                     $btn.prop('disabled', false);

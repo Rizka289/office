@@ -39,12 +39,13 @@ class Pemenuhan extends MY_Controller
 
     // Filter status di menu Purchase Order
     private $filter_po = array(
-        'semua'    => array('label' => 'Semua',             'status' => array()),
-        'draft'    => array('label' => 'Menunggu approval', 'status' => array('draft')),
-        'approved' => array('label' => 'Disetujui',         'status' => array('approved')),
-        'dipesan'  => array('label' => 'Dipesan',           'status' => array('dipesan', 'sebagian')),
-        'selesai'  => array('label' => 'Selesai',           'status' => array('selesai')),
-        'batal'    => array('label' => 'Batal',             'status' => array('batal')),
+        // 'label' berisi key tabel interfaces, diterjemahkan di __construct()
+        'semua'    => array('label' => 'i18n_semua',             'status' => array()),
+        'draft'    => array('label' => 'i18n_menunggu_approval', 'status' => array('draft')),
+        'approved' => array('label' => 'setuju',                 'status' => array('approved')),
+        'dipesan'  => array('label' => 'i18n_dipesan',           'status' => array('dipesan', 'sebagian')),
+        'selesai'  => array('label' => 'selesai',                'status' => array('selesai')),
+        'batal'    => array('label' => 'btn_batal',              'status' => array('batal')),
     );
 
     public function __construct()
@@ -54,6 +55,9 @@ class Pemenuhan extends MY_Controller
         $this->load->model(array('Pemenuhan_model', 'Sales_order_model', 'Supplier_model'));
         $this->load->helper(array('url', 'form'));
         $this->load->library('session');
+        foreach ($this->filter_po as $k => $f) {
+            $this->filter_po[$k]['label'] = translate($f['label']);
+        }
     }
 
     // ================= HALAMAN =================
@@ -62,7 +66,7 @@ class Pemenuhan extends MY_Controller
     public function index()
     {
         $this->_wajib_izin('menu_proses', 'dashboard');
-        $data['title']       = 'Proses Pesanan';
+        $data['title']       = translate('app_purchasing');
         $data['so_list']     = $this->Pemenuhan_model->get_so_aktif();
         $data['active_menu'] = 'pemenuhan';
         $this->_view('pemenuhan/index', $data);
@@ -77,7 +81,7 @@ class Pemenuhan extends MY_Controller
             $f = 'semua';
         }
         $q = mb_substr(trim((string) $this->input->get('q', true)), 0, 60);
-        $data['title']       = 'Purchase Order';
+        $data['title']       = translate('i18n_purchase_order');
         $data['filter']      = $f;
         $data['q']           = $q;
         $data['filter_list'] = $this->filter_po;
@@ -91,7 +95,7 @@ class Pemenuhan extends MY_Controller
     public function penerimaan()
     {
         $this->_wajib_izin('menu_terima', 'dashboard');
-        $data['title']       = 'Penerimaan Barang';
+        $data['title']       = translate('penerimaan_barang');
         $data['po_list']     = $this->Pemenuhan_model->get_po_penerimaan();
         $data['active_menu'] = 'po_terima';
         $this->_view('pemenuhan/penerimaan', $data);
@@ -101,7 +105,7 @@ class Pemenuhan extends MY_Controller
     public function spk_list()
     {
         $this->_wajib_izin('menu_spk', 'dashboard');
-        $data['title']       = 'SPK Pesanan';
+        $data['title']       = translate('i18n_spk_pesanan');
         $data['spk_list']    = $this->Pemenuhan_model->get_spk_list();
         $data['active_menu'] = 'pm_spk';
         $this->_view('pemenuhan/spk_list', $data);
@@ -111,7 +115,7 @@ class Pemenuhan extends MY_Controller
     public function sj_list()
     {
         $this->_wajib_izin('menu_sj', 'dashboard');
-        $data['title']       = 'Surat Jalan';
+        $data['title']       = translate('i18n_surat_jalan');
         $data['sj_list']     = $this->Pemenuhan_model->get_sj_list();
         $data['so_siap']     = $this->Pemenuhan_model->get_so_siap_kirim();
         $data['active_menu'] = 'pm_sj';
@@ -122,7 +126,7 @@ class Pemenuhan extends MY_Controller
     public function hutang()
     {
         $this->_wajib_izin('menu_hutang', 'dashboard');
-        $data['title']       = 'Hutang Supplier';
+        $data['title']       = translate('i18n_hutang_supplier');
         $data['po_hutang']   = $this->Pemenuhan_model->get_po_hutang();
         $data['active_menu'] = 'hutang';
         $this->_view('pemenuhan/hutang', $data);
@@ -132,7 +136,7 @@ class Pemenuhan extends MY_Controller
     public function so($id = 0)
     {
         $h = $this->_so_atau_404($id);
-        $data['title']         = 'Proses ' . $h->no_so;
+        $data['title']         = (translate('i18n_proses') . ' ') . $h->no_so;
         $data['h']             = $h;
         $data['items']         = $this->Pemenuhan_model->get_items($h->id);
         $data['po_list']       = $this->Pemenuhan_model->get_po_list($h->id);
@@ -169,7 +173,7 @@ class Pemenuhan extends MY_Controller
         $this->_wajib_izin('atur', 'pemenuhan/so/' . (int) $id_so);
         $h = $this->_so_atau_404($id_so);
         if (!$this->_status_proses($h)) {
-            return $this->_tolak($h->id, 'SO harus berstatus Dikonfirmasi / Produksi untuk membuat PO.');
+            return $this->_tolak($h->id, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi'));
         }
         $jenis = $this->input->get('jenis') === 'dropship' ? 'dropship' : 'stok';
         $perlu = $jenis === 'dropship' ? 'dropship' : 'beli';
@@ -181,7 +185,7 @@ class Pemenuhan extends MY_Controller
             }
         }
         if ($jenis === 'dropship' && !$items) {
-            return $this->_tolak($h->id, 'Tidak ada item dropship yang belum dipesan. Atur sumber item = Dropship dulu.');
+            return $this->_tolak($h->id, translate('i18n_tidak_ada_item_dropship_yang_belum'));
         }
 
         // supplier: dari pilihan user, atau supplier default item pertama
@@ -201,7 +205,7 @@ class Pemenuhan extends MY_Controller
         }
 
         $p = $this->Pemenuhan_model->perusahaan();
-        $data['title']         = 'Buat PO ' . ($jenis === 'dropship' ? 'Dropship' : 'Beli');
+        $data['title']         = (translate('i18n_buat_po') . ' ') . ($jenis === 'dropship' ? 'Dropship' : translate('i18n_beli'));
         $data['h']             = $h;
         $data['jenis']         = $jenis;
         $data['items']         = $items;
@@ -290,7 +294,7 @@ class Pemenuhan extends MY_Controller
         $kembali = $this->_kembali('pemenuhan/so/' . $po->id_so);
         $perlu   = array('setujui' => 'approve', 'tolak' => 'approve', 'kirim' => 'atur', 'batal' => 'batal_po');
         if (!isset($perlu[$aksi])) {
-            $this->_flash(false, 'Aksi tidak dikenal.');
+            $this->_flash(false, translate('i18n_aksi_tidak_dikenal'));
             redirect($kembali);
         }
         $this->_wajib_izin($perlu[$aksi], $kembali);
@@ -406,9 +410,9 @@ class Pemenuhan extends MY_Controller
         }
 
         if (!in_array($h->status, array('dipesan', 'sebagian'), true)) {
-            return $this->_tolak($h->id_so, 'PO ' . $h->no_po . ' belum dikirim ke supplier / sudah selesai.');
+            return $this->_tolak($h->id_so, 'PO ' . $h->no_po . (' ' . translate('i18n_belum_dikirim_ke_supplier_sudah_selesai')));
         }
-        $data['title'] = ($h->jenis === 'dropship' ? 'Konfirmasi Dropship ' : 'Terima Barang ') . $h->no_po;
+        $data['title'] = ($h->jenis === 'dropship' ? 'Konfirmasi Dropship ' : (translate('i18n_terima_barang') . ' ')) . $h->no_po;
         $data['po']    = $po;
         $data['active_menu'] = 'po_terima';
         $this->_view('pemenuhan/po_terima', $data);
@@ -434,7 +438,7 @@ class Pemenuhan extends MY_Controller
         $this->_wajib_izin('atur', 'pemenuhan/so/' . (int) $id_so);
         $h = $this->_so_atau_404($id_so);
         if (!$this->_status_proses($h)) {
-            return $this->_tolak($h->id, 'SO harus berstatus Dikonfirmasi / Produksi untuk membuat SPK.');
+            return $this->_tolak($h->id, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi_2'));
         }
         $items = array();
         foreach ($this->Pemenuhan_model->get_items($h->id) as $it) {
@@ -443,9 +447,9 @@ class Pemenuhan extends MY_Controller
             }
         }
         if (!$items) {
-            return $this->_tolak($h->id, 'Tidak ada item produksi yang belum dibuatkan SPK. Atur sumber item = Produksi dulu.');
+            return $this->_tolak($h->id, translate('i18n_tidak_ada_item_produksi_yang_belum'));
         }
-        $data['title'] = 'Buat SPK Produksi';
+        $data['title'] = translate('i18n_buat_spk_produksi');
         $data['h']     = $h;
         $data['items'] = $items;
         $this->_view('pemenuhan/spk_form', $data);
@@ -540,13 +544,13 @@ class Pemenuhan extends MY_Controller
             }
         }
         if (!$it || $it->sumber !== 'stok') {
-            return $this->_tolak($h->id, 'Atur sumber item = "Ambil dari stok" lalu simpan sumber dulu.');
+            return $this->_tolak($h->id, translate('i18n_atur_sumber_item_ambil_dari_stok_lalu'));
         }
         $cari      = mb_substr(trim((string) $this->input->get('q', true)), 0, 60);
         $semua     = (string) $this->input->get('semua') === '1';
         $id_barang = (!$semua && !empty($d->id_barang)) ? (int) $d->id_barang : 0;
 
-        $data['title']       = 'Ambil dari Stok';
+        $data['title']       = translate('i18n_ambil_dari_stok');
         $data['h']           = $h;
         $data['it']          = $it;
         $data['cari']        = $cari;
@@ -578,7 +582,7 @@ class Pemenuhan extends MY_Controller
         $this->_wajib_izin('kirim', 'pemenuhan/so/' . (int) $id_so);
         $h = $this->_so_atau_404($id_so);
         if (!$this->_status_proses($h)) {
-            return $this->_tolak($h->id, 'SO harus berstatus Dikonfirmasi / Produksi untuk membuat surat jalan.');
+            return $this->_tolak($h->id, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi_3'));
         }
         $items = array();
         foreach ($this->Pemenuhan_model->get_items($h->id) as $it) {
@@ -587,9 +591,9 @@ class Pemenuhan extends MY_Controller
             }
         }
         if (!$items) {
-            return $this->_tolak($h->id, 'Belum ada barang siap kirim. Selesaikan SPK, terima barang PO, atau pilih stok dulu.');
+            return $this->_tolak($h->id, translate('i18n_belum_ada_barang_siap_kirim_selesaikan'));
         }
-        $data['title'] = 'Buat Surat Jalan';
+        $data['title'] = translate('i18n_buat_surat_jalan');
         $data['h']     = $h;
         $data['items'] = $items;
         $this->_view('pemenuhan/sj_form', $data);
@@ -698,7 +702,7 @@ class Pemenuhan extends MY_Controller
     private function _wajib_izin($kunci, $kembali = 'pemenuhan')
     {
         if (!$this->_boleh($kunci)) {
-            $this->session->set_flashdata('error', 'Anda tidak punya hak akses untuk aksi ini.');
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_hak_akses_untuk_aksi'));
             redirect($kembali);
         }
     }
@@ -716,7 +720,7 @@ class Pemenuhan extends MY_Controller
         $rel = 'uploads/po_pembayaran/';
         $dir = FCPATH . $rel;
         if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
-            return array(false, 'Folder ' . $rel . ' tidak bisa dibuat. Buat manual & beri permission 755.');
+            return array(false, (translate('i18n_folder') . ' ') . $rel . (' ' . translate('i18n_tidak_bisa_dibuat_buat_manual_beri')));
         }
         $this->load->library('upload');
         $this->upload->initialize(array(
@@ -727,7 +731,7 @@ class Pemenuhan extends MY_Controller
             'overwrite'     => false,
         ));
         if (!$this->upload->do_upload($field)) {
-            return array(false, 'Upload bukti gagal: ' . strip_tags($this->upload->display_errors('', '')) . ' (jpg/png/pdf, maks 2MB)');
+            return array(false, (translate('i18n_upload_bukti_gagal') . ' ') . strip_tags($this->upload->display_errors('', '')) . (' ' . translate('i18n_jpg_png_pdf_maks_2mb')));
         }
         return array(true, $rel . $this->upload->data('file_name'));
     }

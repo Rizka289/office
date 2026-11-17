@@ -28,13 +28,13 @@
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible fade show" role="alert">
       <i class="bi bi-check-circle me-1"></i><?= html_escape($this->session->flashdata('success')) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_close') ?>"></button>
     </div>
   <?php endif; ?>
   <?php if ($this->session->flashdata('error')): ?>
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
       <i class="bi bi-exclamation-triangle me-1"></i><?= html_escape($this->session->flashdata('error')) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_close') ?>"></button>
     </div>
   <?php endif; ?>
 
@@ -42,26 +42,26 @@
   <div class="toolbar-card">
     <?php echo form_open('spk', ['method' => 'get', 'class' => 'row g-2 align-items-end']); ?>
     <div class="col-md-4">
-      <label class="form-label small text-muted mb-1">Cari</label>
+      <label class="form-label small text-muted mb-1"><?= translate('cari') ?></label>
       <div class="input-group">
         <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-        <input type="text" name="q" class="form-control" placeholder="No. SPK / No. SO / Customer"
+        <input type="text" name="q" class="form-control" placeholder="<?= translate('i18n_no_spk_no_so_customer') ?>"
           value="<?= isset($filter_q) ? html_escape($filter_q) : ''; ?>">
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <label class="form-label small text-muted mb-1">Dari Tanggal</label>
+      <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal1') ?></label>
       <input type="date" name="dari" class="form-control" value="<?= isset($filter_dari) ? $filter_dari : ''; ?>">
     </div>
     <div class="col-6 col-md-3">
-      <label class="form-label small text-muted mb-1">Sampai Tanggal</label>
+      <label class="form-label small text-muted mb-1"><?= translate('filter_tanggal2') ?></label>
       <input type="date" name="sampai" class="form-control" value="<?= isset($filter_sampai) ? $filter_sampai : ''; ?>">
     </div>
     <div class="col-6 col-md-1 d-grid">
-      <button type="submit" class="btn btn-outline-secondary" title="Filter"><i class="bi bi-funnel"></i></button>
+      <button type="submit" class="btn btn-outline-secondary" title="<?= translate('i18n_filter') ?>"><i class="bi bi-funnel"></i></button>
     </div>
     <div class="col-6 col-md-1 d-grid">
-      <a href="<?= site_url('spk/tambah'); ?>" class="btn btn-success" title="Buat SPK Baru dari SO">
+      <a href="<?= site_url('spk/tambah'); ?>" class="btn btn-success" title="<?= translate('i18n_buat_spk_baru_dari_so') ?>">
         <i class="bi bi-plus-lg"></i>
       </a>
     </div>
@@ -75,13 +75,13 @@
         <thead>
           <tr>
             <th style="width:3%">#</th>
-            <th style="width:15%">No. SPK</th>
-            <th style="width:14%">No. Sales Order</th>
-            <th style="width:10%">Tanggal SPK</th>
-            <th>Customer</th>
-            <th style="width:12%">Target Selesai</th>
-            <th style="width:10%" class="text-center">Status</th>
-            <th style="width:10%" class="text-center">Aksi</th>
+            <th style="width:15%"><?= translate('i18n_no_spk') ?></th>
+            <th style="width:14%"><?= translate('i18n_no_sales_order') ?></th>
+            <th style="width:10%"><?= translate('i18n_tanggal_spk') ?></th>
+            <th><?= translate('i18n_customer') ?></th>
+            <th style="width:12%"><?= translate('i18n_target_selesai_2') ?></th>
+            <th style="width:10%" class="text-center"><?= translate('status') ?></th>
+            <th style="width:10%" class="text-center"><?= translate('aksi') ?></th>
           </tr>
         </thead>
         <tbody>
@@ -106,11 +106,11 @@
                 </td>
                 <td class="text-center">
                   <a href="<?= site_url('spk/detail/' . $row->id); ?>"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Lihat Detail SPK">
+                    class="btn btn-icon-sm btn-outline-secondary" title="<?= translate('i18n_lihat_detail_spk') ?>">
                     <i class="bi bi-eye"></i>
                   </a>
                   <a href="<?= site_url('spk/cetak/' . $row->id); ?>"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Cetak SPK">
+                    class="btn btn-icon-sm btn-outline-secondary" title="<?= translate('i18n_cetak_spk') ?>">
                     <i class="bi bi-printer"></i>
                   </a>
                 </td>
@@ -120,7 +120,7 @@
             <tr class="empty-row">
               <td colspan="8">
                 <i class="bi bi-inbox"></i>
-                Belum ada data Surat Perintah Kerja (SPK).
+                <?= translate('i18n_belum_ada_data_surat_perintah_kerja_spk') ?>
               </td>
             </tr>
           <?php endif; ?>

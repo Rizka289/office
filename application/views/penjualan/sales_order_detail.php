@@ -38,12 +38,12 @@ $multi  = function ($v) {
 };
 
 $status_map = array(
-  'draft'     => array('secondary', 'Draft'),
-  'confirmed' => array('primary',   'Dikonfirmasi'),
-  'produksi'  => array('warning',   'Produksi'),
-  'terkirim'  => array('info',      'Terkirim'),
-  'selesai'   => array('success',   'Selesai'),
-  'batal'     => array('danger',    'Batal'),
+  'draft'     => array('secondary', translate('i18n_draft')),
+  'confirmed' => array('primary',   translate('i18n_dikonfirmasi')),
+  'produksi'  => array('warning',   translate('label_bar')),
+  'terkirim'  => array('info',      translate('kirim')),
+  'selesai'   => array('success',   translate('selesai')),
+  'batal'     => array('danger',    translate('btn_batal')),
 );
 $st = isset($status_map[$h->status]) ? $status_map[$h->status] : array('secondary', ucfirst($h->status));
 
@@ -56,7 +56,7 @@ $dp_persen = (float) $h->dp_persen;
 $dp_nilai  = round((float) $h->grand_total * $dp_persen / 100);
 $sisa      = (float) $h->grand_total - $dp_nilai;
 if ($konsinyasi) {
-  $termin_teks = 'Konsinyasi (titip jual): ditagih sesuai barang yang laku';
+  $termin_teks = translate('i18n_konsinyasi_titip_jual_ditagih_sesuai');
 } elseif ($h->termin === '100' || $dp_persen <= 0) {
   $termin_teks = translate('100%');
 } else {
@@ -87,9 +87,9 @@ $uang_masuk   = $total_bayar;
 $lunas        = $konsinyasi ? ($h->status === 'selesai') : ((float) $h->grand_total > 0 && $sisa_tagih <= 0.005);
 $label_jenis = array(
   'dp'        => 'DP',
-  'pelunasan' => 'Pelunasan',
-  'pph'       => 'PPh (data lama)', // jenis lama, tidak dipakai lagi
-  'lainnya'   => 'Lainnya',
+  'pelunasan' => translate('pelunasan'),
+  'pph'       => translate('i18n_pph_data_lama'), // jenis lama, tidak dipakai lagi
+  'lainnya'   => translate('lainnya'),
 );
 
 // Tombol aksi
@@ -392,7 +392,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible fade show">
       <i class="bi bi-check-circle me-1"></i><?= html_escape($this->session->flashdata('success')) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_tutup') ?>"></button>
     </div>
   <?php endif; ?>
 
@@ -406,22 +406,22 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         </div>
       </div>
       <div class="d-flex align-items-center gap-2 no-print">
-        <?php if ($konsinyasi): ?><span class="badge bg-info text-dark fs-6 fw-normal px-3 py-2"><i class="bi bi-box-seam me-1"></i>Konsinyasi</span><?php endif; ?>
+        <?php if ($konsinyasi): ?><span class="badge bg-info text-dark fs-6 fw-normal px-3 py-2"><i class="bi bi-box-seam me-1"></i><?= translate('i18n_konsinyasi') ?></span><?php endif; ?>
         <span class="badge bg-<?= $st[0] ?> fs-6 fw-normal px-3 py-2"><?= $st[1] ?></span>
         <a href="<?= site_url('sales_order') ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?></a>
         <?php if (in_array($h->status, array('confirmed', 'produksi', 'terkirim', 'selesai'), true)): ?>
-          <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-warning btn-sm"><i class="bi bi-diagram-3 me-1"></i>Proses Pesanan</a>
+          <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-warning btn-sm"><i class="bi bi-diagram-3 me-1"></i><?= translate('app_purchasing') ?></a>
         <?php endif; ?>
         <?php if ($konsinyasi && in_array($h->status, array('produksi', 'terkirim', 'selesai'), true)): ?>
-          <a href="<?= site_url('konsinyasi/so/' . (int) $h->id) ?>" class="btn btn-info btn-sm"><i class="bi bi-box-seam me-1"></i>Barang Titipan</a>
+          <a href="<?= site_url('konsinyasi/so/' . (int) $h->id) ?>" class="btn btn-info btn-sm"><i class="bi bi-box-seam me-1"></i><?= translate('i18n_barang_titipan') ?></a>
         <?php endif; ?>
         <?php if ($h->status === 'draft'): ?>
-          <?= form_open('sales_order/konfirmasi/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Konfirmasi SO ini? Setelah dikonfirmasi SO siap diproses.')")) ?>
-          <button type="submit" class="btn btn-warning btn-sm" <?= $kurang_dp > 0 ? 'disabled title="DP belum cukup, catat pembayaran dulu"' : '' ?>><i class="bi bi-check2-circle me-1"></i><?= translate('btn_setuju_so') ?></button>
+          <?= form_open('sales_order/konfirmasi/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('" . tj('i18n_konfirmasi_so_ini_setelah_dikonfirmasi') . "')")) ?>
+          <button type="submit" class="btn btn-warning btn-sm" <?= $kurang_dp > 0 ? 'disabled title="' . translate('i18n_dp_belum_cukup_catat_pembayaran_dulu') . '"' : '' ?>><i class="bi bi-check2-circle me-1"></i><?= translate('btn_setuju_so') ?></button>
           <?= form_close() ?>
         <?php endif; ?>
         <?php if ($bisa_batal): ?>
-          <?= form_open('sales_order/batal/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Batalkan SO ini?')")) ?>
+          <?= form_open('sales_order/batal/' . (int) $h->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('" . tj('i18n_batalkan_so_ini') . "')")) ?>
           <button type="submit" class="btn btn-outline-light btn-sm"><i class="bi bi-x-circle me-1"></i><?= translate('btn_batal') ?></button>
           <?= form_close() ?>
         <?php endif; ?>
@@ -451,7 +451,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                 <dt><?= translate('pelanggan') ?></dt>
                 <dd><?= html_escape($h->nama_customer) ?></dd>
                 <dt><?= translate('no_po_pelanggan') ?></dt>
-                <dd><?= $isi($h->no_po_customer) ? html_escape($h->no_po_customer) : '<span class="text-muted">Tidak ada</span>' ?></dd>
+                <dd><?= $isi($h->no_po_customer) ? html_escape($h->no_po_customer) : '<span class="text-muted">' . translate('i18n_tidak_ada') . '</span>' ?></dd>
                 <dt><?= translate('dari_penawaran') ?></dt>
                 <dd><a href="<?= site_url('penawaran/edit/' . (int) $h->id_penawaran) ?>"><?= translate('a_penawaran') ?></a></dd>
               </dl>
@@ -459,7 +459,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
             <div class="col-md-6">
               <dl class="kv">
                 <dt><?= translate('target_kirim') ?></dt>
-                <dd><?= $isi($h->tgl_kirim) ? date('d M Y', strtotime($h->tgl_kirim)) : '<span class="text-muted">Belum ditentukan</span>' ?></dd>
+                <dd><?= $isi($h->tgl_kirim) ? date('d M Y', strtotime($h->tgl_kirim)) : '<span class="text-muted">' . translate('i18n_belum_ditentukan') . '</span>' ?></dd>
                 <dt><?= translate('almt_kirim') ?></dt>
                 <dd><?= $isi($h->alamat_kirim) ? $multi($h->alamat_kirim) : '<span class="text-muted">-</span>' ?></dd>
               </dl>
@@ -526,7 +526,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                 <?= $num($it->qty, 2)  . ' ' . translate('satuan') ?>
                 <?php if ($isi($it->warna)): ?> &middot; <?= html_escape($it->warna) ?><?php endif; ?>
                 <?php
-                $sumber_lbl = array('produksi' => 'Produksi sendiri', 'beli' => 'Beli (gudang)', 'dropship' => 'Dropship');
+                $sumber_lbl = array('produksi' => translate('i18n_produksi_sendiri'), 'beli' => translate('i18n_beli_gudang'), 'dropship' => translate('i18n_dropship'));
                 if (!empty($it->sumber) && isset($sumber_lbl[$it->sumber])): ?>
                   &middot; <span class="badge text-bg-light fw-normal"><?= $sumber_lbl[$it->sumber] ?></span>
                 <?php endif; ?>
@@ -534,7 +534,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
             </div>
             <div class="item-total">
               <div class="amt"><?= $rp($it->total_harga) ?></div>
-              <!-- <div class="item-sub">Total item</div> -->
+              <!-- <div class="item-sub"><?= translate('i18n_total_item') ?></div> -->
             </div>
           </div>
 
@@ -739,7 +739,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
               <div class="sum-row"><span><?= translate('ppn') . ' ' . $num($h->ppn_persen, 2) ?>%</span><span><?= $rp($h->ppn_nominal) ?></span></div>
             <?php endif; ?>
             <?php if ((float) $h->pph_persen > 0): ?>
-              <div class="sum-row"><span><?= translate('pph') . ' ' . $num($h->pph_persen, 2) ?>% <small class="text-muted">(dipotong customer)</small></span><span>- <?= $rp($h->pph_nominal) ?></span></div>
+              <div class="sum-row"><span><?= translate('pph') . ' ' . $num($h->pph_persen, 2) ?>% <small class="text-muted"><?= translate('i18n_dipotong_customer_2') ?></small></span><span>- <?= $rp($h->pph_nominal) ?></span></div>
             <?php endif; ?>
             <div class="sum-grand">
               <div class="small text-muted"><?= translate('grand_total') ?></div>
@@ -752,7 +752,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         <div class="panel mb-3">
           <div class="panel-title"><i class="bi bi-wallet2"></i><?= translate('pembayaran') ?>
             <?php if (!empty($h->id_customer) && in_array((string) $this->session->userdata('role'), array('super_admin', 'atasan', 'finance'), true)): ?>
-              <a href="<?= site_url('piutang/customer/' . (int) $h->id_customer) ?>" class="ms-auto small fw-normal text-decoration-none"><i class="bi bi-person-vcard me-1"></i>Kartu piutang</a>
+              <a href="<?= site_url('piutang/customer/' . (int) $h->id_customer) ?>" class="ms-auto small fw-normal text-decoration-none"><i class="bi bi-person-vcard me-1"></i><?= translate('i18n_kartu_piutang_2') ?></a>
             <?php endif; ?>
           </div>
           <div class="panel-body">
@@ -763,34 +763,34 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                 <div class="sisa" style="width: <?= 100 - $dp_persen ?>%"></div>
               </div>
               <div class="pay-legend">
-                <div><span class="dot" style="background:#2f7a57"></span>DP<br><strong><?= $rp($dp_nilai) ?></strong></div>
+                <div><span class="dot" style="background:#2f7a57"></span><?= translate('i18n_dp') ?><br><strong><?= $rp($dp_nilai) ?></strong></div>
                 <div class="text-end"><span class="dot" style="background:#9fc9b4"></span><?= translate('pelunasan') ?><br><strong><?= $rp($sisa) ?></strong></div>
               </div>
             <?php endif; ?>
 
             <div class="block">
               <?php if ($konsinyasi): ?>
-                <div class="sum-row"><span>Nilai barang dititip</span><span><?= $rp($h->grand_total) ?></span></div>
-                <div class="sum-row"><span>Tagihan (barang laku)</span><strong><?= $rp($tagihan) ?></strong></div>
+                <div class="sum-row"><span><?= translate('i18n_nilai_barang_dititip') ?></span><span><?= $rp($h->grand_total) ?></span></div>
+                <div class="sum-row"><span><?= translate('i18n_tagihan_barang_laku') ?></span><strong><?= $rp($tagihan) ?></strong></div>
               <?php endif; ?>
-              <div class="sum-row"><span>Uang diterima</span><strong><?= $rp($uang_masuk) ?></strong></div>
+              <div class="sum-row"><span><?= translate('i18n_uang_diterima') ?></span><strong><?= $rp($uang_masuk) ?></strong></div>
 
               <div class="sum-row"><span><?= translate('lbl_tagihan') ?></span>
                 <?php if ($lunas): ?>
-                  <span class="badge bg-success">LUNAS</span>
+                  <span class="badge bg-success"><?= translate('i18n_lunas_2') ?></span>
                 <?php elseif ($konsinyasi && $sisa_tagih <= 0.005): ?>
-                  <span class="text-muted small">Menunggu laporan laku</span>
+                  <span class="text-muted small"><?= translate('i18n_menunggu_laporan_laku') ?></span>
                 <?php else: ?>
                   <strong><?= $rp($sisa_tagih) ?></strong>
                 <?php endif; ?>
               </div>
 
               <?php if ($pph_so > 0): ?>
-                <div class="note mt-2"><i class="bi bi-info-circle me-1"></i>Grand total sudah dipotong PPh <?= $num($h->pph_persen, 2) ?>% (<?= $rp($pph_so) ?>) dari penawaran. Customer cukup membayar sebesar grand total.</div>
+                <div class="note mt-2"><i class="bi bi-info-circle me-1"></i><?= translate('i18n_grand_total_sudah_dipotong_pph') ?> <?= $num($h->pph_persen, 2) ?>% (<?= $rp($pph_so) ?><?= translate('i18n_dari_penawaran_customer_cukup_membayar') ?></div>
               <?php endif; ?>
               <?php if ($h->status === 'draft'): ?>
                 <?php if ($kurang_dp > 0): ?>
-                  <div class="note mt-2"><i class="bi bi-exclamation-circle me-1"></i><?= translate('info_dp') ?> <strong><?= $rp($kurang_dp) ?></strong>. SO belum bisa dikonfirmasi.</div>
+                  <div class="note mt-2"><i class="bi bi-exclamation-circle me-1"></i><?= translate('info_dp') ?> <strong><?= $rp($kurang_dp) ?></strong><?= translate('i18n_so_belum_bisa_dikonfirmasi') ?></div>
                 <?php else: ?>
                   <div class="note mt-2"><i class="bi bi-check-circle me-1"></i><?= translate('info_pelunasan_so') ?></div>
                 <?php endif; ?>
@@ -810,8 +810,8 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                       <td class="r fw-semibold"><?= $rp($b->nominal) ?></td>
                       <td class="r no-print">
                         <?php if (in_array($h->status, array('draft', 'confirmed'), true)): ?>
-                          <?= form_open('sales_order/hapus_bayar/' . (int) $b->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('Hapus pembayaran ini?')")) ?>
-                          <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Hapus"><i class="bi bi-trash"></i></button>
+                          <?= form_open('sales_order/hapus_bayar/' . (int) $b->id, array('class' => 'd-inline', 'onsubmit' => "return confirm('" . tj('i18n_hapus_pembayaran_ini') . "')")) ?>
+                          <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="<?= translate('hapus') ?>"><i class="bi bi-trash"></i></button>
                           <?= form_close() ?>
                         <?php endif; ?>
                       </td>
@@ -837,9 +837,9 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                       <label class="form-label small mb-1"><?= translate('jenis') ?></label>
                       <select name="jenis" id="bayar_jenis" class="form-select form-select-sm">
                         <?php /* Pilihan jenis pembayaran: DP, Pelunasan, Lainnya (selalu tiga) */ ?>
-                        <option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>>DP</option>
-                        <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>>Pelunasan</option>
-                        <option value="lainnya">Lainnya</option>
+                        <option value="dp" <?= $kurang_dp > 0 ? 'selected' : '' ?>><?= translate('i18n_dp') ?></option>
+                        <option value="pelunasan" <?= $kurang_dp > 0 ? '' : 'selected' ?>><?= translate('pelunasan') ?></option>
+                        <option value="lainnya"><?= translate('lainnya') ?></option>
                       </select>
                     </div>
                     <div class="col-12">
@@ -849,7 +849,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
                     </div>
                     <div class="col-6">
                       <label class="form-label small mb-1"><?= translate('metode') ?></label>
-                      <input type="text" name="metode" class="form-control form-control-sm" maxlength="50" placeholder="Transfer / Tunai">
+                      <input type="text" name="metode" class="form-control form-control-sm" maxlength="50" placeholder="<?= translate('i18n_transfer_tunai') ?>">
                     </div>
                     <div class="col-6">
                       <label class="form-label small mb-1"><?= translate('no.referensi') ?></label>
@@ -875,20 +875,20 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         <div class="ttd-wrap">
           <div class="row text-center">
             <div class="col-6">
-              <div>Keuangan,</div>
+              <div><?= translate('i18n_keuangan') ?></div>
               <div style="height:80px"></div>
               <div style="border-top:1px solid #000; width:70%; margin:0 auto; padding-top:4px">
                 (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
               </div>
-              <div class="small">Pihak Keuangan</div>
+              <div class="small"><?= translate('i18n_pihak_keuangan') ?></div>
             </div>
             <div class="col-6">
-              <div>Menyetujui,</div>
+              <div><?= translate('i18n_menyetujui') ?></div>
               <div style="height:80px"></div>
               <div style="border-top:1px solid #000; width:70%; margin:0 auto; padding-top:4px">
                 (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
               </div>
-              <div class="small">Atasan</div>
+              <div class="small"><?= translate('i18n_atasan') ?></div>
             </div>
           </div>
         </div>
@@ -906,17 +906,17 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
         <?= form_open('sales_order/ubah_info/' . (int) $h->id) ?>
         <div class="modal-header">
           <h5 class="modal-title" id="judul_ubah_info"><i class="bi bi-pencil-square me-1"></i><?= translate('update') ?> <?= html_escape($h->no_so) ?></h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= translate('i18n_tutup') ?>"></button>
         </div>
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label">Tanggal SO</label>
+            <label class="form-label"><?= translate('i18n_tanggal_so') ?></label>
             <input type="date" name="tanggal" id="ubah_tgl_so" class="form-control" max="<?= date('Y-m-d') ?>"
               value="<?= date('Y-m-d', strtotime($h->tanggal)) ?>"
               data-tgl-lama="<?= date('Y-m-d', strtotime($h->tanggal)) ?>"
               data-no-lama="<?= html_escape($h->no_so) ?>"
               data-no-urut="<?= (int) ($h->no_urut ?? 0) ?>">
-            <div class="form-text" id="info_no_so_baru">Nomor SO: <strong><?= html_escape($h->no_so) ?></strong></div>
+            <div class="form-text" id="info_no_so_baru"><?= translate('i18n_nomor_so') ?> <strong><?= html_escape($h->no_so) ?></strong></div>
           </div>
           <div class="mb-3">
             <label class="form-label"><?= translate('no_po_pelanggan') ?></label>
@@ -932,7 +932,7 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
             <label class="form-label"><?= translate('catatan') ?></label>
             <textarea name="catatan" class="form-control" rows="3"><?= html_escape((string) $h->catatan) ?></textarea>
           </div>
-          <div class="form-text"><i class="bi bi-lock me-1"></i>Item, harga, termin dan grand total tidak bisa diubah.</div>
+          <div class="form-text"><i class="bi bi-lock me-1"></i><?= translate('i18n_item_harga_termin_dan_grand_total_tidak') ?></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
@@ -951,17 +951,17 @@ $bisa_ubah  = !in_array($h->status, array('batal', 'selesai'), true);
       function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
       inp.addEventListener('change', function () {
         var lama = inp.dataset.noLama, v = inp.value;
-        if (!v || v === inp.dataset.tglLama) { info.innerHTML = 'Nomor SO: <strong>' + esc(lama) + '</strong>'; return; }
+        if (!v || v === inp.dataset.tglLama) { info.innerHTML = '<?= tj('i18n_nomor_so') ?> <strong>' + esc(lama) + '</strong>'; return; }
         var thnBaru = v.substr(0, 4), blnBaru = v.substr(5, 2);
         var thnLama = inp.dataset.tglLama.substr(0, 4);
         var urut = parseInt(inp.dataset.noUrut, 10) || 0;
         if (thnBaru === thnLama && urut > 0) {
           var baru = (urut < 10 ? '0' : '') + urut + '/SO-OPJI/' + blnBaru + '/' + thnBaru;
           info.innerHTML = baru === lama
-            ? 'Nomor SO tetap: <strong>' + esc(lama) + '</strong>'
-            : 'Nomor SO akan berubah: ' + esc(lama) + ' &rarr; <strong>' + esc(baru) + '</strong>';
+            ? '<?= tj('i18n_nomor_so_tetap') ?> <strong>' + esc(lama) + '</strong>'
+            : '<?= tj('i18n_nomor_so_akan_berubah') ?> ' + esc(lama) + ' &rarr; <strong>' + esc(baru) + '</strong>';
         } else {
-          info.innerHTML = 'Tahun berbeda: SO akan mendapat <strong>nomor urut baru di tahun ' + esc(thnBaru) + '</strong>.';
+          info.innerHTML = '<?= tj('i18n_tahun_berbeda_so_akan_mendapat') ?> <strong><?= tj('i18n_nomor_urut_baru_di_tahun') ?> ' + esc(thnBaru) + '</strong>.';
         }
       });
     })();

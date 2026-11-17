@@ -113,7 +113,7 @@ class Barang extends MY_Controller
     {
         $err = $this->Barang_model->last_error;
         if (isset($err['code']) && (int) $err['code'] === 1062) {
-            return 'Kode barang sudah dipakai, gunakan kode lain.';
+            return translate('i18n_kode_barang_sudah_dipakai_gunakan_kode');
         }
         if (ENVIRONMENT === 'development' && !empty($err['message'])) {
             return $default . ' [DB ' . $err['code'] . ': ' . $err['message'] . ']';
@@ -142,19 +142,19 @@ class Barang extends MY_Controller
             || $this->is_blank($satuan) || $this->is_blank($dimensi) || $this->is_blank($harga_raw)
             || $this->is_blank($stokMinimum) || $this->is_blank($komponen) || $this->is_blank($rumus) || $this->is_blank($keterangan) || $this->is_blank($is_produced)
         ) {
-            $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->respond(['status' => false, 'message' => translate('i18n_semua_field_wajib_diisi')]);
             return;
         }
 
         $harga_clean = $this->parse_harga_decimal($harga_raw);
 
         if (!$this->Kategori_barang_model->get_by_id($idkategori)) {
-            $this->respond(['status' => false, 'message' => 'Kategori tidak valid!']);
+            $this->respond(['status' => false, 'message' => translate('i18n_kategori_tidak_valid')]);
             return;
         }
 
         if ($this->Barang_model->kode_exists($kode)) {
-            $this->respond(['status' => false, 'message' => 'Kode barang sudah dipakai, gunakan kode lain.']);
+            $this->respond(['status' => false, 'message' => translate('i18n_kode_barang_sudah_dipakai_gunakan_kode')]);
             return;
         }
 
@@ -193,8 +193,8 @@ class Barang extends MY_Controller
 
         $this->respond(
             $simpan
-                ? ['status' => true, 'message' => 'Data berhasil disimpan']
-                : ['status' => false, 'message' => $this->db_error_message('Gagal menyimpan data')]
+                ? ['status' => true, 'message' => translate('i18n_data_berhasil_disimpan')]
+                : ['status' => false, 'message' => $this->db_error_message(translate('i18n_gagal_menyimpan_data'))]
         );
     }
 
@@ -210,7 +210,7 @@ class Barang extends MY_Controller
             }
             $this->respond(['status' => true, 'data' => $row]);
         } else {
-            $this->respond(['status' => false, 'message' => 'Data tidak ditemukan']);
+            $this->respond(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan')]);
         }
     }
 
@@ -236,14 +236,14 @@ class Barang extends MY_Controller
             || $this->is_blank($satuan) || $this->is_blank($dimensi) || $this->is_blank($harga_raw)
             || $this->is_blank($stokMinimum) || $this->is_blank($komponen) || $this->is_blank($rumus) || $this->is_blank($keterangan) || $this->is_blank($is_produced)
         ) {
-            $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->respond(['status' => false, 'message' => translate('i18n_semua_field_wajib_diisi')]);
             return;
         }
 
         $harga_clean = $this->parse_harga_decimal($harga_raw);
 
         if (!$this->Kategori_barang_model->get_by_id($idkategori)) {
-            $this->respond(['status' => false, 'message' => 'Kategori tidak valid!']);
+            $this->respond(['status' => false, 'message' => translate('i18n_kategori_tidak_valid')]);
             return;
         }
 
@@ -283,8 +283,8 @@ class Barang extends MY_Controller
 
         $this->respond(
             $update
-                ? ['status' => true, 'message' => 'Data berhasil diperbarui']
-                : ['status' => false, 'message' => 'Gagal memperbarui data']
+                ? ['status' => true, 'message' => translate('i18n_data_berhasil_diperbarui')]
+                : ['status' => false, 'message' => translate('message_update_gagal')]
         );
     }
 
@@ -299,8 +299,8 @@ class Barang extends MY_Controller
 
         $this->respond(
             $hapus
-                ? ['status' => true, 'message' => 'Data berhasil dihapus']
-                : ['status' => false, 'message' => 'Gagal menghapus data']
+                ? ['status' => true, 'message' => translate('i18n_data_berhasil_dihapus')]
+                : ['status' => false, 'message' => translate('i18n_gagal_menghapus_data')]
         );
     }
 }

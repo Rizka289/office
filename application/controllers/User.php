@@ -63,11 +63,11 @@ class User extends MY_Controller
         $role     = $this->input->post('role', true);
 
         if (empty($nama) || empty($username) || empty($password) || empty($role)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_semua_field_wajib_diisi')]);
             return;
         }
         if (!in_array($role, $this->role_valid, true)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Role tidak valid!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_role_tidak_valid')]);
             return;
         }
 
@@ -95,7 +95,7 @@ class User extends MY_Controller
         $this->jsonResponse(
             $user
                 ? ['status' => true, 'data' => $user]
-                : ['status' => false, 'message' => 'Data tidak ditemukan!']
+                : ['status' => false, 'message' => translate('i18n_data_tidak_ditemukan_2')]
         );
     }
 
@@ -109,11 +109,11 @@ class User extends MY_Controller
         $role     = $this->input->post('role', true);
 
         if (empty($id) || empty($nama) || empty($username) || empty($role)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Field nama, username, dan role wajib diisi!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_field_nama_username_dan_role_wajib_diisi')]);
             return;
         }
         if (!in_array($role, $this->role_valid, true)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Role tidak valid!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_role_tidak_valid')]);
             return;
         }
 
@@ -140,7 +140,7 @@ class User extends MY_Controller
     public function delete($id)
     {
         if (empty($id)) {
-            $this->jsonResponse(['status' => false, 'message' => 'ID tidak ditemukan!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_id_tidak_ditemukan')]);
             return;
         }
 

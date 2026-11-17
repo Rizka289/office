@@ -6,10 +6,10 @@ $this->load->view('pemenuhan/_style');
 
   <div class="hero mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-      <div class="judul"><i class="bi bi-hammer me-2"></i>Buat SPK Produksi</div>
-      <div class="meta">Untuk <?= html_escape($h->no_so) ?> &middot; <?= html_escape($h->nama_customer) ?></div>
+      <div class="judul"><i class="bi bi-hammer me-2"></i><?= translate('i18n_buat_spk_produksi') ?></div>
+      <div class="meta"><?= translate('i18n_untuk') ?> <?= html_escape($h->no_so) ?> &middot; <?= html_escape($h->nama_customer) ?></div>
     </div>
-    <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i>Kembali</a>
+    <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?></a>
   </div>
 
   <?php $this->load->view('pemenuhan/_flash'); ?>
@@ -19,16 +19,16 @@ $this->load->view('pemenuhan/_style');
     <div class="card-body">
       <div class="row g-3">
         <div class="col-md-3">
-          <label class="form-label">Tanggal SPK</label>
+          <label class="form-label"><?= translate('i18n_tanggal_spk') ?></label>
           <input type="date" name="tanggal" class="form-control" value="<?= date('Y-m-d') ?>" required>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Target selesai</label>
+          <label class="form-label"><?= translate('i18n_target_selesai') ?></label>
           <input type="date" name="target_selesai" class="form-control" value="<?= html_escape((string) $h->tgl_kirim) ?>">
         </div>
         <div class="col-md-6">
-          <label class="form-label">Catatan untuk produksi</label>
-          <input type="text" name="catatan" class="form-control" placeholder="Prioritas, instruksi khusus, dll">
+          <label class="form-label"><?= translate('i18n_catatan_untuk_produksi') ?></label>
+          <input type="text" name="catatan" class="form-control" placeholder="<?= translate('i18n_prioritas_instruksi_khusus_dll') ?>">
         </div>
       </div>
     </div>
@@ -38,7 +38,7 @@ $this->load->view('pemenuhan/_style');
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead class="table-light">
-          <tr><th>Item</th><th class="text-end">Qty SO</th><th class="text-end">Sudah SPK</th><th class="text-end" style="width:140px">Qty diproduksi</th></tr>
+          <tr><th><?= translate('i18n_item_3') ?></th><th class="text-end"><?= translate('i18n_qty_so') ?></th><th class="text-end"><?= translate('i18n_sudah_spk') ?></th><th class="text-end" style="width:140px"><?= translate('i18n_qty_diproduksi') ?></th></tr>
         </thead>
         <tbody>
           <?php foreach ($items as $it): ?>
@@ -55,12 +55,12 @@ $this->load->view('pemenuhan/_style');
         </tbody>
       </table>
     </div>
-    <div class="card-body border-top muted">Detail spesifikasi lengkap (aksesoris, kaca, motor, dll) ikut tercetak di dokumen SPK.</div>
+    <div class="card-body border-top muted"><?= translate('i18n_detail_spesifikasi_lengkap_aksesoris') ?></div>
   </div>
 
   <div class="d-flex justify-content-end gap-2">
-    <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-outline-secondary">Batal</a>
-    <button type="submit" class="btn btn-primary" id="btn_simpan"><i class="bi bi-check2-square me-1"></i>Simpan SPK</button>
+    <a href="<?= site_url('pemenuhan/so/' . (int) $h->id) ?>" class="btn btn-outline-secondary"><?= translate('btn_batal') ?></a>
+    <button type="submit" class="btn btn-primary" id="btn_simpan"><i class="bi bi-check2-square me-1"></i><?= translate('i18n_simpan_spk') ?></button>
   </div>
   <?= form_close() ?>
 </div>

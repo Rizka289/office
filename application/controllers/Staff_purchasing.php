@@ -8,7 +8,7 @@ class Staff_purchasing extends MY_Controller {
     }
 
     public function index() {
-        $data['title'] = 'Dashboard Staff Purchasing';
+        $data['title'] = translate('i18n_dashboard_staff_purchasing');
         $data['user']  = $this->session->userdata();
         $this->load->view('staff_purchasing/dashboard', $data);
     }

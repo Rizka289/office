@@ -34,6 +34,19 @@ class Piutang_model extends CI_Model
         '90_up'  => '> 90 hari',
     );
 
+    public function __construct()
+    {
+        parent::__construct();
+        // Label tampilan mengikuti bahasa aktif (tabel interfaces)
+        $tahap = array('dp' => 'i18n_tagih_dp', 'proses' => 'i18n_menunggu_pengiriman', 'tagih' => 'i18n_siap_ditagih_pelunasan');
+        foreach ($tahap as $k => $key) {
+            $this->tahap_label[$k][1] = translate($key);
+        }
+        foreach (array_keys($this->aging_label) as $k) {
+            $this->aging_label[$k] = translate('i18n_aging_' . $k);
+        }
+    }
+
     // Semua SO (bukan batal) yang masih punya sisa tagihan.
     // $f: q (no SO / no PO / customer), id_customer
     public function get_piutang($f = array())
@@ -165,12 +178,12 @@ class Piutang_model extends CI_Model
         $mutasi = array();
         foreach ($so as $s) {
             $mutasi[] = (object) array('tanggal' => $s->tanggal, 'urut' => 0, 'id' => (int) $s->id,
-                'ket' => 'Sales Order ' . $s->no_so . ($s->no_po_customer ? ' (PO ' . $s->no_po_customer . ')' : ''),
+                'ket' => (translate('i18n_sales_order') . ' ') . $s->no_so . ($s->no_po_customer ? ' (PO ' . $s->no_po_customer . ')' : ''),
                 'id_so' => (int) $s->id, 'debit' => (float) $s->grand_total, 'kredit' => 0);
         }
         foreach ($bayar as $b) {
             $mutasi[] = (object) array('tanggal' => $b->tanggal, 'urut' => 1, 'id' => (int) $b->id,
-                'ket' => 'Pembayaran ' . strtoupper($b->jenis) . ' ' . $b->no_so
+                'ket' => (translate('pembayaran') . ' ') . strtoupper($b->jenis) . ' ' . $b->no_so
                     . ($b->metode ? ' · ' . $b->metode : '') . ($b->no_referensi ? ' · ' . $b->no_referensi : ''),
                 'id_so' => (int) $b->id_so, 'debit' => 0, 'kredit' => (float) $b->nominal);
         }

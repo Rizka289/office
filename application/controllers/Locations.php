@@ -60,7 +60,7 @@ class Locations extends MY_Controller
         if ($row) {
             $this->jsonResponse(['status' => true, 'data' => $row]);
         } else {
-            $this->jsonResponse(['status' => false, 'message' => 'Data tidak ditemukan']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan')]);
         }
     }
 
@@ -75,9 +75,9 @@ class Locations extends MY_Controller
         $insert = $this->Locations_model->insert_location($payload);
 
         if ($insert) {
-            $this->jsonResponse(['status' => true, 'message' => 'Data lokasi berhasil ditambahkan']);
+            $this->jsonResponse(['status' => true, 'message' => translate('i18n_data_lokasi_berhasil_ditambahkan')]);
         } else {
-            $this->jsonResponse(['status' => false, 'message' => 'Gagal menambahkan data lokasi']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_gagal_menambahkan_data_lokasi')]);
         }
     }
 
@@ -86,13 +86,13 @@ class Locations extends MY_Controller
     {
         $id = (int) $this->input->post('id', true);
         if (!$id) {
-            $this->jsonResponse(['status' => false, 'message' => 'ID lokasi tidak valid']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_id_lokasi_tidak_valid')]);
             return;
         }
 
         $existing = $this->Locations_model->get_by_id($id);
         if (!$existing) {
-            $this->jsonResponse(['status' => false, 'message' => 'Data tidak ditemukan']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan')]);
             return;
         }
 
@@ -104,9 +104,9 @@ class Locations extends MY_Controller
         $update = $this->Locations_model->update_location($id, $payload);
 
         if ($update !== false) {
-            $this->jsonResponse(['status' => true, 'message' => 'Data lokasi berhasil diperbarui']);
+            $this->jsonResponse(['status' => true, 'message' => translate('i18n_data_lokasi_berhasil_diperbarui')]);
         } else {
-            $this->jsonResponse(['status' => false, 'message' => 'Gagal memperbarui data lokasi']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_gagal_memperbarui_data_lokasi')]);
         }
     }
 
@@ -115,16 +115,16 @@ class Locations extends MY_Controller
     {
         $existing = $this->Locations_model->get_by_id($id);
         if (!$existing) {
-            $this->jsonResponse(['status' => false, 'message' => 'Data tidak ditemukan']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan')]);
             return;
         }
 
         $delete = $this->Locations_model->delete_location($id);
 
         if ($delete) {
-            $this->jsonResponse(['status' => true, 'message' => 'Data lokasi berhasil dihapus']);
+            $this->jsonResponse(['status' => true, 'message' => translate('i18n_data_lokasi_berhasil_dihapus')]);
         } else {
-            $this->jsonResponse(['status' => false, 'message' => 'Gagal menghapus data lokasi']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_gagal_menghapus_data_lokasi')]);
         }
     }
 
@@ -144,7 +144,7 @@ class Locations extends MY_Controller
         if ($data['location_code'] === '' || $data['zone_name'] === '') {
             $this->jsonResponse([
                 'status'  => false,
-                'message' => 'Kode lokasi dan nama zona wajib diisi',
+                'message' => translate('i18n_kode_lokasi_dan_nama_zona_wajib_diisi'),
             ]);
             return false;
         }

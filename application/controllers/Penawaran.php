@@ -115,7 +115,7 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
@@ -556,7 +556,7 @@ class Penawaran extends MY_Controller
         // tidak tersimpan (saat edit akan kembali ke per m²). Beri tahu user.
         if (in_array('unit', array_column($items, 'satuan_harga'), true)
             && !$this->db->field_exists('satuan_harga', 'penawaran_detail')) {
-            $this->foto_errors[] = 'Kolom satuan_harga belum ada di tabel penawaran_detail (jalankan database/satuan_harga.sql), pilihan harga per unit belum tersimpan.';
+            $this->foto_errors[] = translate('i18n_kolom_satuan_harga_belum_ada_di_tabel');
         }
 
         return [$items, $subtotal];
@@ -574,7 +574,7 @@ class Penawaran extends MY_Controller
             'tmp_name' => $_FILES['foto']['tmp_name'][$i] ?? '',
             'error'    => $_FILES['foto']['error'][$i] ?? UPLOAD_ERR_NO_FILE,
             'size'     => $_FILES['foto']['size'][$i] ?? 0,
-        ], 'Foto item ' . ($i + 1));
+        ], (translate('i18n_foto_item') . ' ') . ($i + 1));
     }
 
     // Upload foto aksesoris ke-$k milik item ke-$i (input file aks_foto[i][]).
@@ -589,7 +589,7 @@ class Penawaran extends MY_Controller
             'tmp_name' => $_FILES['aks_foto']['tmp_name'][$i][$k] ?? '',
             'error'    => $_FILES['aks_foto']['error'][$i][$k] ?? UPLOAD_ERR_NO_FILE,
             'size'     => $_FILES['aks_foto']['size'][$i][$k] ?? 0,
-        ], 'Foto aksesoris ' . ($k + 1) . ' (item ' . ($i + 1) . ')');
+        ], (translate('i18n_foto_aksesoris') . ' ') . ($k + 1) . (' ' . translate('i18n_item') . ' ') . ($i + 1) . ')');
     }
 
     // Proses 1 file upload. CI Upload hanya membaca $_FILES[field] tunggal,
@@ -846,14 +846,14 @@ class Penawaran extends MY_Controller
         $balik       = 'penawaran/tambah' . ($tipe === 'manual' ? '?tipe=manual' : '');
 
         if (empty($tanggal) || $id_customer <= 0) {
-            $this->session->set_flashdata('error', 'Tanggal dan Customer harus diisi!');
+            $this->session->set_flashdata('error', translate('i18n_tanggal_dan_customer_harus_diisi'));
             redirect($balik);
         }
 
         list($items, $subtotal) = $this->_kumpulkan_item($tipe);
 
         if (empty($items)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
+            $this->session->set_flashdata('error', translate('i18n_minimal_harus_ada_1_item_penawaran_yang'));
             redirect($balik);
         }
 
@@ -874,10 +874,10 @@ class Penawaran extends MY_Controller
         }
 
         if ($id_penawaran) {
-            $this->session->set_flashdata('success', 'Penawaran ' . $header['no_surat'] . ' berhasil disimpan.');
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $header['no_surat'] . (' ' . translate('i18n_berhasil_disimpan')));
             redirect('penawaran/detail/' . $id_penawaran);
         } else {
-            $this->session->set_flashdata('error', 'Gagal menyimpan penawaran. Silakan coba lagi.');
+            $this->session->set_flashdata('error', translate('i18n_gagal_menyimpan_penawaran_silakan_coba'));
             redirect($balik);
         }
     }
@@ -888,17 +888,17 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
         if (($penawaran['header']->status ?? 'draft') === 'approved') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa diedit lagi.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_di_approve_data'));
             redirect('penawaran/detail/' . $id);
         }
 
         if (($penawaran['header']->status ?? 'draft') === 'batal') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah dibatalkan. Aktifkan kembali dulu kalau ingin diedit.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_dibatalkan_aktifkan'));
             redirect('penawaran/detail/' . $id);
         }
 
@@ -926,17 +926,17 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
         if (($penawaran['header']->status ?? 'draft') === 'approved') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah di-approve, data tidak bisa diedit lagi.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_di_approve_data'));
             redirect('penawaran/detail/' . $id);
         }
 
         if (($penawaran['header']->status ?? 'draft') === 'batal') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah dibatalkan. Aktifkan kembali dulu kalau ingin diedit.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_dibatalkan_aktifkan'));
             redirect('penawaran/detail/' . $id);
         }
 
@@ -950,7 +950,7 @@ class Penawaran extends MY_Controller
         list($items, $subtotal) = $this->_kumpulkan_item($tipe);
 
         if (empty($items)) {
-            $this->session->set_flashdata('error', 'Minimal harus ada 1 item penawaran yang diisi!');
+            $this->session->set_flashdata('error', translate('i18n_minimal_harus_ada_1_item_penawaran_yang'));
             redirect('penawaran/edit/' . $id);
         }
 
@@ -974,11 +974,11 @@ class Penawaran extends MY_Controller
             if (!empty($this->foto_errors)) {
                 $this->session->set_flashdata('error', implode(' ', $this->foto_errors));
             }
-            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil diperbarui.');
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_berhasil_diperbarui')));
             redirect('penawaran/detail/' . $id);
         }
 
-        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal memperbarui penawaran.');
+        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: translate('i18n_gagal_memperbarui_penawaran'));
         redirect('penawaran/detail/' . $id);
     }
 
@@ -992,13 +992,13 @@ class Penawaran extends MY_Controller
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
 
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
 
         // Hanya super_admin & admin penawaran (staff_purchasing) yang boleh menghapus
         if (!$this->_boleh_hapus()) {
-            $this->session->set_flashdata('error', 'Anda tidak punya akses untuk menghapus penawaran.');
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_akses_untuk_menghapus'));
             redirect('penawaran/detail/' . $id);
         }
 
@@ -1006,7 +1006,7 @@ class Penawaran extends MY_Controller
         // asalkan belum dibuatkan Sales Order yang masih aktif.
         $no_so = $this->_so_aktif($id);
         if ($no_so !== null) {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah dibuatkan Sales Order ' . $no_so . '. Batalkan SO tersebut dulu sebelum menghapus penawaran.');
+            $this->session->set_flashdata('error', (translate('i18n_penawaran_ini_sudah_dibuatkan_sales') . ' ') . $no_so . '. Batalkan SO tersebut dulu sebelum menghapus penawaran.');
             redirect('penawaran/detail/' . $id);
         }
 
@@ -1014,11 +1014,11 @@ class Penawaran extends MY_Controller
 
         if ($this->Penawaran_model->hapus_penawaran($id)) {
             $this->_hapus_file_foto($foto_list);
-            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' berhasil dihapus.');
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_berhasil_dihapus')));
             redirect('penawaran');
         }
 
-        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: 'Gagal menghapus penawaran.');
+        $this->session->set_flashdata('error', $this->Penawaran_model->get_last_error() ?: translate('i18n_gagal_menghapus_penawaran'));
         redirect('penawaran/detail/' . $id);
     }
 
@@ -1053,20 +1053,20 @@ class Penawaran extends MY_Controller
 
         // Yang boleh approve hanya atasan / super_admin (staff purchasing hanya membuat)
         if (!in_array($this->session->userdata('role'), ['atasan', 'super_admin'], TRUE)) {
-            $this->session->set_flashdata('error', 'Hanya atasan yang dapat meng-approve penawaran.');
+            $this->session->set_flashdata('error', translate('i18n_hanya_atasan_yang_dapat_meng_approve'));
             redirect('penawaran/detail/' . $id);
         }
 
         $cek = $this->Penawaran_model->get_penawaran_detail($id);
         if ($cek && ($cek['header']->status ?? 'draft') === 'batal') {
-            $this->session->set_flashdata('error', 'Penawaran yang sudah dibatalkan tidak bisa di-approve. Aktifkan kembali dulu.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_yang_sudah_dibatalkan_tidak'));
             redirect('penawaran/detail/' . $id);
         }
 
         if ($this->Penawaran_model->approve_penawaran($id, $this->session->userdata('user_id') ?? 0)) {
-            $this->session->set_flashdata('success', 'Penawaran berhasil di-approve. Data tidak bisa diedit lagi.');
+            $this->session->set_flashdata('success', translate('i18n_penawaran_berhasil_di_approve_data_tidak'));
         } else {
-            $this->session->set_flashdata('error', 'Penawaran tidak ditemukan atau sudah di-approve.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_tidak_ditemukan_atau_sudah_di'));
         }
 
         redirect('penawaran/detail/' . $id);
@@ -1089,27 +1089,27 @@ class Penawaran extends MY_Controller
         $id        = (int) $id;
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
         if (!$this->_boleh_batal()) {
-            $this->session->set_flashdata('error', 'Anda tidak punya akses untuk membatalkan penawaran.');
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_akses_untuk_membatalkan'));
             redirect('penawaran/detail/' . $id);
         }
         if (($penawaran['header']->status ?? 'draft') === 'batal') {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah berstatus batal.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_sudah_berstatus_batal'));
             redirect('penawaran/detail/' . $id);
         }
 
         $alasan = trim((string) $this->input->post('alasan_batal', TRUE));
         if ($alasan === '') {
-            $this->session->set_flashdata('error', 'Alasan pembatalan wajib diisi.');
+            $this->session->set_flashdata('error', translate('i18n_alasan_pembatalan_wajib_diisi'));
             redirect('penawaran/detail/' . $id);
         }
 
         $no_so = $this->_so_aktif($id);
         if ($no_so !== null) {
-            $this->session->set_flashdata('error', 'Penawaran ini sudah dibuatkan Sales Order ' . $no_so . '. Batalkan SO tersebut dulu.');
+            $this->session->set_flashdata('error', (translate('i18n_penawaran_ini_sudah_dibuatkan_sales') . ' ') . $no_so . '. Batalkan SO tersebut dulu.');
             redirect('penawaran/detail/' . $id);
         }
 
@@ -1125,10 +1125,10 @@ class Penawaran extends MY_Controller
         }
 
         if ($this->db->where('id', $id)->update('penawaran', $data)) {
-            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' ditandai BATAL.');
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_ditandai_batal')));
         } else {
             $err = $this->db->error();
-            $this->session->set_flashdata('error', 'Gagal membatalkan penawaran' . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
+            $this->session->set_flashdata('error', translate('i18n_gagal_membatalkan_penawaran') . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
         }
         redirect('penawaran/detail/' . $id);
     }
@@ -1144,15 +1144,15 @@ class Penawaran extends MY_Controller
         $id        = (int) $id;
         $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
         if (!$penawaran) {
-            $this->session->set_flashdata('error', 'Data penawaran tidak ditemukan.');
+            $this->session->set_flashdata('error', translate('i18n_data_penawaran_tidak_ditemukan'));
             redirect('penawaran');
         }
         if (!$this->_boleh_batal()) {
-            $this->session->set_flashdata('error', 'Anda tidak punya akses untuk mengaktifkan kembali penawaran.');
+            $this->session->set_flashdata('error', translate('i18n_anda_tidak_punya_akses_untuk'));
             redirect('penawaran/detail/' . $id);
         }
         if (($penawaran['header']->status ?? 'draft') !== 'batal') {
-            $this->session->set_flashdata('error', 'Penawaran ini tidak berstatus batal.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_ini_tidak_berstatus_batal'));
             redirect('penawaran/detail/' . $id);
         }
 
@@ -1164,10 +1164,10 @@ class Penawaran extends MY_Controller
         }
 
         if ($this->db->where('id', $id)->update('penawaran', $data)) {
-            $this->session->set_flashdata('success', 'Penawaran ' . $penawaran['header']->no_surat . ' aktif kembali (status draft, perlu approval ulang).');
+            $this->session->set_flashdata('success', (translate('i18n_penawaran') . ' ') . $penawaran['header']->no_surat . (' ' . translate('i18n_aktif_kembali_status_draft_perlu')));
         } else {
             $err = $this->db->error();
-            $this->session->set_flashdata('error', 'Gagal mengaktifkan penawaran' . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
+            $this->session->set_flashdata('error', translate('i18n_gagal_mengaktifkan_penawaran') . (!empty($err['message']) ? ': ' . $err['message'] : '.'));
         }
         redirect('penawaran/detail/' . $id);
     }

@@ -18,8 +18,8 @@ class Supplier extends MY_Controller
 
     public function index()
     {
-        $data['title']       = 'Supplier';
-        $data['page_title']  = 'Supplier';
+        $data['title']       = translate('i18n_supplier');
+        $data['page_title']  = translate('i18n_supplier');
         $data['active_menu'] = 'supplier';
 
         $this->load->view('templates/header', $data);
@@ -61,7 +61,7 @@ class Supplier extends MY_Controller
             return;
         }
         if ($this->Supplier_model->nama_dipakai($data['nama'])) {
-            $this->jsonResponse(['status' => false, 'message' => 'Supplier "' . $data['nama'] . '" sudah ada.']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_supplier_2') . $data['nama'] . translate('i18n_q_sudah_ada')]);
             return;
         }
         $data['created_at'] = date('Y-m-d H:i:s');
@@ -81,7 +81,7 @@ class Supplier extends MY_Controller
         $this->jsonResponse(
             $row
                 ? ['status' => true, 'data' => $row]
-                : ['status' => false, 'message' => 'Data tidak ditemukan!']
+                : ['status' => false, 'message' => translate('i18n_data_tidak_ditemukan_2')]
         );
     }
 
@@ -93,7 +93,7 @@ class Supplier extends MY_Controller
         }
         $id = (int) $this->input->post('id', true);
         if ($id <= 0 || !$this->Supplier_model->get_by_id($id)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Data tidak ditemukan!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan_2')]);
             return;
         }
         list($data, $error) = $this->_ambil_input();
@@ -102,7 +102,7 @@ class Supplier extends MY_Controller
             return;
         }
         if ($this->Supplier_model->nama_dipakai($data['nama'], $id)) {
-            $this->jsonResponse(['status' => false, 'message' => 'Supplier "' . $data['nama'] . '" sudah ada.']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_supplier_2') . $data['nama'] . translate('i18n_q_sudah_ada')]);
             return;
         }
 
@@ -121,7 +121,7 @@ class Supplier extends MY_Controller
             show_404();
         }
         if ((int) $id <= 0) {
-            $this->jsonResponse(['status' => false, 'message' => 'ID tidak ditemukan!']);
+            $this->jsonResponse(['status' => false, 'message' => translate('i18n_id_tidak_ditemukan')]);
             return;
         }
         list($ok, $pesan) = $this->Supplier_model->hapus((int) $id);
@@ -137,7 +137,7 @@ class Supplier extends MY_Controller
         $deskripsi = trim((string) $this->input->post('deskripsi', true));
 
         if ($nama === '' || $kontak === '' || $alamat === '' || $deskripsi === '') {
-            return [[], 'Nama, kontak, deskripsi, dan alamat wajib diisi!'];
+            return [[], translate('i18n_nama_kontak_deskripsi_dan_alamat_wajib')];
         }
         return [[
             'nama'      => mb_substr($nama, 0, 150),

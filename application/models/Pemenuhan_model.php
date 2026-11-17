@@ -240,7 +240,7 @@ class Pemenuhan_model extends CI_Model
         $this->db->trans_begin();
         if (!$this->_kunci_so($id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'Sumber hanya bisa diatur untuk SO berstatus Dikonfirmasi / Produksi.');
+            return array(false, translate('i18n_sumber_hanya_bisa_diatur_untuk_so'));
         }
         $sup_valid = array();
         foreach ($this->db->select('id')->get('supplier')->result() as $s) {
@@ -276,13 +276,13 @@ class Pemenuhan_model extends CI_Model
             $ubah++;
         }
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan sumber item.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_sumber_item'));
         }
         $this->db->trans_commit();
 
-        $pesan = $ubah . ' item diperbarui.';
+        $pesan = $ubah . (' ' . translate('i18n_item_diperbarui'));
         if ($tolak) {
-            $pesan .= ' Sumber tidak diubah karena sudah ada SPK/PO/pengiriman: ' . implode('; ', $tolak) . '.';
+            $pesan .= (' ' . translate('i18n_sumber_tidak_diubah_karena_sudah_ada_spk') . ' ') . implode('; ', $tolak) . '.';
         }
         return array(true, $pesan);
     }
@@ -341,17 +341,17 @@ class Pemenuhan_model extends CI_Model
                 continue; // baris kosong
             }
             if ($nama === '') {
-                return array(array(), 0, 'Nama biaya tambahan wajib diisi (mis. Biaya kirim).');
+                return array(array(), 0, translate('i18n_nama_biaya_tambahan_wajib_diisi_mis'));
             }
             if ($per === 'm2') {
                 if (!$this->_biaya_po_per_m2_siap()) {
-                    return array(array(), 0, 'Hitung biaya per m² belum aktif. Jalankan database/pm_po_biaya_luas.sql dulu.');
+                    return array(array(), 0, translate('i18n_hitung_biaya_per_m2_belum_aktif_jalankan'));
                 }
                 if ($luas <= 0 || $harga <= 0) {
-                    return array(array(), 0, 'Luas dan harga per m² untuk "' . $nama . '" wajib diisi.');
+                    return array(array(), 0, translate('i18n_luas_dan_harga_per_m2_untuk') . $nama . translate('i18n_q_wajib_diisi'));
                 }
             } elseif ($nominal <= 0) {
-                return array(array(), 0, 'Nominal "' . $nama . '" harus lebih dari 0.');
+                return array(array(), 0, translate('i18n_nominal') . $nama . translate('i18n_q_harus_lebih_dari_0'));
             }
 
             $row = array('nama' => $nama, 'nominal' => $nominal, 'keterangan' => $ket !== '' ? $ket : null);
@@ -371,15 +371,15 @@ class Pemenuhan_model extends CI_Model
         $this->db->trans_begin();
         if (!$this->_kunci_so($id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO harus berstatus Dikonfirmasi / Produksi untuk membuat PO.');
+            return array(false, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi'));
         }
         $jenis = $hdr['jenis'];
         if (!in_array($jenis, array('stok', 'dropship'), true)) {
-            return $this->_gagal('Jenis PO tidak valid.');
+            return $this->_gagal(translate('i18n_jenis_po_tidak_valid'));
         }
         $sup = $this->db->get_where('supplier', array('id' => (int) $hdr['id_supplier']))->row();
         if (!$sup) {
-            return $this->_gagal('Pilih supplier terlebih dahulu.');
+            return $this->_gagal(translate('i18n_pilih_supplier_terlebih_dahulu'));
         }
 
         $peta = array();
@@ -401,14 +401,14 @@ class Pemenuhan_model extends CI_Model
 
             if ($id_d > 0) {
                 if (!isset($peta[$id_d])) {
-                    return $this->_gagal('Ada item yang bukan milik SO ini.');
+                    return $this->_gagal(translate('i18n_ada_item_yang_bukan_milik_so_ini'));
                 }
                 $it = $peta[$id_d];
                 if ((string) $it->sumber !== $perlu) {
-                    return $this->_gagal('Item "' . $it->p_nama . '" sumbernya bukan "' . $perlu . '".');
+                    return $this->_gagal(translate('i18n_item_2') . $it->p_nama . translate('i18n_q_sumbernya_bukan') . $perlu . '".');
                 }
                 if ($qty > $it->p_sisa_proses + $this->eps) {
-                    return $this->_gagal('Qty "' . $it->p_nama . '" melebihi sisa yang belum dipesan ('
+                    return $this->_gagal(translate('i18n_qty') . $it->p_nama . translate('i18n_q_melebihi_sisa_belum_dipesan')
                         . (float) $it->p_sisa_proses . ').');
                 }
                 $it->p_sisa_proses -= $qty;
@@ -417,10 +417,10 @@ class Pemenuhan_model extends CI_Model
                 }
             } else {
                 if ($jenis === 'dropship') {
-                    return $this->_gagal('PO dropship hanya boleh berisi item dari SO.');
+                    return $this->_gagal(translate('i18n_po_dropship_hanya_boleh_berisi_item_dari'));
                 }
                 if ($nama === '') {
-                    return $this->_gagal('Nama barang pada baris tambahan wajib diisi.');
+                    return $this->_gagal(translate('i18n_nama_barang_pada_baris_tambahan_wajib'));
                 }
             }
             // Sama seperti penawaran:
@@ -433,7 +433,7 @@ class Pemenuhan_model extends CI_Model
             $luas   = round($lebar * $tinggi / 1000000, 2);
             $per    = $luas > 0 ? 'm2' : 'unit';
             if ($harga <= 0) {
-                return $this->_gagal('Harga beli "' . $nama . '" belum diisi.');
+                return $this->_gagal(translate('i18n_harga_beli') . $nama . translate('i18n_q_belum_diisi'));
             }
             $sub    = round(($per === 'm2' ? $luas * $qty : $qty) * $harga, 2);
             $rows[] = array(
@@ -452,7 +452,7 @@ class Pemenuhan_model extends CI_Model
             $total += $sub;
         }
         if (!$rows) {
-            return $this->_gagal('Isi qty minimal satu barang.');
+            return $this->_gagal(translate('i18n_isi_qty_minimal_satu_barang'));
         }
 
         list($biaya_rows, $total_biaya, $err_biaya) = $this->_saring_biaya_po($biaya);
@@ -460,7 +460,7 @@ class Pemenuhan_model extends CI_Model
             return $this->_gagal($err_biaya);
         }
         if ($biaya_rows && !$this->ada_tabel_biaya_po()) {
-            return $this->_gagal('Tabel biaya tambahan PO belum ada. Jalankan database/pm_po_biaya.sql dulu.');
+            return $this->_gagal(translate('i18n_tabel_biaya_tambahan_po_belum_ada'));
         }
         $total_barang = round($total, 2);
         $dpp          = round($total_barang + $total_biaya, 2);
@@ -468,7 +468,7 @@ class Pemenuhan_model extends CI_Model
         // PPN 11% dari (subtotal barang + biaya tambahan), dibulatkan ke rupiah (sama dengan penawaran)
         $pakai_ppn = !empty($hdr['pakai_ppn']);
         if ($pakai_ppn && !$this->ada_kolom_ppn_po()) {
-            return $this->_gagal('Kolom PPN di PO belum ada. Jalankan database/pm_po_ppn.sql dulu.');
+            return $this->_gagal(translate('i18n_kolom_ppn_di_po_belum_ada_jalankan'));
         }
         $ppn_persen  = $pakai_ppn ? self::TARIF_PPN_PO : 0;
         $ppn_nominal = $pakai_ppn ? round($dpp * $ppn_persen / 100) : 0;
@@ -503,27 +503,27 @@ class Pemenuhan_model extends CI_Model
             'id_user'      => $id_user,
         ));
         if (!$ok) {
-            return $this->_gagal('Gagal menyimpan PO.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_po'));
         }
         $id_po = (int) $this->db->insert_id();
         foreach ($rows as $r) {
             $r['id_po'] = $id_po;
             if (!$this->db->insert('pm_po_detail', $r)) {
-                return $this->_gagal('Gagal menyimpan detail PO.');
+                return $this->_gagal(translate('i18n_gagal_menyimpan_detail_po'));
             }
         }
         foreach ($biaya_rows as $b) {
             $b['id_po'] = $id_po;
             if (!$this->db->insert('pm_po_biaya', $b)) {
-                return $this->_gagal('Gagal menyimpan biaya tambahan PO.');
+                return $this->_gagal(translate('i18n_gagal_menyimpan_biaya_tambahan_po'));
             }
         }
         $this->sinkron_status_so($id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan PO.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_po'));
         }
         $this->db->trans_commit();
-        return array(true, 'PO ' . $no['no'] . ' dibuat (draft), menunggu persetujuan atasan.', $id_po);
+        return array(true, 'PO ' . $no['no'] . (' ' . translate('i18n_dibuat_draft_menunggu_persetujuan_atasan')), $id_po);
     }
 
     // $aksi:
@@ -540,12 +540,12 @@ class Pemenuhan_model extends CI_Model
     {
         $po = $this->db->get_where('pm_po', array('id' => (int) $id_po))->row();
         if (!$po) {
-            return array(false, 'PO tidak ditemukan.');
+            return array(false, translate('i18n_po_tidak_ditemukan'));
         }
         $this->db->trans_begin();
         if (!$this->_kunci_so($po->id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO sudah selesai / batal, PO tidak bisa diubah.');
+            return array(false, translate('i18n_so_sudah_selesai_batal_po_tidak_bisa'));
         }
         $po     = $this->db->query('SELECT * FROM pm_po WHERE id = ? FOR UPDATE', array((int) $id_po))->row();
         $alasan = mb_substr(trim((string) $alasan), 0, 255);
@@ -555,49 +555,49 @@ class Pemenuhan_model extends CI_Model
             $dari  = array('draft');
             $ke    = 'approved';
             $set   = array('approved_by' => $id_user, 'approved_at' => date('Y-m-d H:i:s'));
-            $pesan = 'PO ' . $po->no_po . ' disetujui. Purchasing bisa mengirim PO ke supplier.';
+            $pesan = 'PO ' . $po->no_po . (' ' . translate('i18n_disetujui_purchasing_bisa_mengirim_po_ke'));
         } elseif ($aksi === 'tolak') {
             $dari = array('draft');
             $ke   = 'batal';
             if ($alasan === '') {
                 $this->db->trans_rollback();
-                return array(false, 'Isi alasan penolakan PO.');
+                return array(false, translate('i18n_isi_alasan_penolakan_po'));
             }
             $set   = array('approved_by' => $id_user, 'approved_at' => date('Y-m-d H:i:s'), 'alasan_batal' => 'Ditolak atasan: ' . $alasan);
-            $pesan = 'PO ' . $po->no_po . ' ditolak. Qty item kembali bisa dibuatkan PO baru.';
+            $pesan = 'PO ' . $po->no_po . (' ' . translate('i18n_ditolak_qty_item_kembali_bisa_dibuatkan'));
         } elseif ($aksi === 'kirim') {
             $dari  = array('approved');
             $ke    = 'dipesan';
-            $pesan = 'PO ' . $po->no_po . ' ditandai sudah dipesan ke supplier.';
+            $pesan = 'PO ' . $po->no_po . (' ' . translate('i18n_ditandai_sudah_dipesan_ke_supplier'));
         } elseif ($aksi === 'batal') {
             $dari = array('draft', 'approved', 'dipesan');
             $ke   = 'batal';
             $r    = $this->db->select_sum('qty_diterima', 't')->where('id_po', $po->id)->get('pm_po_detail')->row();
             if ($r && (float) $r->t > 0) {
                 $this->db->trans_rollback();
-                return array(false, 'PO sudah ada penerimaan barang, tidak bisa dibatalkan.');
+                return array(false, translate('i18n_po_sudah_ada_penerimaan_barang_tidak'));
             }
             if ((float) $po->total_bayar > 0) {
                 $this->db->trans_rollback();
-                return array(false, 'PO sudah ada pembayaran ke supplier. Hapus / selesaikan pembayarannya dulu (finance).');
+                return array(false, translate('i18n_po_sudah_ada_pembayaran_ke_supplier'));
             }
             if ($alasan !== '') {
                 $set['alasan_batal'] = $alasan;
             }
-            $pesan = 'PO ' . $po->no_po . ' dibatalkan.';
+            $pesan = 'PO ' . $po->no_po . (' ' . translate('i18n_dibatalkan'));
         } else {
             $this->db->trans_rollback();
-            return array(false, 'Aksi tidak dikenal.');
+            return array(false, translate('i18n_aksi_tidak_dikenal'));
         }
         if (!in_array($po->status, $dari, true)) {
             $this->db->trans_rollback();
-            $label = $po->status === 'draft' ? 'belum disetujui atasan' : 'berstatus "' . $po->status . '"';
-            return array(false, 'PO ' . $po->no_po . ' ' . $label . ', tidak bisa di-' . $aksi . '.');
+            $label = $po->status === 'draft' ? 'belum disetujui atasan' : translate('i18n_berstatus') . $po->status . '"';
+            return array(false, 'PO ' . $po->no_po . ' ' . $label . translate('i18n_tidak_bisa_di') . $aksi . '.');
         }
         $this->db->where('id', $po->id)->update('pm_po', array_merge(array('status' => $ke), $set));
         $this->sinkron_status_so($po->id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal mengubah status PO.');
+            return $this->_gagal(translate('i18n_gagal_mengubah_status_po'));
         }
         $this->db->trans_commit();
         return array(true, $pesan);
@@ -617,17 +617,17 @@ class Pemenuhan_model extends CI_Model
     {
         $po = $this->db->get_where('pm_po', array('id' => (int) $id_po))->row();
         if (!$po) {
-            return array(false, 'PO tidak ditemukan.');
+            return array(false, translate('i18n_po_tidak_ditemukan'));
         }
         $this->db->trans_begin();
         if (!$this->_kunci_so($po->id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO sudah selesai / batal.');
+            return array(false, translate('i18n_so_sudah_selesai_batal'));
         }
         $po = $this->db->query('SELECT * FROM pm_po WHERE id = ? FOR UPDATE', array((int) $id_po))->row();
         if (!in_array($po->status, array('dipesan', 'sebagian'), true)) {
             $this->db->trans_rollback();
-            return array(false, 'Penerimaan hanya untuk PO berstatus Dipesan / Diterima sebagian.');
+            return array(false, translate('i18n_penerimaan_hanya_untuk_po_berstatus'));
         }
 
         $det    = $this->db->query('SELECT * FROM pm_po_detail WHERE id_po = ? FOR UPDATE', array($po->id))->result();
@@ -639,12 +639,12 @@ class Pemenuhan_model extends CI_Model
             }
             $sisa = (float) $d->qty - (float) $d->qty_diterima;
             if ($q > $sisa + $this->eps) {
-                return $this->_gagal('Qty "' . $d->nama_barang . '" melebihi sisa (' . $sisa . ').');
+                return $this->_gagal(translate('i18n_qty') . $d->nama_barang . translate('i18n_q_melebihi_sisa') . $sisa . ').');
             }
             $terima[] = array($d, $q);
         }
         if (!$terima) {
-            return $this->_gagal('Isi qty yang diterima minimal satu barang.');
+            return $this->_gagal(translate('i18n_isi_qty_yang_diterima_minimal_satu'));
         }
 
         $this->db->insert('pm_po_terima', array(
@@ -661,7 +661,7 @@ class Pemenuhan_model extends CI_Model
             $this->db->query('UPDATE pm_po_detail SET qty_diterima = qty_diterima + ? WHERE id = ?', array($q, $d->id));
         }
 
-        $pesan = 'Penerimaan PO ' . $po->no_po . ' dicatat.';
+        $pesan = (translate('i18n_penerimaan_po') . ' ') . $po->no_po . (' ' . translate('i18n_dicatat'));
 
         // Dropship: barang sudah sampai di customer -> buat surat jalan dropship + tambah qty_terkirim
         if ($po->jenis === 'dropship') {
@@ -691,7 +691,7 @@ class Pemenuhan_model extends CI_Model
                 $this->db->insert('pm_sj_detail', array('id_sj' => $id_sj, 'id_so_detail' => $d->id_so_detail, 'qty' => $q));
                 $this->db->query('UPDATE sales_order_detail SET qty_terkirim = qty_terkirim + ? WHERE id = ?', array($q, $d->id_so_detail));
             }
-            $pesan = 'Dropship PO ' . $po->no_po . ' dikonfirmasi diterima customer (' . $no['no'] . ').';
+            $pesan = (translate('i18n_dropship_po') . ' ') . $po->no_po . (' ' . translate('i18n_dikonfirmasi_diterima_customer')) . $no['no'] . ').';
         }
 
         $r = $this->db->query('SELECT COALESCE(SUM(qty - qty_diterima), 0) AS sisa FROM pm_po_detail WHERE id_po = ?', array($po->id))->row();
@@ -701,7 +701,7 @@ class Pemenuhan_model extends CI_Model
         $this->sinkron_status_so($po->id_so);
 
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan penerimaan barang.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_penerimaan_barang'));
         }
         $this->db->trans_commit();
         return array(true, $pesan);
@@ -721,7 +721,7 @@ class Pemenuhan_model extends CI_Model
         $this->db->trans_begin();
         if (!$this->_kunci_so($id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO harus berstatus Dikonfirmasi / Produksi untuk membuat SPK.');
+            return array(false, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi_2'));
         }
         $rows = array();
         foreach ($this->get_items($id_so) as $it) {
@@ -730,15 +730,15 @@ class Pemenuhan_model extends CI_Model
                 continue;
             }
             if ($it->sumber !== 'produksi') {
-                return $this->_gagal('Item "' . $it->p_nama . '" bukan item produksi.');
+                return $this->_gagal(translate('i18n_item_2') . $it->p_nama . translate('i18n_q_bukan_item_produksi'));
             }
             if ($q > $it->p_sisa_proses + $this->eps) {
-                return $this->_gagal('Qty "' . $it->p_nama . '" melebihi sisa yang belum di-SPK (' . (float) $it->p_sisa_proses . ').');
+                return $this->_gagal(translate('i18n_qty') . $it->p_nama . translate('i18n_q_melebihi_sisa_belum_spk') . (float) $it->p_sisa_proses . ').');
             }
             $rows[] = array('id_so_detail' => (int) $it->id, 'qty' => $q);
         }
         if (!$rows) {
-            return $this->_gagal('Isi qty produksi minimal satu item.');
+            return $this->_gagal(translate('i18n_isi_qty_produksi_minimal_satu_item'));
         }
 
         $no = $this->nomor('pm_spk', 'SPK', $hdr['tanggal'], true);
@@ -754,21 +754,21 @@ class Pemenuhan_model extends CI_Model
             'id_user'        => $id_user,
         ));
         if (!$ok) {
-            return $this->_gagal('Gagal menyimpan SPK.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_spk'));
         }
         $id_spk = (int) $this->db->insert_id();
         foreach ($rows as $r) {
             $r['id_spk'] = $id_spk;
             if (!$this->db->insert('pm_spk_detail', $r)) {
-                return $this->_gagal('Gagal menyimpan detail SPK.');
+                return $this->_gagal(translate('i18n_gagal_menyimpan_detail_spk'));
             }
         }
         $this->sinkron_status_so($id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan SPK.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_spk'));
         }
         $this->db->trans_commit();
-        return array(true, 'SPK ' . $no['no'] . ' dibuat, masuk antrian produksi.', $id_spk);
+        return array(true, 'SPK ' . $no['no'] . (' ' . translate('i18n_dibuat_masuk_antrian_produksi')), $id_spk);
     }
 
     // $aksi: mulai (antri -> proses) | selesai (antri/proses -> selesai) | batal (antri/proses -> batal)
@@ -781,27 +781,27 @@ class Pemenuhan_model extends CI_Model
     {
         $spk = $this->db->get_where('pm_spk', array('id' => (int) $id_spk))->row();
         if (!$spk) {
-            return array(false, 'SPK tidak ditemukan.');
+            return array(false, translate('i18n_spk_tidak_ditemukan'));
         }
         $aturan = array(
             'mulai'   => array(array('antri'), 'proses', array('tgl_mulai' => date('Y-m-d')), 'dimulai'),
-            'selesai' => array(array('antri', 'proses'), 'selesai', array('tgl_selesai' => date('Y-m-d')), 'selesai, barang siap dikirim'),
+            'selesai' => array(array('antri', 'proses'), 'selesai', array('tgl_selesai' => date('Y-m-d')), translate('i18n_selesai_barang_siap_dikirim')),
             'batal'   => array(array('antri', 'proses'), 'batal', array(), 'dibatalkan'),
         );
         if (!isset($aturan[$aksi])) {
-            return array(false, 'Aksi tidak dikenal.');
+            return array(false, translate('i18n_aksi_tidak_dikenal'));
         }
         list($dari, $ke, $extra, $kata) = $aturan[$aksi];
 
         $this->db->trans_begin();
         if (!$this->_kunci_so($spk->id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO sudah selesai / batal, SPK tidak bisa diubah.');
+            return array(false, translate('i18n_so_sudah_selesai_batal_spk_tidak_bisa'));
         }
         $spk = $this->db->query('SELECT * FROM pm_spk WHERE id = ? FOR UPDATE', array((int) $id_spk))->row();
         if (!in_array($spk->status, $dari, true)) {
             $this->db->trans_rollback();
-            return array(false, 'SPK berstatus "' . $spk->status . '" tidak bisa di-' . $aksi . '.');
+            return array(false, translate('i18n_spk_berstatus') . $spk->status . translate('i18n_q_tidak_bisa_di') . $aksi . '.');
         }
         if ($aksi === 'selesai' && !$spk->tgl_mulai) {
             $extra['tgl_mulai'] = date('Y-m-d');
@@ -809,7 +809,7 @@ class Pemenuhan_model extends CI_Model
         $this->db->where('id', $spk->id)->update('pm_spk', array_merge(array('status' => $ke), $extra));
         $this->sinkron_status_so($spk->id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal mengubah status SPK.');
+            return $this->_gagal(translate('i18n_gagal_mengubah_status_spk'));
         }
         $this->db->trans_commit();
         return array(true, 'SPK ' . $spk->no_spk . ' ' . $kata . '.');
@@ -829,7 +829,7 @@ class Pemenuhan_model extends CI_Model
         $this->db->trans_begin();
         if (!$this->_kunci_so($id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO harus berstatus Dikonfirmasi / Produksi untuk membuat surat jalan.');
+            return array(false, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi_3'));
         }
         $rows = array();
         foreach ($this->get_items($id_so) as $it) {
@@ -838,18 +838,18 @@ class Pemenuhan_model extends CI_Model
                 continue;
             }
             if (!in_array($it->sumber, array('produksi', 'beli', 'stok'), true)) {
-                return $this->_gagal('Item "' . $it->p_nama . '" tidak dikirim dari gudang.');
+                return $this->_gagal(translate('i18n_item_2') . $it->p_nama . translate('i18n_q_tidak_dikirim_dari_gudang'));
             }
             if ($it->sumber === 'stok' && abs($q - round($q)) > $this->eps) {
-                return $this->_gagal('Qty kirim "' . $it->p_nama . '" dari stok harus bilangan bulat.');
+                return $this->_gagal(translate('i18n_qty_kirim') . $it->p_nama . translate('i18n_q_dari_stok_harus_bulat'));
             }
             if ($q > $it->p_siap_kirim + $this->eps) {
-                return $this->_gagal('Qty kirim "' . $it->p_nama . '" melebihi barang siap di gudang (' . (float) $it->p_siap_kirim . ').');
+                return $this->_gagal(translate('i18n_qty_kirim') . $it->p_nama . translate('i18n_q_melebihi_barang_siap') . (float) $it->p_siap_kirim . ').');
             }
             $rows[] = array('id_so_detail' => (int) $it->id, 'qty' => $q, '_stok' => $it->sumber === 'stok', '_nama' => $it->p_nama);
         }
         if (!$rows) {
-            return $this->_gagal('Isi qty kirim minimal satu item.');
+            return $this->_gagal(translate('i18n_isi_qty_kirim_minimal_satu_item'));
         }
 
         $no = $this->nomor('pm_sj', 'SJ', $hdr['tanggal'], true);
@@ -868,7 +868,7 @@ class Pemenuhan_model extends CI_Model
             'id_user'      => $id_user,
         ));
         if (!$ok) {
-            return $this->_gagal('Gagal menyimpan surat jalan.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_surat_jalan'));
         }
         $id_sj = (int) $this->db->insert_id();
         foreach ($rows as $r) {
@@ -888,10 +888,10 @@ class Pemenuhan_model extends CI_Model
         }
         $this->sinkron_status_so($id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan surat jalan.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_surat_jalan'));
         }
         $this->db->trans_commit();
-        return array(true, 'Surat jalan ' . $no['no'] . ' dibuat.', $id_sj);
+        return array(true, (translate('i18n_surat_jalan_2') . ' ') . $no['no'] . (' ' . translate('i18n_dibuat')), $id_sj);
     }
 
     public function batal_sj($id_sj)
@@ -903,20 +903,20 @@ class Pemenuhan_model extends CI_Model
     {
         $sj = $this->db->get_where('pm_sj', array('id' => (int) $id_sj))->row();
         if (!$sj) {
-            return array(false, 'Surat jalan tidak ditemukan.');
+            return array(false, translate('i18n_surat_jalan_tidak_ditemukan'));
         }
         if ($sj->jenis === 'dropship') {
-            return array(false, 'Surat jalan dropship berasal dari penerimaan PO, tidak bisa dibatalkan di sini.');
+            return array(false, translate('i18n_surat_jalan_dropship_berasal_dari'));
         }
         $this->db->trans_begin();
         if (!$this->_kunci_so($sj->id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO sudah selesai / batal, surat jalan tidak bisa dibatalkan.');
+            return array(false, translate('i18n_so_sudah_selesai_batal_surat_jalan_tidak'));
         }
         $sj = $this->db->query('SELECT * FROM pm_sj WHERE id = ? FOR UPDATE', array((int) $id_sj))->row();
         if ($sj->status !== 'terkirim') {
             $this->db->trans_rollback();
-            return array(false, 'Surat jalan sudah dibatalkan.');
+            return array(false, translate('i18n_surat_jalan_sudah_dibatalkan'));
         }
         $cek_konsinyasi = $this->db->field_exists('qty_laku', 'sales_order_detail');
         foreach ($this->db->get_where('pm_sj_detail', array('id_sj' => $sj->id))->result() as $d) {
@@ -924,7 +924,7 @@ class Pemenuhan_model extends CI_Model
             if ($cek_konsinyasi) {
                 $sod = $this->db->select('qty_terkirim, qty_laku, qty_retur')->get_where('sales_order_detail', array('id' => (int) $d->id_so_detail))->row();
                 if ($sod && (float) $sod->qty_terkirim - (float) $d->qty + $this->eps < (float) $sod->qty_laku + (float) $sod->qty_retur) {
-                    return $this->_gagal('Surat jalan tidak bisa dibatalkan: sebagian barangnya sudah dilaporkan laku / ditarik (konsinyasi). Batalkan dokumen konsinyasinya dulu.');
+                    return $this->_gagal(translate('i18n_surat_jalan_tidak_bisa_dibatalkan'));
                 }
             }
             $this->db->query('UPDATE sales_order_detail SET qty_terkirim = GREATEST(0, qty_terkirim - ?) WHERE id = ?', array((float) $d->qty, $d->id_so_detail));
@@ -934,10 +934,10 @@ class Pemenuhan_model extends CI_Model
         $this->db->where('id', $sj->id)->update('pm_sj', array('status' => 'batal'));
         $this->sinkron_status_so($sj->id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal membatalkan surat jalan.');
+            return $this->_gagal(translate('i18n_gagal_membatalkan_surat_jalan'));
         }
         $this->db->trans_commit();
-        return array(true, 'Surat jalan ' . $sj->no_sj . ' dibatalkan, qty kembali ke "siap kirim". Barang dari stok dikembalikan ke stok gudang.');
+        return array(true, (translate('i18n_surat_jalan_2') . ' ') . $sj->no_sj . (' ' . translate('i18n_dibatalkan_qty_kembali_ke_siap_kirim')));
     }
 
     // ================= 3b. AMBIL DARI STOK =================
@@ -1025,12 +1025,12 @@ class Pemenuhan_model extends CI_Model
     {
         $d = $this->db->get_where('sales_order_detail', array('id' => (int) $id_so_detail))->row();
         if (!$d) {
-            return array(false, 'Item SO tidak ditemukan.');
+            return array(false, translate('i18n_item_so_tidak_ditemukan'));
         }
         $this->db->trans_begin();
         if (!$this->_kunci_so($d->id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO harus berstatus Dikonfirmasi / Produksi.');
+            return array(false, translate('i18n_so_harus_berstatus_dikonfirmasi_produksi_4'));
         }
         $it = null;
         foreach ($this->get_items($d->id_so) as $x) {
@@ -1038,7 +1038,7 @@ class Pemenuhan_model extends CI_Model
         }
         if (!$it || $it->sumber !== 'stok') {
             $this->db->trans_rollback();
-            return array(false, 'Sumber item ini bukan "Ambil dari stok". Atur sumbernya dulu.');
+            return array(false, translate('i18n_sumber_item_ini_bukan_ambil_dari_stok'));
         }
 
         $total = 0;
@@ -1049,10 +1049,10 @@ class Pemenuhan_model extends CI_Model
                 continue;
             }
             if (abs($qty - round($qty)) > $this->eps) {
-                return $this->_gagal('Qty dari stok harus bilangan bulat.');
+                return $this->_gagal(translate('i18n_qty_dari_stok_harus_bilangan_bulat'));
             }
             if (substr_count((string) $kunci, '|') < 3) {
-                return $this->_gagal('Data stok tidak valid.');
+                return $this->_gagal(translate('i18n_data_stok_tidak_valid'));
             }
             list($b, $l, $o, $u) = explode('|', (string) $kunci, 4);
             // kunci baris stok supaya tidak dipakai dua pesanan bersamaan
@@ -1063,16 +1063,16 @@ class Pemenuhan_model extends CI_Model
             $dipesan  = $this->_stok_dipesan($kunci);
             $tersedia = (float) $r->stok - (float) ($dipesan[$kunci] ?? 0);
             if ($qty > $tersedia + $this->eps) {
-                return $this->_gagal('Stok tidak cukup (tersedia ' . max(0, $tersedia) . ', diminta ' . $qty . '). Mungkin baru dipakai pesanan lain, muat ulang halaman.');
+                return $this->_gagal((translate('i18n_stok_tidak_cukup_tersedia') . ' ') . max(0, $tersedia) . (translate('i18n_diminta') . ' ') . $qty . translate('i18n_mungkin_baru_dipakai_pesanan_lain_muat'));
             }
             $total  += $qty;
             $baris[] = array('id_barang' => (int) $b, 'id_location' => (int) $l, 'opsi' => $o, 'ukuran' => $u, 'qty' => $qty);
         }
         if (!$baris) {
-            return $this->_gagal('Isi qty minimal pada satu stok.');
+            return $this->_gagal(translate('i18n_isi_qty_minimal_pada_satu_stok'));
         }
         if ($total > $it->p_sisa_proses + $this->eps) {
-            return $this->_gagal('Total qty (' . $total . ') melebihi qty item yang belum dipenuhi (' . (float) $it->p_sisa_proses . ').');
+            return $this->_gagal(translate('i18n_total_qty') . $total . translate('i18n_melebihi_qty_item_yang_belum_dipenuhi') . (float) $it->p_sisa_proses . ').');
         }
         foreach ($baris as $x) {
             $this->db->insert('pm_alokasi_stok', $x + array(
@@ -1084,10 +1084,10 @@ class Pemenuhan_model extends CI_Model
         }
         $this->sinkron_status_so($d->id_so);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan pengambilan stok.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_pengambilan_stok'));
         }
         $this->db->trans_commit();
-        return array(true, $total . ' qty dipesan dari stok untuk "' . $it->p_nama . '". Barang siap dibuatkan surat jalan.');
+        return array(true, $total . (' ' . translate('i18n_qty_dipesan_dari_stok_untuk')) . $it->p_nama . translate('i18n_q_barang_siap_dibuatkan_sj'));
     }
 
     // Lepas alokasi yang belum dikirim. Return array(ok, pesan, id_so)
@@ -1100,30 +1100,30 @@ class Pemenuhan_model extends CI_Model
     {
         $a = $this->db->get_where('pm_alokasi_stok', array('id' => (int) $id_alokasi))->row();
         if (!$a) {
-            return array(false, 'Data tidak ditemukan.', 0);
+            return array(false, translate('i18n_data_tidak_ditemukan_3'), 0);
         }
         $this->db->trans_begin();
         if (!$this->_kunci_so($a->id_so)) {
             $this->db->trans_rollback();
-            return array(false, 'SO sudah selesai / batal.', (int) $a->id_so);
+            return array(false, translate('i18n_so_sudah_selesai_batal'), (int) $a->id_so);
         }
         $a = $this->db->query('SELECT * FROM pm_alokasi_stok WHERE id = ? FOR UPDATE', array((int) $id_alokasi))->row();
         if ($a->status !== 'aktif') {
             $this->db->trans_rollback();
-            return array(false, 'Stok ini sudah dilepas.', (int) $a->id_so);
+            return array(false, translate('i18n_stok_ini_sudah_dilepas'), (int) $a->id_so);
         }
         if ((float) $a->qty_keluar > $this->eps) {
             $this->db->trans_rollback();
-            return array(false, 'Sebagian barang dari stok ini sudah dikirim. Batalkan surat jalannya dulu.', (int) $a->id_so);
+            return array(false, translate('i18n_sebagian_barang_dari_stok_ini_sudah'), (int) $a->id_so);
         }
         $this->db->where('id', $a->id)->update('pm_alokasi_stok', array('status' => 'batal'));
         $this->sinkron_status_so($a->id_so);
         if ($this->db->trans_status() === false) {
-            $r = $this->_gagal('Gagal melepas stok.');
+            $r = $this->_gagal(translate('i18n_gagal_melepas_stok'));
             return array($r[0], $r[1], (int) $a->id_so);
         }
         $this->db->trans_commit();
-        return array(true, 'Stok dilepas dan kembali tersedia untuk pesanan lain.', (int) $a->id_so);
+        return array(true, translate('i18n_stok_dilepas_dan_kembali_tersedia_untuk'), (int) $a->id_so);
     }
 
     // Potong stok untuk 1 item SO saat surat jalan dibuat (FIFO dari alokasi). Return '' jika ok, atau pesan error.
@@ -1150,7 +1150,7 @@ class Pemenuhan_model extends CI_Model
             $this->db->insert('pm_sj_stok', array('id_sj' => (int) $id_sj, 'id_alokasi' => (int) $a->id, 'qty' => $ambil));
             $sisa -= $ambil;
         }
-        return $sisa > 0 ? 'stok yang dipesan tidak cukup untuk qty kirim.' : '';
+        return $sisa > 0 ? translate('i18n_stok_yang_dipesan_tidak_cukup_untuk_qty') : '';
     }
 
     // Kembalikan stok dari SJ yang dibatalkan
@@ -1183,7 +1183,7 @@ class Pemenuhan_model extends CI_Model
         }
         $sesudah = $sebelum + (int) $delta;
         if ($sesudah < 0) {
-            return 'stok fisik di gudang tinggal ' . $sebelum . ', tidak cukup. Cek stok opname.';
+            return (translate('i18n_stok_fisik_di_gudang_tinggal') . ' ') . $sebelum . translate('i18n_tidak_cukup_cek_stok_opname');
         }
         if ($rows) {
             // sama seperti stok opname: selisih diterapkan ke baris pertama
@@ -1431,36 +1431,36 @@ class Pemenuhan_model extends CI_Model
         $po = $q ? $q->row() : null;
         if (!$po) {
             $this->db->trans_rollback();
-            return array(false, 'PO tidak ditemukan.');
+            return array(false, translate('i18n_po_tidak_ditemukan'));
         }
         if (!in_array($po->status, $this->status_boleh_bayar, true)) {
             $this->db->trans_rollback();
             return array(false, $po->status === 'draft'
                 ? 'PO belum disetujui atasan, belum boleh dibayar.'
-                : 'PO berstatus "' . $po->status . '" tidak bisa dibayar.');
+                : translate('i18n_po_berstatus') . $po->status . translate('i18n_q_tidak_bisa_dibayar'));
         }
         if (!in_array($d['jenis'], $this->jenis_bayar_valid, true)) {
             $this->db->trans_rollback();
-            return array(false, 'Jenis pembayaran tidak valid.');
+            return array(false, translate('i18n_jenis_pembayaran_tidak_valid'));
         }
         if (!in_array($d['metode'], $this->metode_bayar_valid, true)) {
             $this->db->trans_rollback();
-            return array(false, 'Metode pembayaran tidak valid.');
+            return array(false, translate('i18n_metode_pembayaran_tidak_valid'));
         }
         $nominal = round((float) $d['nominal'], 2);
         $sisa    = round((float) $po->total - (float) $po->total_bayar, 2);
         if ($nominal <= 0) {
             $this->db->trans_rollback();
-            return array(false, 'Nominal pembayaran harus lebih dari 0.');
+            return array(false, translate('i18n_nominal_pembayaran_harus_lebih_dari_0'));
         }
         if ($nominal > $sisa + 0.005) {
             $this->db->trans_rollback();
-            return array(false, 'Nominal melebihi sisa hutang ke supplier (Rp ' . number_format($sisa, 0, ',', '.') . ').');
+            return array(false, (translate('i18n_nominal_melebihi_sisa_hutang_ke_supplier') . ' ') . number_format($sisa, 0, ',', '.') . ').');
         }
         // pelunasan harus menutup sisa; DP tidak boleh langsung melunasi semua
         if ($d['jenis'] === 'pelunasan' && abs($nominal - $sisa) > 0.005) {
             $this->db->trans_rollback();
-            return array(false, 'Pelunasan harus sama dengan sisa hutang (Rp ' . number_format($sisa, 0, ',', '.') . '). Pakai jenis "Termin" untuk bayar sebagian.');
+            return array(false, (translate('i18n_pelunasan_harus_sama_dengan_sisa_hutang') . ' ') . number_format($sisa, 0, ',', '.') . translate('i18n_pakai_jenis_termin_untuk_bayar_sebagian'));
         }
 
         $ok = $this->db->insert('pm_po_pembayaran', array(
@@ -1475,14 +1475,14 @@ class Pemenuhan_model extends CI_Model
             'id_user'       => $id_user,
         ));
         if (!$ok) {
-            return $this->_gagal('Gagal menyimpan pembayaran.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_pembayaran'));
         }
         $this->_sinkron_bayar_po($po->id);
         if ($this->db->trans_status() === false) {
-            return $this->_gagal('Gagal menyimpan pembayaran.');
+            return $this->_gagal(translate('i18n_gagal_menyimpan_pembayaran'));
         }
         $this->db->trans_commit();
-        return array(true, 'Pembayaran ' . strtoupper($d['jenis']) . ' Rp ' . number_format($nominal, 0, ',', '.') . ' untuk PO ' . $po->no_po . ' dicatat.');
+        return array(true, (translate('pembayaran') . ' ') . strtoupper($d['jenis']) . ' Rp ' . number_format($nominal, 0, ',', '.') . (' ' . translate('i18n_untuk_po') . ' ') . $po->no_po . (' ' . translate('i18n_dicatat')));
     }
 
     // Hapus pembayaran yang salah input. Return array(ok, pesan, path_bukti_untuk_dihapus)
@@ -1495,18 +1495,18 @@ class Pemenuhan_model extends CI_Model
     {
         $b = $this->db->get_where('pm_po_pembayaran', array('id' => (int) $id_bayar))->row();
         if (!$b) {
-            return array(false, 'Data pembayaran tidak ditemukan.', '');
+            return array(false, translate('i18n_data_pembayaran_tidak_ditemukan'), '');
         }
         $this->db->trans_begin();
         $this->db->query('SELECT id FROM pm_po WHERE id = ? FOR UPDATE', array((int) $b->id_po));
         $this->db->where('id', $b->id)->delete('pm_po_pembayaran');
         $this->_sinkron_bayar_po($b->id_po);
         if ($this->db->trans_status() === false) {
-            $r = $this->_gagal('Gagal menghapus pembayaran.');
+            $r = $this->_gagal(translate('i18n_gagal_menghapus_pembayaran'));
             return array($r[0], $r[1], '');
         }
         $this->db->trans_commit();
-        return array(true, 'Pembayaran Rp ' . number_format((float) $b->nominal, 0, ',', '.') . ' dihapus.', (string) $b->bukti);
+        return array(true, (translate('i18n_pembayaran_rp') . ' ') . number_format((float) $b->nominal, 0, ',', '.') . (' ' . translate('i18n_dihapus')), (string) $b->bukti);
     }
 
     // Hitung ulang total_bayar & status_bayar (belum | dp | lunas) di pm_po

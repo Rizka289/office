@@ -2,8 +2,8 @@
 include APPPATH . 'views/pemenuhan/_status.php';
 $this->load->view('pemenuhan/_style');
 
-$label_jenis = array('dp' => array('warning', 'DP'), 'pelunasan' => array('success', 'Pelunasan'),
-  'lainnya' => array('info', 'Lainnya'), 'pph' => array('secondary', 'PPh (data lama)'));
+$label_jenis = array('dp' => array('warning', 'DP'), 'pelunasan' => array('success', translate('pelunasan')),
+  'lainnya' => array('info', translate('lainnya')), 'pph' => array('secondary', translate('i18n_pph_data_lama')));
 $total = 0; $per_jenis = array();
 foreach ($list as $b) {
   $total += (float) $b->nominal;
@@ -14,23 +14,23 @@ foreach ($list as $b) {
 
   <div class="hero mb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
     <div>
-      <div class="judul"><i class="bi bi-clock-history me-2"></i>Penerimaan Pembayaran Customer</div>
+      <div class="judul"><i class="bi bi-clock-history me-2"></i><?= translate('i18n_penerimaan_pembayaran_customer') ?></div>
       <div class="meta"><?= $tgl($dari) ?> s/d <?= $tgl($sampai) ?></div>
     </div>
-    <a href="<?= site_url('piutang') ?>" class="btn btn-light btn-sm"><i class="bi bi-receipt me-1"></i>Daftar piutang</a>
+    <a href="<?= site_url('piutang') ?>" class="btn btn-light btn-sm"><i class="bi bi-receipt me-1"></i><?= translate('i18n_daftar_piutang') ?></a>
   </div>
 
   <form method="get" action="<?= site_url('piutang/penerimaan') ?>" class="card mb-3">
     <div class="card-body row g-2 align-items-end">
-      <div class="col-sm-3"><label class="form-label small mb-1">Dari</label><input type="date" name="dari" value="<?= html_escape($dari) ?>" class="form-control form-control-sm"></div>
-      <div class="col-sm-3"><label class="form-label small mb-1">Sampai</label><input type="date" name="sampai" value="<?= html_escape($sampai) ?>" class="form-control form-control-sm"></div>
-      <div class="col-sm-4"><label class="form-label small mb-1">Cari</label><input type="search" name="q" value="<?= html_escape($q) ?>" class="form-control form-control-sm" placeholder="No. SO / customer / no. referensi"></div>
-      <div class="col-sm-2 d-grid"><button class="btn btn-sm btn-success"><i class="bi bi-funnel me-1"></i>Tampilkan</button></div>
+      <div class="col-sm-3"><label class="form-label small mb-1"><?= translate('dari') ?></label><input type="date" name="dari" value="<?= html_escape($dari) ?>" class="form-control form-control-sm"></div>
+      <div class="col-sm-3"><label class="form-label small mb-1"><?= translate('i18n_sampai') ?></label><input type="date" name="sampai" value="<?= html_escape($sampai) ?>" class="form-control form-control-sm"></div>
+      <div class="col-sm-4"><label class="form-label small mb-1"><?= translate('cari') ?></label><input type="search" name="q" value="<?= html_escape($q) ?>" class="form-control form-control-sm" placeholder="<?= translate('i18n_no_so_customer_no_referensi') ?>"></div>
+      <div class="col-sm-2 d-grid"><button class="btn btn-sm btn-success"><i class="bi bi-funnel me-1"></i><?= translate('i18n_tampilkan') ?></button></div>
     </div>
   </form>
 
   <div class="row g-3 mb-3">
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted">Total uang masuk</div><div class="fs-5 fw-semibold text-success"><?= $rp($total) ?></div><div class="muted"><?= count($list) ?> transaksi</div></div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted"><?= translate('i18n_total_uang_masuk') ?></div><div class="fs-5 fw-semibold text-success"><?= $rp($total) ?></div><div class="muted"><?= count($list) ?> <?= translate('i18n_transaksi') ?></div></div></div></div>
     <?php foreach ($per_jenis as $j => $n): ?>
       <div class="col-sm-4 col-lg-2"><div class="card h-100"><div class="card-body"><div class="muted"><?= html_escape($label_jenis[$j][1] ?? ucfirst($j)) ?></div><div class="fw-semibold"><?= $rp($n) ?></div></div></div></div>
     <?php endforeach; ?>
@@ -39,9 +39,9 @@ foreach ($list as $b) {
   <div class="card">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>Tanggal</th><th>No. SO</th><th>Customer</th><th>Jenis</th><th>Metode / Ref.</th><th>Catatan</th><th class="text-end">Nominal</th></tr></thead>
+        <thead class="table-light"><tr><th><?= translate('tanggal') ?></th><th><?= translate('i18n_no_so') ?></th><th><?= translate('i18n_customer') ?></th><th><?= translate('jenis') ?></th><th><?= translate('i18n_metode_ref') ?></th><th><?= translate('i18n_catatan') ?></th><th class="text-end"><?= translate('i18n_nominal_2') ?></th></tr></thead>
         <tbody>
-          <?php if (!$list): ?><tr><td colspan="7" class="text-center text-muted py-4">Tidak ada pembayaran pada periode ini.</td></tr><?php endif; ?>
+          <?php if (!$list): ?><tr><td colspan="7" class="text-center text-muted py-4"><?= translate('i18n_tidak_ada_pembayaran_pada_periode_ini') ?></td></tr><?php endif; ?>
           <?php foreach ($list as $b): $x = $label_jenis[$b->jenis] ?? array('light', ucfirst($b->jenis)); ?>
             <tr>
               <td class="text-nowrap"><?= $tgl($b->tanggal) ?></td>

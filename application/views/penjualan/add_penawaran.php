@@ -319,7 +319,7 @@ if ($is_edit && !empty($items_edit)) {
     <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
       <i class="bi bi-exclamation-triangle-fill me-2"></i>
       <?= $this->session->flashdata('error'); ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_tutup') ?>"></button>
     </div>
   <?php endif; ?>
 
@@ -328,7 +328,7 @@ if ($is_edit && !empty($items_edit)) {
   <?php if ($is_manual): ?>
     <div class="alert alert-info py-2 mb-3">
       <i class="bi bi-pencil-square me-1"></i>
-      <strong>Penawaran Manual</strong> &mdash; semua isian diketik langsung (tanpa rumus luas). Nama barang boleh dikosongkan kalau hanya mengisi aksesoris.
+      <strong><?= translate('i18n_penawaran_manual') ?></strong> <?= translate('i18n_semua_isian_diketik_langsung_tanpa_rumus') ?>
     </div>
   <?php endif; ?>
 
@@ -367,10 +367,10 @@ if ($is_edit && !empty($items_edit)) {
         <?php if ($this->db->field_exists('jenis_penjualan', 'penawaran')): ?>
           <?php $jenis_val = $is_edit ? ($pen->jenis_penjualan ?? 'biasa') : 'biasa'; ?>
           <div class="col-md-4">
-            <label for="jenis_penjualan" class="form-label">Jenis penjualan</label>
+            <label for="jenis_penjualan" class="form-label"><?= translate('i18n_jenis_penjualan') ?></label>
             <select id="jenis_penjualan" name="jenis_penjualan" class="form-select" <?= $pajak_lock; ?>>
-              <option value="biasa" <?= $jenis_val !== 'konsinyasi' ? 'selected' : ''; ?>>Penjualan biasa</option>
-              <option value="konsinyasi" <?= $jenis_val === 'konsinyasi' ? 'selected' : ''; ?>>Konsinyasi / titip jual (sample)</option>
+              <option value="biasa" <?= $jenis_val !== 'konsinyasi' ? 'selected' : ''; ?>><?= translate('i18n_penjualan_biasa') ?></option>
+              <option value="konsinyasi" <?= $jenis_val === 'konsinyasi' ? 'selected' : ''; ?>><?= translate('i18n_konsinyasi_titip_jual_sample') ?></option>
             </select>
           </div>
           <?php
@@ -379,16 +379,16 @@ if ($is_edit && !empty($items_edit)) {
           ?>
           <?php if ($ada_kolom_masa): ?>
             <div class="col-md-3" id="wrap_masa_konsinyasi" style="<?= $jenis_val === 'konsinyasi' ? '' : 'display:none'; ?>">
-              <label for="masa_konsinyasi" class="form-label">Masa konsinyasi</label>
+              <label for="masa_konsinyasi" class="form-label"><?= translate('i18n_masa_konsinyasi') ?></label>
               <select id="masa_konsinyasi" name="masa_konsinyasi" class="form-select" <?= $pajak_lock; ?>>
-                <option value="30" <?= $masa_val === 30 ? 'selected' : ''; ?>>30 hari</option>
-                <option value="60" <?= $masa_val === 60 ? 'selected' : ''; ?>>60 hari</option>
+                <option value="30" <?= $masa_val === 30 ? 'selected' : ''; ?>><?= translate('i18n_30_hari') ?></option>
+                <option value="60" <?= $masa_val === 60 ? 'selected' : ''; ?>><?= translate('i18n_60_hari') ?></option>
               </select>
             </div>
           <?php endif; ?>
           <div class="<?= $ada_kolom_masa ? 'col-md-5' : 'col-md-8'; ?> d-flex align-items-end">
             <div class="form-text" id="info_konsinyasi" style="<?= $jenis_val === 'konsinyasi' ? '' : 'display:none'; ?>">
-              <i class="bi bi-info-circle me-1"></i>Barang dititip ke customer dengan harga di penawaran ini. Tanpa DP; yang ditagih hanya barang yang laku, sisanya ditarik kembali ke gudang. Masa konsinyasi dihitung sejak tanggal surat jalan.
+              <i class="bi bi-info-circle me-1"></i><?= translate('i18n_barang_dititip_ke_customer_dengan_harga') ?>
             </div>
           </div>
           <script>
@@ -445,7 +445,7 @@ if ($is_edit && !empty($items_edit)) {
             <input type="number" min="0" step="1" id="biaya_ongkir" name="biaya_ongkir" class="form-control" placeholder="Rp" value="<?= html_escape($ongkir_val); ?>" <?= $ongkir_on ? '' : 'disabled'; ?>>
             <div class="form-check form-switch mt-2 mb-0">
               <input class="form-check-input" type="checkbox" role="switch" id="pph_ongkir" name="pph_ongkir" value="1" <?= $pph_ongkir_on ? 'checked' : ''; ?> <?= ($ongkir_on && $pajak_lock === '') ? '' : 'disabled'; ?>>
-              <label class="form-check-label small" for="pph_ongkir">Ongkir ikut dipotong PPh oleh customer</label>
+              <label class="form-check-label small" for="pph_ongkir"><?= translate('i18n_ongkir_ikut_dipotong_pph_oleh_customer') ?></label>
             </div>
           </div>
         </div>
@@ -464,9 +464,9 @@ if ($is_edit && !empty($items_edit)) {
           </div>
           <div class="form-check form-switch mb-0">
             <input class="form-check-input" type="checkbox" role="switch" id="pakai_pph" name="pakai_pph" value="1" <?= ($is_edit && (float) $pen->pph_persen > 0) ? 'checked' : ''; ?> <?= $pajak_lock; ?>>
-            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong customer)</label>
+            <label class="form-check-label" for="pakai_pph"><?= translate('pph') . ' ' . html_escape($tarif_pph); ?><?= translate('i18n_dipotong_customer') ?></label>
           </div>
-          <div class="form-text" id="infoPph">PPh <?= html_escape($tarif_pph); ?>% hanya bisa dipilih kalau ada biaya pemasangan / instalasi (atau ongkir yang ikut dipotong PPh). Dihitung dari nilai jasa pemasangan<span id="infoPphOngkir" class="d-none"> + ongkir</span>, dan mengurangi grand total.</div>
+          <div class="form-text" id="infoPph"><?= translate('pph') ?> <?= html_escape($tarif_pph); ?><?= translate('i18n_hanya_bisa_dipilih_kalau_ada_biaya') ?><span id="infoPphOngkir" class="d-none"> <?= translate('i18n_ongkir') ?></span><?= translate('i18n_dan_mengurangi_grand_total') ?></div>
         </div>
       </div>
     </div>
@@ -485,7 +485,7 @@ if ($is_edit && !empty($items_edit)) {
             <span class="text-muted"><?= translate('ppn') . ' ' . html_escape($tarif_ppn); ?>%</span><span id="sumPpn">Rp 0</span>
           </div>
           <div class="d-flex justify-content-between small mb-1">
-            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?>% (dipotong)<span id="sumDppPph" class="d-block" style="font-size:.75rem"></span></span><span id="sumPph">Rp 0</span>
+            <span class="text-muted"> <?= translate('pph') . ' ' . html_escape($tarif_pph); ?><?= translate('i18n_dipotong') ?><span id="sumDppPph" class="d-block" style="font-size:.75rem"></span></span><span id="sumPph">Rp 0</span>
           </div>
           <div class="total-box mt-3">
             <div class="text-muted small"><?= translate('grand_total') ?></div>
@@ -512,94 +512,94 @@ if ($is_edit && !empty($items_edit)) {
   <template id="templateItem">
     <div class="item-card">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="item-title">Item <span class="item-no">1</span></span>
-        <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+        <span class="item-title"><?= translate('i18n_item_3') ?> <span class="item-no">1</span></span>
+        <button type="button" class="btn btn-sm btn-remove-item" title="<?= translate('i18n_hapus_item') ?>"><i class="bi bi-trash3"></i></button>
       </div>
       <div class="row g-2">
         <!-- Penampung kategori rumus (kosong di mode manual, tidak ikut dikirim) -->
         <input type="hidden" class="it-id-barang" value="">
 
         <div class="col-md-6">
-          <label class="form-label">Nama Barang</label>
+          <label class="form-label"><?= translate('nama_barang') ?></label>
           <input type="text" name="jenis_item[]" class="form-control it-jenis" autocomplete="off"
-            placeholder="Ketik nama barang (boleh kosong jika hanya aksesoris)">
+            placeholder="<?= translate('i18n_ketik_nama_barang_boleh_kosong_jika') ?>">
         </div>
         <div class="col-md-3">
           <label class="form-label"><?= translate('warna') ?></label>
-          <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
+          <input type="text" name="warna[]" class="form-control it-warna" placeholder="<?= translate('i18n_mis_coklat') ?>">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Finishing</label>
-          <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Mis. Powder Coating">
+          <label class="form-label"><?= translate('i18n_finishing') ?></label>
+          <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="<?= translate('i18n_mis_powder_coating') ?>">
         </div>
 
         <div class="col-6 col-md-2">
-          <label class="form-label">Lebar (mm)</label>
+          <label class="form-label"><?= translate('i18n_lebar_mm') ?></label>
           <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Tinggi (mm)</label>
+          <label class="form-label"><?= translate('i18n_tinggi_mm') ?></label>
           <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Luas (m²)</label>
+          <label class="form-label"><?= translate('i18n_luas_m2') ?></label>
           <input type="text" inputmode="decimal" name="luas_m2[]" class="form-control it-luas" value="" placeholder="0,00" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Qty</label>
+          <label class="form-label"><?= translate('i18n_qty_2') ?></label>
           <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Satuan Harga</label>
+          <label class="form-label"><?= translate('i18n_satuan_harga') ?></label>
           <select name="satuan_harga[]" class="form-select it-satuan">
-            <option value="m2">Per m²</option>
-            <option value="unit">Per unit</option>
+            <option value="m2"><?= translate('i18n_per_m2_2') ?></option>
+            <option value="unit"><?= translate('i18n_per_unit_2') ?></option>
           </select>
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label"><span class="it-harga-label">Harga / m²</span> (Rp)</label>
+          <label class="form-label"><span class="it-harga-label"><?= translate('i18n_harga_m2') ?></span> (Rp)</label>
           <input type="number" name="harga_unit[]" min="0" step="any" class="form-control it-harga" placeholder="0">
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Total Barang (otomatis)</label>
+          <label class="form-label"><?= translate('i18n_total_barang_otomatis') ?></label>
           <input type="text" class="form-control it-total-barang" value="Rp 0" readonly tabindex="-1">
           <div class="form-text it-rumus-info"></div>
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Komponen</label>
-          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="Opsional"></textarea>
+          <label class="form-label"><?= translate('komponen') ?></label>
+          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="<?= translate('i18n_opsional_2') ?>"></textarea>
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Tebal(mm)</label>
-          <input type="text" name="tebal[]" class="form-control" placeholder="Mis. 1,0">
+          <label class="form-label"><?= translate('i18n_tebal_mm') ?></label>
+          <input type="text" name="tebal[]" class="form-control" placeholder="<?= translate('i18n_mis_1_0') ?>">
         </div>
 
         <div class="col-md-2">
-          <label class="form-label">Kusen (mm)</label>
-          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
+          <label class="form-label"><?= translate('i18n_kusen_mm') ?></label>
+          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="<?= translate('i18n_mis_1_0') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Daun (mm)</label>
-          <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+          <label class="form-label"><?= translate('i18n_daun_mm') ?></label>
+          <input type="text" name="komponen_daun[]" class="form-control" placeholder="<?= translate('i18n_mis_1_0') ?>">
         </div>
 
         <div class="col-12">
-          <div class="form-text mt-0">Luas terisi otomatis dari Lebar × Tinggi, tapi boleh diketik sendiri (mis. 1,65). Satuan <strong>Per m²</strong>: total barang = Luas × Qty × Harga / m² (jika lebar/tinggi dikosongkan, total = Qty × Harga). Satuan <strong>Per unit</strong>: total barang = Qty × Harga / unit (luas tidak ikut dihitung).</div>
+          <div class="form-text mt-0"><?= translate('i18n_luas_terisi_otomatis_dari_lebar_tinggi') ?> <strong><?= translate('i18n_per_m2_2') ?></strong><?= translate('i18n_total_barang_luas_qty_harga_m2_jika') ?> <strong><?= translate('i18n_per_unit_2') ?></strong><?= translate('i18n_total_barang_qty_harga_unit_luas_tidak') ?></div>
         </div>
 
         <div class="col-md-6">
-          <label class="form-label">Foto Barang</label>
+          <label class="form-label"><?= translate('fb') ?></label>
           <input type="file" name="foto[]" accept="image/jpeg,image/png" class="form-control it-foto">
           <input type="hidden" name="foto_lama[]" class="it-foto-lama" value="">
           <div class="foto-preview mt-2"></div>
-          <div class="form-text">JPG / PNG, maks. 3 MB. Kosongkan untuk tanpa foto (saat edit: kosongkan untuk tetap memakai foto lama).</div>
+          <div class="form-text"><?= translate('i18n_jpg_png_maks_3_mb_kosongkan_untuk_tanpa') ?></div>
         </div>
         <div class="col-md-6">
           <label class="form-label"><?= translate('catatan') ?></label>
-          <textarea name="keterangan[]" class="form-control it-keterangan" rows="4" placeholder="Spesifikasi, catatan khusus, dll."></textarea>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="4" placeholder="<?= translate('i18n_spesifikasi_catatan_khusus_dll') ?>"></textarea>
         </div>
 
         <!-- Biaya untuk kaca (Luas x Harga per m²) -->
@@ -631,8 +631,8 @@ if ($is_edit && !empty($items_edit)) {
   <template id="templateItem">
     <div class="item-card">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="item-title">Item <span class="item-no">1</span></span>
-        <button type="button" class="btn btn-sm btn-remove-item" title="Hapus item"><i class="bi bi-trash3"></i></button>
+        <span class="item-title"><?= translate('i18n_item_3') ?> <span class="item-no">1</span></span>
+        <button type="button" class="btn btn-sm btn-remove-item" title="<?= translate('i18n_hapus_item') ?>"><i class="bi bi-trash3"></i></button>
       </div>
       <div class="row g-2">
         <div class="col-md-4">
@@ -649,40 +649,40 @@ if ($is_edit && !empty($items_edit)) {
         </div>
         <div class="col-md-4">
           <label class="form-label"><?= translate('warna') ?></label>
-          <input type="text" name="warna[]" class="form-control it-warna" placeholder="Mis. Coklat">
+          <input type="text" name="warna[]" class="form-control it-warna" placeholder="<?= translate('i18n_mis_coklat') ?>">
         </div>
         <div class="col-md-4">
-          <label class="form-label">Finishing</label>
+          <label class="form-label"><?= translate('i18n_finishing') ?></label>
           <input type="text" name="finishing[]" class="form-control it-finishing" placeholder="Powder Coating / 粉末涂料">
         </div>
 
         <div class="col-6 col-md-2">
-          <label class="form-label">Lebar (mm)</label>
+          <label class="form-label"><?= translate('i18n_lebar_mm') ?></label>
           <input type="number" name="lebar_mm[]" min="0" class="form-control it-lebar" placeholder="0">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Tinggi (mm)</label>
+          <label class="form-label"><?= translate('i18n_tinggi_mm') ?></label>
           <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Luas (m²)</label>
+          <label class="form-label"><?= translate('i18n_luas_m2') ?></label>
           <input type="text" class="form-control it-luas" value="0.00" readonly>
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label">Qty <span class="text-danger">*</span></label>
+          <label class="form-label"><?= translate('i18n_qty_2') ?> <span class="text-danger">*</span></label>
           <input type="number" name="qty[]" min="1" value="1" class="form-control it-qty" required>
         </div>
         <div class="col-md-4">
-          <label class="form-label">Harga Satuan (Rp) <span class="text-danger">*</span></label>
+          <label class="form-label"><?= translate('i18n_harga_satuan_rp') ?> <span class="text-danger">*</span></label>
           <input type="number" name="harga_unit[]" min="0" step="1" class="form-control it-harga" placeholder="0" required>
         </div>
 
         <!-- Rumus ukuran (khusus rolling door). Selalu ikut terkirim supaya urutan array item tetap sejajar. -->
         <div class="col-md-4 rumus-ukuran-blok d-none">
-          <label class="form-label">Rumus Ukuran Rolling Door</label>
+          <label class="form-label"><?= translate('i18n_rumus_ukuran_rolling_door') ?></label>
           <select name="rumus_ukuran[]" class="form-select it-rumus-ukuran">
-            <option value="l200_t600">Lebar +200, Tinggi +600</option>
-            <option value="t500">Lebar tetap, Tinggi +500</option>
+            <option value="l200_t600"><?= translate('i18n_lebar_200_tinggi_600') ?></option>
+            <option value="t500"><?= translate('i18n_lebar_tetap_tinggi_500') ?></option>
           </select>
         </div>
         <div class="col-md-8 rumus-ukuran-blok d-none">
@@ -691,91 +691,91 @@ if ($is_edit && !empty($items_edit)) {
           </div>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Komponen</label>
-          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="Otomatis dari data barang"></textarea>
+          <label class="form-label"><?= translate('komponen') ?></label>
+          <textarea name="komponen[]" class="form-control it-komponen" rows="5" placeholder="<?= translate('i18n_otomatis_dari_data_barang') ?>"></textarea>
         </div>
 
         <div class="col-md-2">
-          <label class="form-label">Tebal (mm)</label>
-          <input type="text" name="tebal[]" class="form-control" placeholder="Mis. 1,0">
+          <label class="form-label"><?= translate('i18n_tebal_mm_2') ?></label>
+          <input type="text" name="tebal[]" class="form-control" placeholder="<?= translate('i18n_mis_1_0') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Kusen (mm)</label>
-          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="Mis. 1,0">
+          <label class="form-label"><?= translate('i18n_kusen_mm') ?></label>
+          <input type="text" name="komponen_kusen[]" class="form-control" placeholder="<?= translate('i18n_mis_1_0') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Daun (mm)</label>
-          <input type="text" name="komponen_daun[]" class="form-control" placeholder="Mis. 1,0">
+          <label class="form-label"><?= translate('i18n_daun_mm') ?></label>
+          <input type="text" name="komponen_daun[]" class="form-control" placeholder="<?= translate('i18n_mis_1_0') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Tipe Motor</label>
-          <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="Mis. Electra 600">
+          <label class="form-label"><?= translate('i18n_tipe_motor') ?></label>
+          <input type="text" name="tipe_motor[]" class="form-control it-tipe-motor" placeholder="<?= translate('i18n_mis_electra_600') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label">Input Power</label>
-          <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="Mis. 250 W">
+          <label class="form-label"><?= translate('i18n_input_power') ?></label>
+          <input type="text" name="input_power[]" class="form-control it-input-power" placeholder="<?= translate('i18n_mis_250_w') ?>">
         </div>
 
         <div class="col-md-2">
-          <label class="form-label">Voltage</label>
-          <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="Mis. 220 V - 50 Hz">
+          <label class="form-label"><?= translate('i18n_voltage') ?></label>
+          <input type="text" name="voltage[]" class="form-control it-voltage" placeholder="<?= translate('i18n_mis_220_v_50_hz') ?>">
         </div>
         <div class="col-md-3">
-          <label class="form-label">Books Penutup</label>
-          <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="Tulis spesifikasi books penutup"></textarea>
+          <label class="form-label"><?= translate('i18n_books_penutup') ?></label>
+          <textarea name="books_penutup[]" class="form-control it-books-penutup" rows="5" placeholder="<?= translate('i18n_tulis_spesifikasi_books_penutup') ?>"></textarea>
         </div>
         <div class="col-md-3">
-          <label class="form-label">Kelengkapan</label>
-          <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="Tulis kelengkapan"></textarea>
+          <label class="form-label"><?= translate('kelengkapan') ?></label>
+          <textarea name="kelengkapan[]" class="form-control it-kelengkapan" rows="5" placeholder="<?= translate('i18n_tulis_kelengkapan') ?>"></textarea>
         </div>
         <div class="col-3">
           <label class="form-label"><?= translate('catatan') ?></label>
-          <textarea name="keterangan[]" class="form-control it-keterangan" rows="5" placeholder="Aksesoris, spesifikasi kaca, catatan khusus, dll."></textarea>
+          <textarea name="keterangan[]" class="form-control it-keterangan" rows="5" placeholder="<?= translate('i18n_aksesoris_spesifikasi_kaca_catatan') ?>"></textarea>
         </div>
 
         <!-- Books Penutup (khusus rolling door) -->
         <div class="col-12 books-blok d-none">
-          <div class="fw-bold text-success small">Ukuran &amp; Harga Books Penutup</div>
+          <div class="fw-bold text-success small"><?= translate('i18n_ukuran_harga_books_penutup') ?></div>
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label">Lebar (mm)</label>
-          <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="Mis. 2000">
+          <label class="form-label"><?= translate('i18n_lebar_mm') ?></label>
+          <input type="number" min="0" step="1" name="lebar_m2_books[]" class="form-control it-books-lebar" placeholder="<?= translate('i18n_mis_2000') ?>">
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label">Tinggi (mm)</label>
-          <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="Mis. 600">
+          <label class="form-label"><?= translate('i18n_tinggi_mm') ?></label>
+          <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="<?= translate('i18n_mis_600') ?>">
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label">Luas (m²)</label>
+          <label class="form-label"><?= translate('i18n_luas_m2') ?></label>
           <input type="text" class="form-control it-books-luas" value="0.00" readonly tabindex="-1">
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label">Qty</label>
-          <input type="number" min="0" step="1" name="qty_books[]" class="form-control it-books-qty" placeholder="Mis. 1">
+          <label class="form-label"><?= translate('i18n_qty_2') ?></label>
+          <input type="number" min="0" step="1" name="qty_books[]" class="form-control it-books-qty" placeholder="<?= translate('i18n_mis_1') ?>">
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label">Harga (Rp / m²)</label>
-          <input type="number" min="0" step="any" name="harga_m2_books[]" class="form-control it-books-harga" placeholder="Mis. 500000">
+          <label class="form-label"><?= translate('i18n_harga_rp_m2') ?></label>
+          <input type="number" min="0" step="any" name="harga_m2_books[]" class="form-control it-books-harga" placeholder="<?= translate('i18n_mis_500000') ?>">
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label">Total Books</label>
+          <label class="form-label"><?= translate('i18n_total_books') ?></label>
           <input type="text" class="form-control it-books-total" value="Rp 0" readonly tabindex="-1">
         </div>
 
         <!-- Biaya Instalasi Rolling Door (Luas x Qty x Harga Pasang per m²) -->
         <div class="col-12 instalasi-blok d-none">
-          <div class="fw-bold text-success small">Biaya Instalasi / Pemasangan Rolling Door</div>
+          <div class="fw-bold text-success small"><?= translate('i18n_biaya_instalasi_pemasangan_rolling_door') ?></div>
         </div>
         <div class="col-md-4 instalasi-blok d-none">
-          <label class="form-label">Qty Instalasi</label>
-          <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="Mis. 1">
+          <label class="form-label"><?= translate('i18n_qty_instalasi') ?></label>
+          <input type="number" min="0" step="1" name="qty_instalasi[]" class="form-control it-instalasi-qty" placeholder="<?= translate('i18n_mis_1') ?>">
         </div>
         <div class="col-md-4 instalasi-blok d-none">
-          <label class="form-label">Tarif Pasang (Rp / m²)</label>
-          <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="Mis. 50000">
+          <label class="form-label"><?= translate('i18n_tarif_pasang_rp_m2') ?></label>
+          <input type="number" min="0" step="any" name="harga_m2_instalasi[]" class="form-control it-instalasi-harga" placeholder="<?= translate('i18n_mis_50000') ?>">
         </div>
         <div class="col-md-4 instalasi-blok d-none">
-          <label class="form-label">Total Biaya Instalasi</label>
+          <label class="form-label"><?= translate('i18n_total_biaya_instalasi') ?></label>
           <input type="text" class="form-control it-instalasi-total" value="Rp 0" readonly tabindex="-1">
         </div>
 
@@ -860,7 +860,7 @@ if ($is_edit && !empty($items_edit)) {
       // Mode manual: setiap aksesoris boleh diberi foto (JPG/PNG, maks. 3 MB)
       var kolFoto = IS_MANUAL ? `
         <div class="col-md-4">
-          <label class="form-label small text-muted mb-0">Foto</label>
+          <label class="form-label small text-muted mb-0"><?= tj('foto') ?></label>
           <input type="file" name="aks_foto[${itemIndex}][]" accept="image/jpeg,image/png" class="form-control form-control-sm aks-foto">
           <input type="hidden" name="aks_foto_lama[${itemIndex}][]" class="aks-foto-lama" value="">
           <div class="aks-foto-preview mt-1"></div>
@@ -872,16 +872,16 @@ if ($is_edit && !empty($items_edit)) {
       return `
       <div class="row g-2 align-items-start mb-1 baris-aksesoris">
         <div class="${cNama}">
-          <label class="form-label small text-muted mb-0">Nama</label>
-          <input type="text" name="aks_nama[${itemIndex}][]" class="form-control form-control-sm aks-nama" placeholder="Nama Aksesoris">
+          <label class="form-label small text-muted mb-0"><?= tj('nama') ?></label>
+          <input type="text" name="aks_nama[${itemIndex}][]" class="form-control form-control-sm aks-nama" placeholder="<?= tj('i18n_nama_aksesoris') ?>">
         </div>
         <div class="${cQty}">
-          <label class="form-label small text-muted mb-0">Qty</label>
-          <input type="number" name="aks_qty[${itemIndex}][]" min="1" value="1" class="form-control form-control-sm aks-qty" placeholder="Qty">
+          <label class="form-label small text-muted mb-0"><?= tj('i18n_qty_2') ?></label>
+          <input type="number" name="aks_qty[${itemIndex}][]" min="1" value="1" class="form-control form-control-sm aks-qty" placeholder="<?= tj('i18n_qty_2') ?>">
         </div>
         <div class="${cHarga}">
-          <label class="form-label small text-muted mb-0">Harga (Rp)</label>
-          <input type="number" name="aks_harga[${itemIndex}][]" min="0" step="1" value="0" class="form-control form-control-sm aks-harga" placeholder="Harga">
+          <label class="form-label small text-muted mb-0"><?= tj('i18n_harga_rp') ?></label>
+          <input type="number" name="aks_harga[${itemIndex}][]" min="0" step="1" value="0" class="form-control form-control-sm aks-harga" placeholder="<?= tj('harga') ?>">
         </div>${kolFoto}
         <div class="${cHapus} text-end pt-4">
           <button type="button" class="btn btn-sm btn-link text-danger btn-hapus-aksesoris"><i class="bi bi-x-circle"></i></button>
@@ -904,19 +904,19 @@ if ($is_edit && !empty($items_edit)) {
       return `
       <div class="row g-2 align-items-start mb-1 baris-kaca">
         <div class="col-md-4">
-          <label class="form-label small text-muted mb-0">Nama</label>
-          <input type="text" name="kaca_nama[${itemIndex}][]" class="form-control form-control-sm kaca-nama" placeholder="Nama Detail Kaca">
+          <label class="form-label small text-muted mb-0"><?= tj('nama') ?></label>
+          <input type="text" name="kaca_nama[${itemIndex}][]" class="form-control form-control-sm kaca-nama" placeholder="<?= tj('i18n_nama_detail_kaca') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label small text-muted mb-0">Luas (m²)</label>
-          <input type="text" inputmode="decimal" name="kaca_luas[${itemIndex}][]" value="1" class="form-control form-control-sm kaca-luas" placeholder="Luas m² (mis. 1,25)">
+          <label class="form-label small text-muted mb-0"><?= tj('i18n_luas_m2') ?></label>
+          <input type="text" inputmode="decimal" name="kaca_luas[${itemIndex}][]" value="1" class="form-control form-control-sm kaca-luas" placeholder="<?= tj('i18n_luas_m2_mis_1_25') ?>">
         </div>
         <div class="col-md-3">
-          <label class="form-label small text-muted mb-0">Harga / m² (Rp)</label>
-          <input type="number" name="kaca_harga[${itemIndex}][]" min="0" step="any" value="0" class="form-control form-control-sm kaca-harga" placeholder="Harga / m²">
+          <label class="form-label small text-muted mb-0"><?= tj('i18n_harga_m2_rp') ?></label>
+          <input type="number" name="kaca_harga[${itemIndex}][]" min="0" step="any" value="0" class="form-control form-control-sm kaca-harga" placeholder="<?= tj('i18n_harga_m2') ?>">
         </div>
         <div class="col-md-2">
-          <label class="form-label small text-muted mb-0">Total</label>
+          <label class="form-label small text-muted mb-0"><?= tj('total') ?></label>
           <input type="text" class="form-control form-control-sm kaca-total" value="Rp 0" readonly tabindex="-1">
         </div>
         <div class="col-md-1 text-end pt-4">
@@ -1078,7 +1078,7 @@ if ($is_edit && !empty($items_edit)) {
     function tampilkanDropdown(card, hasil) {
       var list = card.querySelector('.barang-dropdown-list');
       if (!hasil.length) {
-        list.innerHTML = '<div class="barang-empty">Barang tidak ditemukan.</div>';
+        list.innerHTML = '<div class="barang-empty"><?= tj('i18n_barang_tidak_ditemukan') ?></div>';
         list.classList.remove('d-none');
         return;
       }
@@ -1090,7 +1090,7 @@ if ($is_edit && !empty($items_edit)) {
       opts.forEach(function(el, i) {
         var b = hasil[i];
         el.querySelector('.bo-nama').textContent = b.nama;
-        el.querySelector('.bo-meta').textContent = (b.kode_barang || '') + ' • Rp ' + formatHargaBarang(b.harga_satuan) + (b.warna ? ' • ' + b.warna : '');
+        el.querySelector('.bo-meta').textContent = (b.kode_barang || '') + ' <?= tj('i18n_rp') ?> ' + formatHargaBarang(b.harga_satuan) + (b.warna ? ' • ' + b.warna : '');
       });
       list.classList.remove('d-none');
     }
@@ -1232,7 +1232,7 @@ if ($is_edit && !empty($items_edit)) {
       var elUkTagih = card.querySelector('.it-ukuran-tagih');
       if (elUkTagih && rolling) {
         var ukT = ukuranRolling(lebar, tinggi, rumusUk);
-        elUkTagih.textContent = 'Ukuran tagih: ' + ukT[0] + ' × ' + ukT[1] + ' mm → luas ' + luas.toFixed(2) + ' m² (minimal 10 m²)';
+        elUkTagih.textContent = '<?= tj('i18n_ukuran_tagih') ?> ' + ukT[0] + ' × ' + ukT[1] + ' <?= tj('i18n_mm_luas') ?> ' + luas.toFixed(2) + ' <?= tj('i18n_m2_minimal_10_m2') ?>';
       }
 
       // Toggle Books Penutup
@@ -1274,7 +1274,7 @@ if ($is_edit && !empty($items_edit)) {
         var elSatuan = card.querySelector('.it-satuan');
         var perUnit = elSatuan && elSatuan.value === 'unit';
         var elHargaLbl = card.querySelector('.it-harga-label');
-        if (elHargaLbl) elHargaLbl.textContent = perUnit ? 'Harga / unit' : 'Harga / m²';
+        if (elHargaLbl) elHargaLbl.textContent = perUnit ? '<?= tj('i18n_harga_unit') ?>' : '<?= tj('i18n_harga_m2') ?>';
         totalBarang = (perUnit || luas <= 0 ? 1 : luas) * qty * harga;
         var elTB = card.querySelector('.it-total-barang');
         if (elTB) elTB.value = rupiah(totalBarang);
@@ -1342,7 +1342,7 @@ if ($is_edit && !empty($items_edit)) {
       var pph = chkPph.checked ? Math.round(dasarJasa * TARIF_PPH / 100) : 0;
       document.getElementById('infoPphOngkir').classList.toggle('d-none', !(ongkirKenaPph > 0));
       document.getElementById('sumDppPph').textContent = pph > 0
-        ? 'dari ' + rupiah(dasarJasa) + (ongkirKenaPph > 0 ? ' (jasa + ongkir)' : ' (jasa)')
+        ? '<?= tj('i18n_dari_lc') ?> ' + rupiah(dasarJasa) + (ongkirKenaPph > 0 ? ' <?= tj('i18n_jasa_ongkir') ?>' : ' <?= tj('i18n_jasa') ?>')
         : '';
       // PPh dipotong customer -> mengurangi grand total
       var grand = dasar + ppn - pph;
@@ -1473,7 +1473,7 @@ if ($is_edit && !empty($items_edit)) {
       var f = e.target.files && e.target.files[0];
       if (!pv || !f) return;
       if (f.size > 3 * 1024 * 1024) {
-        alert('Ukuran foto maksimal 3 MB.');
+        alert('<?= tj('i18n_ukuran_foto_maksimal_3_mb') ?>');
         e.target.value = '';
         return;
       }
@@ -1515,7 +1515,7 @@ if ($is_edit && !empty($items_edit)) {
       if (!hasil.length) {
         var kosong = document.createElement('div');
         kosong.className = 'customer-empty';
-        kosong.textContent = 'Customer tidak ditemukan.';
+        kosong.textContent = '<?= tj('i18n_customer_tidak_ditemukan') ?>';
         custList.appendChild(kosong);
       } else {
         hasil.forEach(function(c) {
@@ -1560,7 +1560,7 @@ if ($is_edit && !empty($items_edit)) {
     form.addEventListener('submit', function(e) {
       if (custInput && !custInput.disabled && !custId.value) {
         e.preventDefault();
-        alert('Customer harus dipilih dari daftar.');
+        alert('<?= tj('i18n_customer_harus_dipilih_dari_daftar') ?>');
         custInput.focus();
         return;
       }
@@ -1574,7 +1574,7 @@ if ($is_edit && !empty($items_edit)) {
       });
       if (!jenisTerisi) {
         e.preventDefault();
-        alert(IS_MANUAL ? 'Minimal isi 1 nama barang atau 1 aksesoris.' : 'Minimal harus ada 1 item dengan Jenis Item diisi.');
+        alert(IS_MANUAL ? '<?= tj('i18n_minimal_isi_1_nama_barang_atau_1') ?>' : '<?= tj('i18n_minimal_harus_ada_1_item_dengan_jenis') ?>');
         return;
       }
       if (IS_MANUAL) {
@@ -1584,11 +1584,11 @@ if ($is_edit && !empty($items_edit)) {
         });
         if (hargaTanpaNama) {
           e.preventDefault();
-          alert('Nama barang wajib diisi kalau harga satuan diisi.');
+          alert('<?= tj('i18n_nama_barang_wajib_diisi_kalau_harga') ?>');
           return;
         }
       }
-      if (!confirm(<?= $is_edit ? "'Simpan perubahan penawaran ini?'" : "'Simpan penawaran ini?'"; ?>)) {
+      if (!confirm(<?= json_encode($is_edit ? translate('i18n_simpan_perubahan_penawaran_ini') : translate('i18n_simpan_penawaran_ini'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>)) {
         e.preventDefault();
       }
     });

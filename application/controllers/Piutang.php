@@ -65,7 +65,7 @@ class Piutang extends MY_Controller
             return $b['sisa'] <=> $a['sisa'];
         });
 
-        $data['title']        = 'Piutang Customer';
+        $data['title']        = translate('i18n_piutang_customer');
         $data['tahap']        = $tahap;
         $data['q']            = $q;
         $data['ring']         = $ring;
@@ -88,7 +88,7 @@ class Piutang extends MY_Controller
         }
         $q = mb_substr(trim((string) $this->input->get('q', true)), 0, 60);
 
-        $data['title']       = 'Penerimaan Pembayaran';
+        $data['title']       = translate('i18n_penerimaan_pembayaran');
         $data['dari']        = $dari;
         $data['sampai']      = $sampai;
         $data['q']           = $q;
@@ -104,7 +104,7 @@ class Piutang extends MY_Controller
         if (!$c) {
             show_404();
         }
-        $data['title']       = 'Kartu Piutang ' . $c->nama;
+        $data['title']       = (translate('i18n_kartu_piutang') . ' ') . $c->nama;
         $data['customer']    = $c;
         $data['kartu']       = $this->Piutang_model->get_kartu_customer($c->id);
         $data['terbuka']     = $this->Piutang_model->get_piutang(array('id_customer' => $c->id));
@@ -118,7 +118,7 @@ class Piutang extends MY_Controller
         $this->_wajib_post();
         $kembali = $this->_kembali('piutang');
         if (!$this->_boleh('bayar')) {
-            $this->_flash(false, 'Anda tidak punya hak akses untuk mencatat pembayaran.');
+            $this->_flash(false, translate('i18n_anda_tidak_punya_hak_akses_untuk'));
             redirect($kembali);
         }
         $id_so = (int) $id_so;
@@ -130,7 +130,7 @@ class Piutang extends MY_Controller
         $jenis   = (string) $this->input->post('jenis');
         $nominal = (float) $this->input->post('nominal');
         if ($tanggal === '' || !in_array($jenis, array('dp', 'pelunasan', 'lainnya'), true) || $nominal <= 0) {
-            $this->_flash(false, 'Tanggal, jenis, dan nominal pembayaran wajib diisi dengan benar.');
+            $this->_flash(false, translate('i18n_tanggal_jenis_dan_nominal_pembayaran'));
             redirect($kembali);
         }
 

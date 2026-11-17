@@ -195,7 +195,7 @@
                 <label class="form-label small fw-semibold text-secondary"><?= translate('app_username'); ?></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-person"></i></span>
-                    <input type="text" name="username" class="form-control" value="<?= set_value('username'); ?>" placeholder="Masukkan username" required autocomplete="off">
+                    <input type="text" name="username" class="form-control" value="<?= set_value('username'); ?>" placeholder="<?= translate('i18n_masukkan_username') ?>" required autocomplete="off">
                 </div>
             </div>
 
@@ -203,7 +203,7 @@
                 <label class="form-label small fw-semibold text-secondary"><?= translate('app_password'); ?></label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                    <input type="password" name="password" class="form-control" placeholder="Masukkan password" required>
+                    <input type="password" name="password" class="form-control" placeholder="<?= translate('i18n_masukkan_password') ?>" required>
                 </div>
             </div>
 

@@ -121,13 +121,13 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible fade show" role="alert">
       <i class="bi bi-check-circle-fill me-2"></i><?= html_escape($this->session->flashdata('success')); ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_tutup') ?>"></button>
     </div>
   <?php endif; ?>
   <?php if ($this->session->flashdata('error')): ?>
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
       <i class="bi bi-exclamation-triangle-fill me-2"></i><?= html_escape($this->session->flashdata('error')); ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Tutup"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_tutup') ?>"></button>
     </div>
   <?php endif; ?>
 
@@ -135,10 +135,10 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
     <div>
       <h5 class="mb-0">
         <?= html_escape($header->no_surat); ?>
-        <?php if ($is_manual): ?><span class="badge bg-info text-dark ms-2 align-middle">Manual</span><?php endif; ?>
-        <?php if ($is_konsinyasi): ?><span class="badge text-white ms-2 align-middle" style="background:#6f42c1">Konsinyasi / Sample &middot; <?= $masa_konsinyasi; ?> hari</span><?php endif; ?>
+        <?php if ($is_manual): ?><span class="badge bg-info text-dark ms-2 align-middle"><?= translate('i18n_manual') ?></span><?php endif; ?>
+        <?php if ($is_konsinyasi): ?><span class="badge text-white ms-2 align-middle" style="background:#6f42c1"><?= translate('i18n_konsinyasi_sample') ?> <?= $masa_konsinyasi; ?> <?= translate('i18n_hari') ?></span><?php endif; ?>
         <?php if ($batal): ?>
-          <span class="badge bg-danger ms-2 align-middle"><i class="bi bi-x-circle me-1"></i>Batal</span>
+          <span class="badge bg-danger ms-2 align-middle"><i class="bi bi-x-circle me-1"></i><?= translate('btn_batal') ?></span>
         <?php elseif ($approved): ?>
           <span class="badge bg-success ms-2 align-middle"><i class="bi bi-lock-fill me-1"></i><?= translate('setuju') ?></span>
         <?php else: ?>
@@ -149,7 +149,7 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
       <?php if ($is_konsinyasi): ?>
         <div class="small mt-1" style="color:#6f42c1">
           <i class="bi bi-box-arrow-right me-1"></i>
-          Barang dikirim sebagai titipan / sample. Customer hanya membayar barang yang laku, barang yang tidak laku diambil kembali. Masa konsinyasi <strong><?= $masa_konsinyasi; ?> hari</strong> sejak tanggal surat jalan.
+          <?= translate('i18n_barang_dikirim_sebagai_titipan_sample') ?> <strong><?= $masa_konsinyasi; ?> <?= translate('i18n_hari') ?></strong> <?= translate('i18n_sejak_tanggal_surat_jalan') ?>
         </div>
       <?php endif; ?>
       <?php if ($approved): ?>
@@ -161,7 +161,7 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
       <?php if ($batal): ?>
         <div class="text-danger status-lock mt-1">
           <i class="bi bi-x-circle me-1"></i>
-          Penawaran dibatalkan<?= !empty($header->dibatalkan_at) ? ' pada ' . date('d M Y H:i', strtotime($header->dibatalkan_at)) : ''; ?><?= !empty($header->alasan_batal) ? ' &mdash; alasan: <strong>' . html_escape($header->alasan_batal) . '</strong>' : ''; ?>
+          <?= translate('i18n_penawaran_dibatalkan') ?><?= !empty($header->dibatalkan_at) ? ' ' . translate('i18n_pada_lc') . ' ' . date('d M Y H:i', strtotime($header->dibatalkan_at)) : ''; ?><?= !empty($header->alasan_batal) ? ' ' . translate('i18n_alasan') . ' <strong>' . html_escape($header->alasan_batal) . '</strong>' : ''; ?>
         </div>
       <?php endif; ?>
     </div>
@@ -173,37 +173,37 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
         <?php if (in_array($this->session->userdata('role'), ['atasan', 'super_admin'], true)): ?>
         <?= form_open('penawaran/approve/' . (int) $header->id, [
           'class'    => 'd-inline',
-          'onsubmit' => "return confirm('Approve penawaran ini? Setelah di-approve, data tidak bisa diedit lagi.');"
+          'onsubmit' => "return confirm('" . tj('i18n_approve_penawaran_ini_setelah_di_approve') . "');"
         ]); ?>
         <button type="submit" class="btn btn-success">
           <i class="bi bi-check2-circle me-1"></i> <?= translate('setuju') ?>
         </button>
         <?= form_close(); ?>
         <?php else: ?>
-        <span class="btn btn-outline-secondary disabled"><i class="bi bi-hourglass-split me-1"></i> Menunggu approval atasan</span>
+        <span class="btn btn-outline-secondary disabled"><i class="bi bi-hourglass-split me-1"></i> <?= translate('i18n_menunggu_approval_atasan') ?></span>
         <?php endif; ?>
       <?php endif; ?>
       <?php if (!empty($boleh_batal)): ?>
         <?php if ($batal): ?>
           <?= form_open('penawaran/aktifkan/' . (int) $header->id, [
             'class'    => 'd-inline',
-            'onsubmit' => "return confirm('Aktifkan kembali penawaran ini? Status kembali ke draft dan perlu di-approve ulang.');"
+            'onsubmit' => "return confirm('" . tj('i18n_aktifkan_kembali_penawaran_ini_status') . "');"
           ]); ?>
           <button type="submit" class="btn btn-outline-success">
-            <i class="bi bi-arrow-counterclockwise me-1"></i> Aktifkan kembali
+            <i class="bi bi-arrow-counterclockwise me-1"></i> <?= translate('i18n_aktifkan_kembali') ?>
           </button>
           <?= form_close(); ?>
         <?php else: ?>
           <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalBatalPenawaran">
-            <i class="bi bi-x-circle me-1"></i> Batalkan
+            <i class="bi bi-x-circle me-1"></i> <?= translate('i18n_batalkan') ?>
           </button>
         <?php endif; ?>
       <?php endif; ?>
       <?php if (!empty($boleh_hapus)): ?>
         <?php
           $pesan_hapus = $approved
-            ? 'Penawaran ' . $header->no_surat . ' SUDAH DI-APPROVE. Yakin hapus (mis. customer batal order)? Data yang dihapus tidak bisa dikembalikan.'
-            : 'Hapus penawaran ' . $header->no_surat . '? Data yang dihapus tidak bisa dikembalikan.';
+            ? (translate('i18n_penawaran') . ' ') . $header->no_surat . (' ' . translate('i18n_sudah_di_approve_yakin_hapus_mis'))
+            : (translate('i18n_hapus_penawaran') . ' ') . $header->no_surat . '? Data yang dihapus tidak bisa dikembalikan.';
         ?>
         <?= form_open('penawaran/delete/' . (int) $header->id, [
           'class'    => 'd-inline',
@@ -222,7 +222,7 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
           <?php if ($is_konsinyasi): ?>
           <li>
             <a class="dropdown-item" target="_blank" href="<?= site_url('penawaran/cetak/' . (int) $header->id); ?>">
-              Penawaran konsinyasi (S&amp;K <?= $masa_konsinyasi; ?> hari)
+              <?= translate('i18n_penawaran_konsinyasi_s_k') ?> <?= $masa_konsinyasi; ?> <?= translate('i18n_hari_2') ?>
             </a>
           </li>
           <?php else: ?>
@@ -307,47 +307,46 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
                   <?php if (trim((string) $it->jenis_item) !== ''): ?>
                     <strong><?= html_escape($it->jenis_item); ?></strong>
                   <?php else: ?>
-                    <strong class="text-muted">Aksesoris</strong>
+                    <strong class="text-muted"><?= translate('aksesoris') ?></strong>
                   <?php endif; ?>
                   <?php if (!empty($it->warna)): ?>
-                    <span class="spek-line">Warna: <?= html_escape($it->warna); ?></span>
+                    <span class="spek-line"><?= translate('i18n_warna') ?> <?= html_escape($it->warna); ?></span>
                   <?php endif; ?>
                   <?php if (!empty($it->komponen)): ?>
-                    <span class="spek-line">Komponen: <?= html_escape($it->komponen); ?></span>
+                    <span class="spek-line"><?= translate('i18n_komponen') ?> <?= html_escape($it->komponen); ?></span>
                   <?php endif; ?>
                   <?php if (!empty($it->books_penutup)): ?>
-                    <span class="spek-line spek-multi">Books Penutup: <?= nl2br(html_escape($it->books_penutup)); ?></span>
+                    <span class="spek-line spek-multi"><?= translate('i18n_books_penutup_2') ?> <?= nl2br(html_escape($it->books_penutup)); ?></span>
                   <?php endif; ?>
                   <?php if ((float) ($it->luas_m2_books ?? 0) > 0 && (int) ($it->qty_books ?? 0) > 0): ?>
                     <span class="spek-line">
-                      Ukuran Books: <?= (int) round((float) $it->lebar_m2_books); ?> &times; <?= (int) round((float) $it->tinggi_m2_books); ?> mm
-                      = <?= $fmt_luas($it->luas_m2_books); ?> m² &times; <?= (int) $it->qty_books; ?> &times; <?= $rp($it->harga_m2_books); ?>
+                      <?= translate('i18n_ukuran_books') ?> <?= (int) round((float) $it->lebar_m2_books); ?> &times; <?= (int) round((float) $it->tinggi_m2_books); ?> <?= translate('i18n_mm') ?> <?= $fmt_luas($it->luas_m2_books); ?> m² &times; <?= (int) $it->qty_books; ?> &times; <?= $rp($it->harga_m2_books); ?>
                       = <?= $rp((float) $it->luas_m2_books * (int) $it->qty_books * (float) $it->harga_m2_books); ?>
                     </span>
                   <?php endif; ?>
                   <?php if ((float) ($it->qty_instalasi ?? 0) > 0 || (float) ($it->harga_m2_instalasi ?? 0) > 0): ?>
                     <?php $i_luas = (float) ($it->luas_billing_m2 ?? $it->luas_m2 ?? 0); ?>
                     <span class="spek-line">
-                      Biaya Instalasi: <?= $fmt_luas($i_luas); ?> m² &times; <?= (int) $it->qty_instalasi; ?> &times; <?= $rp($it->harga_m2_instalasi); ?>
+                      <?= translate('i18n_biaya_instalasi') ?> <?= $fmt_luas($i_luas); ?> m² &times; <?= (int) $it->qty_instalasi; ?> &times; <?= $rp($it->harga_m2_instalasi); ?>
                       = <?= $rp($i_luas * (float) $it->qty_instalasi * (float) $it->harga_m2_instalasi); ?>
                     </span>
                   <?php endif; ?>
                   <?php if (!empty($it->kelengkapan)): ?>
-                    <span class="spek-line spek-multi">Kelengkapan: <?= nl2br(html_escape($it->kelengkapan)); ?></span>
+                    <span class="spek-line spek-multi"><?= translate('i18n_kelengkapan') ?> <?= nl2br(html_escape($it->kelengkapan)); ?></span>
                   <?php endif; ?>
                   <?php if (!empty($it->finishing)): ?>
-                    <span class="spek-line">Finishing: <?= html_escape($it->finishing); ?></span>
+                    <span class="spek-line"><?= translate('i18n_finishing_2') ?> <?= html_escape($it->finishing); ?></span>
                   <?php endif; ?>
                   <?php if (!empty($it->komponen_kusen) || !empty($it->komponen_daun)): ?>
                     <span class="spek-line">
-                      Plate Kusen/Daun: <?= html_escape($it->komponen_kusen ?: '-'); ?> / <?= html_escape($it->komponen_daun ?: '-'); ?> mm
+                      <?= translate('i18n_plate_kusen_daun') ?> <?= html_escape($it->komponen_kusen ?: '-'); ?> / <?= html_escape($it->komponen_daun ?: '-'); ?> mm
                     </span>
                   <?php endif; ?>
                   <?php if (!empty($it->tebal)): ?>
-                    <span class="spek-line">Tebal: <?= html_escape($it->tebal); ?> mm</span>
+                    <span class="spek-line"><?= translate('i18n_tebal') ?> <?= html_escape($it->tebal); ?> mm</span>
                   <?php endif; ?>
                   <?php if (!empty($it->aksesoris)): ?>
-                    <span class="spek-line spek-multi">Aksesoris:</span>
+                    <span class="spek-line spek-multi"><?= translate('i18n_aksesoris') ?></span>
                     <?php foreach ($it->aksesoris as $ak): ?>
                       <span class="spek-line">
                         &bull; <?= html_escape($ak->nama); ?> (<?= (int) $ak->qty; ?> &times; <?= $rp($ak->harga); ?> = <?= $rp(isset($ak->total_harga) ? $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?>)
@@ -415,7 +414,7 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
     </div>
     <?php if ($pph > 0): ?>
       <div class="summary-row">
-        <span><?= translate('pph') ?> <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)<?= !empty($header->pph_ongkir) ? ' <small class="text-muted">· termasuk ongkir</small>' : ''; ?></span>
+        <span><?= translate('pph') ?> <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?><?= translate('i18n_dipotong_customer') ?><?= !empty($header->pph_ongkir) ? ' <small class="text-muted">' . translate('i18n_termasuk_ongkir') . '</small>' : ''; ?></span>
         <span>- <?= $rp($pph); ?></span>
       </div>
     <?php endif; ?>
@@ -431,21 +430,20 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
       <div class="modal-dialog">
         <?= form_open('penawaran/batal/' . (int) $header->id, ['class' => 'modal-content']); ?>
           <div class="modal-header">
-            <h5 class="modal-title" id="modalBatalPenawaranLabel">Batalkan penawaran <?= html_escape($header->no_surat); ?></h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+            <h5 class="modal-title" id="modalBatalPenawaranLabel"><?= translate('i18n_batalkan_penawaran') ?> <?= html_escape($header->no_surat); ?></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= translate('i18n_tutup') ?>"></button>
           </div>
           <div class="modal-body">
             <p class="small text-muted mb-2">
-              Penawaran akan ditandai <strong>Batal</strong> (tidak dihapus), sehingga tetap tersimpan sebagai riwayat.
-              Kalau nanti customer jadi deal, penawaran bisa diaktifkan kembali.
+              <?= translate('i18n_penawaran_akan_ditandai') ?> <strong><?= translate('btn_batal') ?></strong> <?= translate('i18n_tidak_dihapus_sehingga_tetap_tersimpan') ?>
             </p>
-            <label for="alasan_batal" class="form-label">Alasan batal <span class="text-danger">*</span></label>
+            <label for="alasan_batal" class="form-label"><?= translate('i18n_alasan_batal') ?> <span class="text-danger">*</span></label>
             <textarea name="alasan_batal" id="alasan_batal" class="form-control" rows="3" maxlength="255" required
-              placeholder="Contoh: harga tidak deal, customer pilih vendor lain, proyek ditunda"></textarea>
+              placeholder="<?= translate('i18n_contoh_harga_tidak_deal_customer_pilih') ?>"></textarea>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Tutup</button>
-            <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i> Batalkan penawaran</button>
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= translate('i18n_tutup') ?></button>
+            <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle me-1"></i> <?= translate('i18n_batalkan_penawaran') ?></button>
           </div>
         <?= form_close(); ?>
       </div>

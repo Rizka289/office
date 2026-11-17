@@ -42,13 +42,13 @@
                         <i class="bi bi-bell-fill fs-4"></i>
                     </div>
                     <div>
-                        <h6 class="fw-bold text-dark mb-1">Persetujuan Tertunda (Pending Approvals)</h6>
-                        <p class="text-muted small mb-0">Ada <span class="badge bg-danger">5 dokumen</span> (Sales Order / Purchase) yang memerlukan persetujuan Anda.</p>
+                        <h6 class="fw-bold text-dark mb-1"><?= translate('i18n_persetujuan_tertunda_pending_approvals') ?></h6>
+                        <p class="text-muted small mb-0"><?= translate('i18n_ada') ?> <span class="badge bg-danger"><?= translate('i18n_5_dokumen') ?></span> <?= translate('i18n_sales_order_purchase_yang_memerlukan') ?></p>
                     </div>
                 </div>
                 <div>
                     <button type="button" class="btn btn-warning text-dark fw-semibold btn-sm px-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#approvalModal">
-                        <i class="bi bi-check2-square me-1"></i> Lihat & Setujui
+                        <i class="bi bi-check2-square me-1"></i> <?= translate('i18n_lihat_setujui') ?>
                     </button>
                 </div>
             </div>
@@ -62,25 +62,25 @@
         <div class="card border-0 shadow-sm rounded-3">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h5 class="m-0 fw-bold text-dark">
-                    <i class="bi bi-graph-up-arrow me-2 text-primary"></i>Grafik Performa Bisnis
+                    <i class="bi bi-graph-up-arrow me-2 text-primary"></i><?= translate('i18n_grafik_performa_bisnis') ?>
                 </h5>
                 <!-- Filter Bulan -->
                 <div class="d-flex align-items-center gap-2">
-                    <label for="monthFilter" class="form-label mb-0 text-muted small fw-semibold">Pilih Bulan:</label>
+                    <label for="monthFilter" class="form-label mb-0 text-muted small fw-semibold"><?= translate('i18n_pilih_bulan') ?></label>
                     <select id="monthFilter" class="form-select form-select-sm" style="width: 160px;" onchange="updateChartData()">
-                        <option value="all">Semua Bulan (2026)</option>
-                        <option value="0">Januari</option>
-                        <option value="1">Februari</option>
-                        <option value="2">Maret</option>
-                        <option value="3">April</option>
-                        <option value="4">Mei</option>
-                        <option value="5">Juni</option>
-                        <option value="6">Juli</option>
-                        <option value="7">Agustus</option>
-                        <option value="8">September</option>
-                        <option value="9">Oktober</option>
-                        <option value="10">November</option>
-                        <option value="11">Desember</option>
+                        <option value="all"><?= translate('i18n_semua_bulan_2026') ?></option>
+                        <option value="0"><?= translate('i18n_januari') ?></option>
+                        <option value="1"><?= translate('i18n_februari') ?></option>
+                        <option value="2"><?= translate('i18n_maret') ?></option>
+                        <option value="3"><?= translate('i18n_april') ?></option>
+                        <option value="4"><?= translate('i18n_mei') ?></option>
+                        <option value="5"><?= translate('i18n_juni') ?></option>
+                        <option value="6"><?= translate('i18n_juli') ?></option>
+                        <option value="7"><?= translate('i18n_agustus') ?></option>
+                        <option value="8"><?= translate('i18n_september') ?></option>
+                        <option value="9"><?= translate('i18n_oktober') ?></option>
+                        <option value="10"><?= translate('i18n_november') ?></option>
+                        <option value="11"><?= translate('i18n_desember') ?></option>
                     </select>
                 </div>
             </div>
@@ -100,41 +100,41 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-light">
                 <h5 class="modal-title fw-bold" id="approvalModalLabel">
-                    <i class="bi bi-clipboard-check me-2 text-primary"></i>Daftar Pending Approval
+                    <i class="bi bi-clipboard-check me-2 text-primary"></i><?= translate('i18n_daftar_pending_approval') ?>
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <div class="modal-body">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>No. Dokumen</th>
-                                <th>Tipe</th>
-                                <th>Pemohon</th>
-                                <th>Total Nilai</th>
-                                <th class="text-center">Aksi</th>
+                                <th><?= translate('i18n_no_dokumen') ?></th>
+                                <th><?= translate('i18n_tipe') ?></th>
+                                <th><?= translate('i18n_pemohon') ?></th>
+                                <th><?= translate('i18n_total_nilai') ?></th>
+                                <th class="text-center"><?= translate('aksi') ?></th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
                                 <td class="fw-semibold">SO-2026-089</td>
-                                <td><span class="badge bg-primary">Penjualan</span></td>
+                                <td><span class="badge bg-primary"><?= translate('penjualan') ?></span></td>
                                 <td>Budi (Sales)</td>
                                 <td>Rp 45.000.000</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-success px-2 py-1 me-1" title="Setujui"><i class="bi bi-check-lg"></i></button>
-                                    <button class="btn btn-sm btn-danger px-2 py-1" title="Tolak"><i class="bi bi-x-lg"></i></button>
+                                    <button class="btn btn-sm btn-success px-2 py-1 me-1" title="<?= translate('i18n_setujui') ?>"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-sm btn-danger px-2 py-1" title="<?= translate('i18n_tolak') ?>"><i class="bi bi-x-lg"></i></button>
                                 </td>
                             </tr>
                             <tr>
                                 <td class="fw-semibold">PO-2026-042</td>
-                                <td><span class="badge bg-danger">Pembelian</span></td>
+                                <td><span class="badge bg-danger"><?= translate('purchasing') ?></span></td>
                                 <td>Siti (Purchasing)</td>
                                 <td>Rp 120.000.000</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-success px-2 py-1 me-1" title="Setujui"><i class="bi bi-check-lg"></i></button>
-                                    <button class="btn btn-sm btn-danger px-2 py-1" title="Tolak"><i class="bi bi-x-lg"></i></button>
+                                    <button class="btn btn-sm btn-success px-2 py-1 me-1" title="<?= translate('i18n_setujui') ?>"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn btn-sm btn-danger px-2 py-1" title="<?= translate('i18n_tolak') ?>"><i class="bi bi-x-lg"></i></button>
                                 </td>
                             </tr>
                         </tbody>
@@ -142,7 +142,7 @@
                 </div>
             </div>
             <div class="modal-footer bg-light">
-                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal"><?= translate('i18n_tutup') ?></button>
             </div>
         </div>
     </div>
@@ -152,7 +152,7 @@
 <script>
     // Data dummy 12 bulan (Nominal dalam juta / Miliar Rp)
     const monthlyData = {
-        months: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'],
+        months: ['<?= tj('i18n_jan') ?>', '<?= tj('i18n_feb') ?>', '<?= tj('i18n_mar') ?>', '<?= tj('i18n_apr') ?>', '<?= tj('i18n_mei') ?>', '<?= tj('i18n_jun') ?>', '<?= tj('i18n_jul') ?>', '<?= tj('i18n_agt') ?>', '<?= tj('i18n_sep') ?>', '<?= tj('i18n_okt') ?>', '<?= tj('i18n_nov') ?>', '<?= tj('i18n_des') ?>'],
         penjualan: [1200, 1500, 1800, 1400, 1600, 2100, 1900, 2300, 2000, 2500, 2200, 2800],
         penawaran: [1500, 1900, 2200, 1800, 2000, 2500, 2300, 2700, 2400, 3000, 2600, 3200],
         pembelian: [800,  950,  1100,  900, 1000, 1300, 1200, 1400, 1250, 1500, 1350, 1600]
@@ -184,7 +184,7 @@
                 labels: monthlyData.months,
                 datasets: [
                     {
-                        label: 'Penjualan (Sales)',
+                        label: '<?= tj('i18n_penjualan_sales') ?>',
                         data: monthlyData.penjualan,
                         borderColor: '#0d6efd',
                         backgroundColor: 'rgba(13, 110, 253, 0.1)',
@@ -193,7 +193,7 @@
                         fill: true
                     },
                     {
-                        label: 'Penawaran (Quotation)',
+                        label: '<?= tj('i18n_penawaran_quotation') ?>',
                         data: monthlyData.penawaran,
                         borderColor: '#ffc107',
                         backgroundColor: 'rgba(255, 193, 7, 0.1)',
@@ -202,7 +202,7 @@
                         fill: true
                     },
                     {
-                        label: 'Pembelian (Purchase)',
+                        label: '<?= tj('i18n_pembelian_purchase') ?>',
                         data: monthlyData.pembelian,
                         borderColor: '#dc3545',
                         backgroundColor: 'rgba(220, 53, 69, 0.1)',
@@ -223,7 +223,7 @@
                         callbacks: {
                             label: function(context) {
                                 let value = context.raw || 0;
-                                return context.dataset.label + ': Rp ' + value.toLocaleString('id-ID') + ' Juta';
+                                return context.dataset.label + ': Rp ' + value.toLocaleString('id-ID') + ' <?= tj('i18n_juta') ?>';
                             }
                         }
                     }
@@ -233,7 +233,7 @@
                         beginAtZero: true,
                         ticks: {
                             callback: function(value) {
-                                return 'Rp ' + value + ' Jt';
+                                return 'Rp ' + value + ' <?= tj('i18n_jt') ?>';
                             }
                         }
                     }
@@ -260,7 +260,7 @@
             const monthIdx = parseInt(selectedValue);
             const monthName = monthlyData.months[monthIdx];
             
-            businessChart.data.labels = [`Minggu 1 (${monthName})`, `Minggu 2 (${monthName})`, `Minggu 3 (${monthName})`, `Minggu 4 (${monthName})`];
+            businessChart.data.labels = [`<?= tj('i18n_minggu_1') ?>${monthName})`, `<?= tj('i18n_minggu_2') ?>${monthName})`, `<?= tj('i18n_minggu_3') ?>${monthName})`, `<?= tj('i18n_minggu_4') ?>${monthName})`];
             
             const salesVal = monthlyData.penjualan[monthIdx];
             const quoteVal = monthlyData.penawaran[monthIdx];

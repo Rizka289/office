@@ -81,7 +81,7 @@ class MY_Controller extends CI_Controller
         // jangan biarkan user terjebak di halaman Akses Ditolak -> logout & kembali ke login.
         if (!in_array($user_role, self::ROLE_VALID, TRUE)) {
             $this->session->unset_userdata(['user_id', 'username', 'nama', 'role', 'foto', 'logged_in']);
-            $this->session->set_flashdata('error', 'Role akun "' . html_escape((string) $user_role) . '" tidak dikenali sistem. Hubungi admin untuk memperbaiki role user.');
+            $this->session->set_flashdata('error', translate('i18n_role_akun') . html_escape((string) $user_role) . translate('i18n_q_tidak_dikenali_sistem'));
             redirect('login');
             return;
         }
@@ -90,12 +90,12 @@ class MY_Controller extends CI_Controller
             // translate() mengembalikan key-nya sendiri kalau terjemahan tidak ada
             $pesan = lang('app_access_denied');
             if (!$pesan || $pesan === 'app_access_denied') {
-                $pesan = 'Anda tidak memiliki akses ke halaman ini.';
+                $pesan = translate('i18n_anda_tidak_memiliki_akses_ke_halaman_ini');
             }
             $pesan .= '<br><br>'
-                . '<a href="' . site_url('dashboard') . '" style="margin-right:12px">&larr; Kembali ke Dashboard</a>'
-                . '<a href="' . site_url('login/logout') . '">Keluar / Ganti Akun</a>';
-            show_error($pesan, 403, 'Akses Ditolak');
+                . '<a href="' . site_url('dashboard') . '" style="margin-right:12px">' . translate('i18n_kembali_ke_dashboard') . '</a>'
+                . '<a href="' . site_url('login/logout') . '">' . translate('i18n_keluar_ganti_akun') . '</a>';
+            show_error($pesan, 403, translate('i18n_akses_ditolak'));
         }
     }
 

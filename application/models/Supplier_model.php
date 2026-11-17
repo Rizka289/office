@@ -111,20 +111,20 @@ class Supplier_model extends CI_Model
     public function hapus($id)
     {
         if (!$this->get_by_id($id)) {
-            return array(false, 'Data tidak ditemukan!');
+            return array(false, translate('i18n_data_tidak_ditemukan_2'));
         }
         if ($this->dipakai($id)) {
             if ($this->db->field_exists('aktif', $this->table)) {
                 $this->db->where('id', (int) $id)->update($this->table, array('aktif' => 0));
-                return array(true, 'Supplier sudah dipakai di PO / SO, jadi dinonaktifkan (tidak dihapus).');
+                return array(true, translate('i18n_supplier_sudah_dipakai_di_po_so_jadi'));
             }
-            return array(false, 'Supplier sudah dipakai di PO / SO, tidak bisa dihapus.');
+            return array(false, translate('i18n_supplier_sudah_dipakai_di_po_so_tidak'));
         }
         if (!$this->db->where('id', (int) $id)->delete($this->table)) {
             $err = $this->db->error();
             log_message('error', 'Hapus supplier gagal: ' . $err['message']);
-            return array(false, 'Gagal menghapus data dari database.');
+            return array(false, translate('i18n_gagal_menghapus_data_dari_database_2'));
         }
-        return array(true, 'Supplier dihapus.');
+        return array(true, translate('i18n_supplier_dihapus'));
     }
 }

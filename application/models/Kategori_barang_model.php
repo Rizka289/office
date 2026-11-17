@@ -138,13 +138,13 @@ class Kategori_barang_model extends CI_Model
 
         switch ($this->lastError['code']) {
             case 1062: // Duplicate entry
-                return 'Kode kategori sudah digunakan, gunakan kode lain.';
+                return translate('i18n_kode_kategori_sudah_digunakan_gunakan');
             case 1451: // FK: masih dipakai tabel lain (mis. barang)
-                return 'Kategori tidak bisa dihapus karena masih dipakai oleh data barang.';
+                return translate('i18n_kategori_tidak_bisa_dihapus_karena_masih');
             case 1452: // FK: referensi tidak valid
-                return 'Data referensi tidak valid.';
+                return translate('i18n_data_referensi_tidak_valid');
             case 1406: // Data too long
-                return 'Salah satu isian terlalu panjang.';
+                return translate('i18n_salah_satu_isian_terlalu_panjang');
         }
 
         // Error lain: catat di application/logs supaya bisa dilacak

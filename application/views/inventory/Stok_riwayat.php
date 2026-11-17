@@ -44,7 +44,7 @@
 
                     <div class="form-group col-md-3 mt-3 mt-md-0">
                         <button type="submit" class="btn btn-primary mr-2"><?= translate('cari') ?></button>
-                        <a href="<?= site_url('stok_riwayat'); ?>" class="btn btn-secondary">Reset</a>
+                        <a href="<?= site_url('stok_riwayat'); ?>" class="btn btn-secondary"><?= translate('reset') ?></a>
                     </div>
                 </div>
             </form>
@@ -96,7 +96,7 @@
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="13" class="text-center">Belum ada data riwayat stok.</td>
+                                <td colspan="13" class="text-center"><?= translate('i18n_belum_ada_data_riwayat_stok') ?></td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -118,8 +118,8 @@ window.addEventListener('load', function () {
             return $(this).find('option[value=""]').text();
         },
         language: {
-            noResults: function () { return 'Tidak ditemukan'; },
-            searching: function () { return 'Mencari...'; }
+            noResults: function () { return '<?= tj('i18n_tidak_ditemukan_2') ?>'; },
+            searching: function () { return '<?= tj('i18n_mencari') ?>'; }
         }
     });
 

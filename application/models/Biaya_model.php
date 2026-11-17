@@ -50,13 +50,13 @@ class Biaya_model extends CI_Model
     {
         $k = $this->get_kategori_by_id($id);
         if (!$k) {
-            return array(false, 'Kategori tidak ditemukan.');
+            return array(false, translate('i18n_kategori_tidak_ditemukan'));
         }
         if ($this->db->where('id_kategori', (int) $id)->count_all_results('biaya_operasional') > 0) {
-            return array(false, 'Kategori "' . $k->nama . '" sudah dipakai transaksi. Nonaktifkan saja supaya tidak muncul di form.');
+            return array(false, translate('i18n_kategori') . $k->nama . translate('i18n_q_sudah_dipakai_transaksi'));
         }
         $this->db->where('id', (int) $id)->delete('biaya_kategori');
-        return array(true, 'Kategori "' . $k->nama . '" dihapus.');
+        return array(true, translate('i18n_kategori') . $k->nama . translate('i18n_q_dihapus'));
     }
 
     // ================= TRANSAKSI =================
@@ -113,7 +113,7 @@ class Biaya_model extends CI_Model
         if ($id) {
             $d['updated_at'] = date('Y-m-d H:i:s');
             $ok = $this->db->where('id', (int) $id)->update('biaya_operasional', $d);
-            return array($ok, $ok ? 'Pengeluaran diperbarui.' : 'Gagal memperbarui pengeluaran.');
+            return array($ok, $ok ? translate('i18n_pengeluaran_diperbarui') : translate('i18n_gagal_memperbarui_pengeluaran'));
         }
 
         // No. bukti urut per bulan; dikunci supaya tidak dobel saat dua orang simpan bersamaan
@@ -130,10 +130,10 @@ class Biaya_model extends CI_Model
         $this->db->insert('biaya_operasional', $d);
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal menyimpan pengeluaran.');
+            return array(false, translate('i18n_gagal_menyimpan_pengeluaran'));
         }
         $this->db->trans_commit();
-        return array(true, 'Pengeluaran ' . $d['no_bukti'] . ' Rp ' . number_format($d['nominal'], 0, ',', '.') . ' dicatat.');
+        return array(true, (translate('i18n_pengeluaran') . ' ') . $d['no_bukti'] . ' Rp ' . number_format($d['nominal'], 0, ',', '.') . (' ' . translate('i18n_dicatat')));
     }
 
     public function hapus($id)
@@ -160,7 +160,7 @@ class Biaya_model extends CI_Model
         foreach ($rows as $r) {
             $k = (int) $r->id;
             if (!isset($hasil[$k])) {
-                $hasil[$k] = array('nama' => $r->nama ?: '(tanpa kategori)', 'bulan' => array_fill(1, 12, 0), 'total' => 0);
+                $hasil[$k] = array('nama' => $r->nama ?: translate('i18n_tanpa_kategori'), 'bulan' => array_fill(1, 12, 0), 'total' => 0);
             }
             $hasil[$k]['bulan'][(int) $r->bln] += (float) $r->total;
             $hasil[$k]['total']                += (float) $r->total;
@@ -177,6 +177,24 @@ class Biaya_model extends CI_Model
         }
         $rows = $this->db->query(
             'SELECT MONTH(tanggal) AS bln, SUM(nominal) AS total FROM sales_order_pembayaran
+              WHERE tanggal BETWEEN ? AND ? GROUP BY MONTH(tanggal)',
+            array($tahun . '-01-01', $tahun . '-12-31')
+        )->result();
+        foreach ($rows as $r) {
+            $bulan[(int) $r->bln] = (float) $r->total;
+        }
+        return $bulan;
+    }
+
+    // Uang masuk dari menu Pemasukan Lain & Modal (modal, pinjaman, pendapatan lain) per bulan
+    public function get_kas_masuk_lain_tahun($tahun)
+    {
+        $bulan = array_fill(1, 12, 0);
+        if (!$this->db->table_exists('kas_masuk')) {
+            return $bulan;
+        }
+        $rows = $this->db->query(
+            'SELECT MONTH(tanggal) AS bln, SUM(nominal) AS total FROM kas_masuk
               WHERE tanggal BETWEEN ? AND ? GROUP BY MONTH(tanggal)',
             array($tahun . '-01-01', $tahun . '-12-31')
         )->result();

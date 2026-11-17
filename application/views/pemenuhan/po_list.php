@@ -5,7 +5,7 @@ $this->load->view('pemenuhan/_style');
 $izin    = isset($izin) ? $izin : array();
 $kembali = 'pemenuhan/po';
 $tombol_po = function ($id, $aksi, $label, $kelas, $tanya) use ($kembali) {
-  return form_open('pemenuhan/po_aksi/' . (int) $id . '/' . $aksi, array('class' => 'd-inline', 'onsubmit' => "return confirm('" . $tanya . "')"))
+  return form_open('pemenuhan/po_aksi/' . (int) $id . '/' . $aksi, array('class' => 'd-inline', 'onsubmit' => "return confirm('" . js_esc($tanya) . "')"))
     . form_hidden('kembali', $kembali)
     . '<button type="submit" class="btn btn-sm ' . $kelas . ' py-0 px-2">' . $label . '</button>'
     . form_close();
@@ -28,11 +28,11 @@ $url_filter = function ($kode) use ($q) {
 
   <div class="hero mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
-      <div class="judul"><i class="bi bi-cart me-2"></i>Purchase Order</div>
-      <div class="meta">Pesanan ke supplier: approval atasan, pengiriman, penerimaan &amp; pembayaran</div>
+      <div class="judul"><i class="bi bi-cart me-2"></i><?= translate('i18n_purchase_order') ?></div>
+      <div class="meta"><?= translate('i18n_pesanan_ke_supplier_approval_atasan') ?></div>
     </div>
     <?php if (!empty($izin['atur'])): ?>
-      <a href="<?= site_url('pemenuhan') ?>" class="btn btn-light btn-sm"><i class="bi bi-plus-lg me-1"></i>Buat PO dari Proses Pesanan</a>
+      <a href="<?= site_url('pemenuhan') ?>" class="btn btn-light btn-sm"><i class="bi bi-plus-lg me-1"></i><?= translate('i18n_buat_po_dari_proses_pesanan') ?></a>
     <?php endif; ?>
   </div>
 
@@ -52,20 +52,20 @@ $url_filter = function ($kode) use ($q) {
       </ul>
       <form method="get" action="<?= site_url('pemenuhan/po') ?>" class="d-flex gap-1">
         <?php if ($filter !== 'semua'): ?><input type="hidden" name="status" value="<?= html_escape($filter) ?>"><?php endif; ?>
-        <input type="text" name="q" value="<?= html_escape($q) ?>" class="form-control form-control-sm" placeholder="Cari no PO / supplier / SO / customer" style="min-width:240px">
+        <input type="text" name="q" value="<?= html_escape($q) ?>" class="form-control form-control-sm" placeholder="<?= translate('i18n_cari_no_po_supplier_so_customer') ?>" style="min-width:240px">
         <button class="btn btn-sm btn-outline-secondary" type="submit"><i class="bi bi-search"></i></button>
-        <?php if ($q !== ''): ?><a href="<?= site_url('pemenuhan/po') . ($filter !== 'semua' ? '?status=' . rawurlencode($filter) : '') ?>" class="btn btn-sm btn-link">Reset</a><?php endif; ?>
+        <?php if ($q !== ''): ?><a href="<?= site_url('pemenuhan/po') . ($filter !== 'semua' ? '?status=' . rawurlencode($filter) : '') ?>" class="btn btn-sm btn-link"><?= translate('reset') ?></a><?php endif; ?>
       </form>
     </div>
 
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle mb-0">
         <thead class="table-light">
-          <tr><th>No. PO</th><th>Supplier</th><th>SO / Customer</th><th>Jenis</th><th class="text-end">Total</th><th>Status</th><th>Pembayaran</th><th class="text-end">Aksi</th></tr>
+          <tr><th><?= translate('i18n_no_po_2') ?></th><th><?= translate('i18n_supplier') ?></th><th><?= translate('i18n_so_customer') ?></th><th><?= translate('jenis') ?></th><th class="text-end"><?= translate('total') ?></th><th><?= translate('status') ?></th><th><?= translate('pembayaran') ?></th><th class="text-end"><?= translate('aksi') ?></th></tr>
         </thead>
         <tbody>
           <?php if (!$po_list): ?>
-            <tr><td colspan="8" class="text-center text-muted py-4"><?= $q !== '' ? 'Tidak ada PO yang cocok dengan pencarian.' : 'Tidak ada PO di status ini.' ?></td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-4"><?= $q !== '' ? 'Tidak ada PO yang cocok dengan pencarian.' : translate('i18n_tidak_ada_po_di_status_ini') ?></td></tr>
           <?php endif; ?>
           <?php foreach ($po_list as $p): $dibayar = (float) ($p->total_bayar ?? 0); ?>
             <tr>
@@ -75,7 +75,7 @@ $url_filter = function ($kode) use ($q) {
               </td>
               <td><?= html_escape($p->nama_supplier) ?></td>
               <td><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape($p->nama_customer) ?></div></td>
-              <td><?= $p->jenis === 'dropship' ? '<span class="badge text-bg-info fw-normal">Dropship</span>' : '<span class="badge text-bg-light fw-normal">Ke gudang</span>' ?></td>
+              <td><?= $p->jenis === 'dropship' ? '<span class="badge text-bg-info fw-normal">Dropship</span>' : '<span class="badge text-bg-light fw-normal">' . translate('i18n_ke_gudang') . '</span>' ?></td>
               <td class="text-end"><?= $rp($p->total) ?></td>
               <td>
                 <?= $badge('po', $p->status) ?>
@@ -89,20 +89,20 @@ $url_filter = function ($kode) use ($q) {
               </td>
               <td class="text-end text-nowrap">
                 <?php if (!empty($izin['approve']) && $p->status === 'draft'): ?>
-                  <?= $tombol_po($p->id, 'setujui', 'Setujui', 'btn-outline-success', 'Setujui PO ' . $p->no_po . '?') ?>
-                  <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>#tolak" class="btn btn-sm btn-outline-danger py-0 px-2">Tolak</a>
+                  <?= $tombol_po($p->id, 'setujui', translate('i18n_setujui'), 'btn-outline-success', (translate('i18n_setujui_po') . ' ') . $p->no_po . '?') ?>
+                  <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>#tolak" class="btn btn-sm btn-outline-danger py-0 px-2"><?= translate('i18n_tolak') ?></a>
                 <?php endif; ?>
                 <?php if (!empty($izin['atur']) && $p->status === 'approved'): ?>
-                  <?= $tombol_po($p->id, 'kirim', 'Kirim ke supplier', 'btn-outline-primary', 'PO sudah dikirim / dipesan ke supplier?') ?>
+                  <?= $tombol_po($p->id, 'kirim', translate('i18n_kirim_ke_supplier'), 'btn-outline-primary', translate('i18n_po_sudah_dikirim_dipesan_ke_supplier')) ?>
                 <?php endif; ?>
                 <?php if (!empty($izin['terima']) && in_array($p->status, array('dipesan', 'sebagian'), true)): ?>
-                  <a href="<?= site_url('pemenuhan/po_terima/' . (int) $p->id) ?>" class="btn btn-sm btn-outline-success py-0 px-2"><?= $p->jenis === 'dropship' ? 'Diterima customer' : 'Terima' ?></a>
+                  <a href="<?= site_url('pemenuhan/po_terima/' . (int) $p->id) ?>" class="btn btn-sm btn-outline-success py-0 px-2"><?= $p->jenis === 'dropship' ? 'Diterima customer' : translate('i18n_terima') ?></a>
                 <?php endif; ?>
                 <?php if (!empty($izin['bayar']) && $p->status !== 'draft' && $p->status !== 'batal' && ($p->status_bayar ?? 'belum') !== 'lunas'): ?>
-                  <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>#pembayaran" class="btn btn-sm btn-outline-success py-0 px-2">Bayar</a>
+                  <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>#pembayaran" class="btn btn-sm btn-outline-success py-0 px-2"><?= translate('i18n_bayar') ?></a>
                 <?php endif; ?>
-                <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Detail"><i class="bi bi-eye"></i></a>
-                <a href="<?= site_url('pemenuhan/po_cetak/' . (int) $p->id) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" title="Cetak PO"><i class="bi bi-printer"></i></a>
+                <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>" class="btn btn-sm btn-outline-secondary py-0 px-2" title="<?= translate('i18n_detail_2') ?>"><i class="bi bi-eye"></i></a>
+                <a href="<?= site_url('pemenuhan/po_cetak/' . (int) $p->id) ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2" title="<?= translate('i18n_cetak_po') ?>"><i class="bi bi-printer"></i></a>
               </td>
             </tr>
           <?php endforeach; ?>
@@ -110,7 +110,7 @@ $url_filter = function ($kode) use ($q) {
       </table>
     </div>
     <?php if (count($po_list) >= 300): ?>
-      <div class="card-body border-top muted">Menampilkan 300 PO terbaru. Gunakan filter atau pencarian untuk PO yang lebih lama.</div>
+      <div class="card-body border-top muted"><?= translate('i18n_menampilkan_300_po_terbaru_gunakan') ?></div>
     <?php endif; ?>
   </div>
 </div>

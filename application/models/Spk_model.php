@@ -148,12 +148,12 @@ class Spk_model extends CI_Model
         $so = $this->db->query('SELECT * FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id_so))->row();
         if (!$so || $so->status !== 'confirmed') {
             $this->db->trans_rollback();
-            return array(false, 'Sales Order tidak ditemukan atau belum dikonfirmasi.');
+            return array(false, translate('i18n_sales_order_tidak_ditemukan_atau_belum'));
         }
 
         if ($this->db->where('id_so', $so->id)->where('status !=', 'batal')->count_all_results('spk') > 0) {
             $this->db->trans_rollback();
-            return array(false, 'Sales Order ini sudah dibuatkan SPK.');
+            return array(false, translate('i18n_sales_order_ini_sudah_dibuatkan_spk'));
         }
 
         $no = $this->generate_no($input['tanggal_spk'], true);
@@ -198,7 +198,7 @@ class Spk_model extends CI_Model
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal menyimpan data SPK.');
+            return array(false, translate('i18n_gagal_menyimpan_data_spk'));
         }
 
         $this->db->trans_commit();
@@ -276,11 +276,11 @@ class Spk_model extends CI_Model
         // stok_barang.stok & stok_riwayat.qty_* bertipe INT: qty pecahan ditolak.
         // Hapus pengecekan ini jika kolom-kolom tsb sudah diubah menjadi DECIMAL.
         if (abs($qty - round($qty)) > 0.00001) {
-            return array(false, 'Qty harus bilangan bulat (kolom stok bertipe integer).');
+            return array(false, translate('i18n_qty_harus_bilangan_bulat_kolom_stok'));
         }
         $qty = (int) round($qty);
         if ($qty <= 0) {
-            return array(false, 'Qty harus lebih dari 0.');
+            return array(false, translate('i18n_qty_harus_lebih_dari_0'));
         }
 
         $this->db->trans_begin();
@@ -288,19 +288,19 @@ class Spk_model extends CI_Model
         $spk = $this->db->query('SELECT id, no_spk, status FROM spk WHERE id = ? FOR UPDATE', array($id_spk))->row();
         if (!$spk || $spk->status !== 'proses') {
             $this->db->trans_rollback();
-            return array(false, 'SPK tidak ditemukan atau sudah tidak dalam status proses.');
+            return array(false, translate('i18n_spk_tidak_ditemukan_atau_sudah_tidak'));
         }
 
         $ada = $this->db->where('id', $id_detail)->where('id_spk', $id_spk)->count_all_results('spk_detail');
         if ($ada < 1) {
             $this->db->trans_rollback();
-            return array(false, 'Item SPK tidak valid.');
+            return array(false, translate('i18n_item_spk_tidak_valid'));
         }
 
         $barang = $this->db->select('id, nama, satuan')->where('id', $id_barang)->get('barang')->row();
         if (!$barang) {
             $this->db->trans_rollback();
-            return array(false, 'Barang tidak ditemukan.');
+            return array(false, translate('i18n_barang_tidak_ditemukan'));
         }
 
         // Kunci baris stok barang ini (semua lokasi yang masih ada stok)
@@ -315,7 +315,7 @@ class Spk_model extends CI_Model
         }
         if ($tersedia < $qty) {
             $this->db->trans_rollback();
-            return array(false, 'Stok ' . $barang->nama . ' tidak cukup. Tersedia: ' . $tersedia . ' ' . $barang->satuan . '.');
+            return array(false, (translate('stok') . ' ') . $barang->nama . (' ' . translate('i18n_tidak_cukup_tersedia') . ' ') . $tersedia . ' ' . $barang->satuan . '.');
         }
 
         // Log pemakaian bahan dibuat dulu supaya id-nya bisa jadi id_referensi di stok_riwayat
@@ -343,18 +343,18 @@ class Spk_model extends CI_Model
             $ambil = min((int) $r->stok, $sisa);
             if (!$this->_mutasi_stok($id_barang, $r->id_location, 'PEMAKAIAN_PRODUKSI', $id_usage, 0, $ambil, $ket, $id_user)) {
                 $this->db->trans_rollback();
-                return array(false, 'Gagal mencatat riwayat stok.');
+                return array(false, translate('i18n_gagal_mencatat_riwayat_stok'));
             }
             $sisa -= $ambil;
         }
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal mencatat pengeluaran bahan baku.');
+            return array(false, translate('i18n_gagal_mencatat_pengeluaran_bahan_baku'));
         }
 
         $this->db->trans_commit();
-        return array(true, 'Pengeluaran ' . $barang->nama . ' sebanyak ' . $qty . ' ' . $barang->satuan . ' dicatat di kartu stok dan stok gudang diperbarui.');
+        return array(true, (translate('i18n_pengeluaran') . ' ') . $barang->nama . ' sebanyak ' . $qty . ' ' . $barang->satuan . (' ' . translate('i18n_dicatat_di_kartu_stok_dan_stok_gudang')));
     }
 
     // Kembalikan SISA bahan ke gudang (lokasi asal). Dicatat sebagai RETUR di stok_riwayat.
@@ -366,11 +366,11 @@ class Spk_model extends CI_Model
         $qty    = (float) $data['qty_retur'];
 
         if (abs($qty - round($qty)) > 0.00001) {
-            return array(false, 'Qty harus bilangan bulat (kolom stok bertipe integer).');
+            return array(false, translate('i18n_qty_harus_bilangan_bulat_kolom_stok'));
         }
         $qty = (int) round($qty);
         if ($qty <= 0) {
-            return array(false, 'Qty retur harus lebih dari 0.');
+            return array(false, translate('i18n_qty_retur_harus_lebih_dari_0'));
         }
 
         $this->db->trans_begin();
@@ -378,7 +378,7 @@ class Spk_model extends CI_Model
         $spk = $this->db->query('SELECT id, no_spk, status FROM spk WHERE id = ? FOR UPDATE', array($id_spk))->row();
         if (!$spk || !in_array($spk->status, array('proses', 'selesai'), true)) {
             $this->db->trans_rollback();
-            return array(false, 'SPK tidak ditemukan atau sudah dibatalkan.');
+            return array(false, translate('i18n_spk_tidak_ditemukan_atau_sudah'));
         }
 
         $m = $this->db->query(
@@ -387,7 +387,7 @@ class Spk_model extends CI_Model
         )->row();
         if (!$m) {
             $this->db->trans_rollback();
-            return array(false, 'Data bahan tidak ditemukan.');
+            return array(false, translate('i18n_data_bahan_tidak_ditemukan'));
         }
 
         $sudah = (int) $this->db->query(
@@ -396,7 +396,7 @@ class Spk_model extends CI_Model
         $maks = (int) round((float) $m->qty_pakai) - $sudah;
         if ($qty > $maks) {
             $this->db->trans_rollback();
-            return array(false, 'Qty retur melebihi sisa. Maksimal yang bisa dikembalikan: ' . $maks . ' ' . $m->satuan . '.');
+            return array(false, (translate('i18n_qty_retur_melebihi_sisa_maksimal_yang') . ' ') . $maks . ' ' . $m->satuan . '.');
         }
 
         // Lokasi asal bahan (dari riwayat pengeluaran) dikurangi yang sudah pernah diretur
@@ -436,7 +436,7 @@ class Spk_model extends CI_Model
 
             if (!$this->_mutasi_stok($m->id_barang_bahan, $l->id_location, 'RETUR', $id_retur, $ambil, 0, $ket, $id_user)) {
                 $this->db->trans_rollback();
-                return array(false, 'Gagal mencatat riwayat stok.');
+                return array(false, translate('i18n_gagal_mencatat_riwayat_stok'));
             }
             $sisa -= $ambil;
         }
@@ -444,16 +444,16 @@ class Spk_model extends CI_Model
         if ($sisa > 0) {
             // Pemakaian lama (sebelum perbaikan) tidak punya riwayat lokasi
             $this->db->trans_rollback();
-            return array(false, 'Lokasi asal bahan tidak ditemukan di kartu stok (pengeluaran lama). Kembalikan lewat Stok Opname.');
+            return array(false, translate('i18n_lokasi_asal_bahan_tidak_ditemukan_di'));
         }
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal mencatat retur bahan.');
+            return array(false, translate('i18n_gagal_mencatat_retur_bahan'));
         }
 
         $this->db->trans_commit();
-        return array(true, 'Sisa bahan sebanyak ' . $qty . ' ' . $m->satuan . ' dikembalikan ke gudang dan dicatat di kartu stok.');
+        return array(true, (translate('i18n_sisa_bahan_sebanyak') . ' ') . $qty . ' ' . $m->satuan . (' ' . translate('i18n_dikembalikan_ke_gudang_dan_dicatat_di')));
     }
 
     // ===================== TAHAPAN PRODUKSI =====================
@@ -527,7 +527,7 @@ class Spk_model extends CI_Model
         $spk = $this->db->query('SELECT id, status FROM spk WHERE id = ? FOR UPDATE', array($id_spk))->row();
         if (!$spk || $spk->status !== 'proses') {
             $this->db->trans_rollback();
-            return array(false, 'SPK tidak ditemukan atau sudah tidak dalam status proses.');
+            return array(false, translate('i18n_spk_tidak_ditemukan_atau_sudah_tidak'));
         }
 
         $t = $this->db->query(
@@ -536,7 +536,7 @@ class Spk_model extends CI_Model
         )->row();
         if (!$t || (int) $t->id_spk !== $id_spk) {
             $this->db->trans_rollback();
-            return array(false, 'Tahapan tidak valid.');
+            return array(false, translate('i18n_tahapan_tidak_valid'));
         }
 
         $now = date('Y-m-d H:i:s');
@@ -548,7 +548,7 @@ class Spk_model extends CI_Model
             $upd = array('status' => 'proses', 'tgl_selesai' => null);
         } else {
             $this->db->trans_rollback();
-            return array(false, 'Aksi tidak dikenal.');
+            return array(false, translate('i18n_aksi_tidak_dikenal'));
         }
         $upd['id_user'] = $id_user;
 
@@ -557,10 +557,10 @@ class Spk_model extends CI_Model
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal memperbarui tahapan.');
+            return array(false, translate('i18n_gagal_memperbarui_tahapan'));
         }
         $this->db->trans_commit();
-        return array(true, 'Tahapan "' . $t->nama_tahap . '" diperbarui.');
+        return array(true, translate('i18n_tahapan') . $t->nama_tahap . translate('i18n_q_diperbarui'));
     }
 
     // Tandai SPK selesai: hanya bila semua tahapan item custom sudah selesai
@@ -568,7 +568,7 @@ class Spk_model extends CI_Model
     {
         $id_spk = (int) $id_spk;
         if ($status !== 'selesai') {
-            return array(false, 'Status tidak dikenal.');
+            return array(false, translate('i18n_status_tidak_dikenal'));
         }
 
         $this->db->trans_begin();
@@ -576,7 +576,7 @@ class Spk_model extends CI_Model
         $spk = $this->db->query('SELECT id, id_so, status FROM spk WHERE id = ? FOR UPDATE', array($id_spk))->row();
         if (!$spk || $spk->status !== 'proses') {
             $this->db->trans_rollback();
-            return array(false, 'SPK tidak ditemukan atau sudah tidak dalam status proses.');
+            return array(false, translate('i18n_spk_tidak_ditemukan_atau_sudah_tidak'));
         }
 
         $belum = (int) $this->db->query(
@@ -592,7 +592,7 @@ class Spk_model extends CI_Model
 
         if ($belum > 0 || $tanpa > 0) {
             $this->db->trans_rollback();
-            return array(false, 'Masih ada tahapan produksi yang belum selesai.');
+            return array(false, translate('i18n_masih_ada_tahapan_produksi_yang_belum'));
         }
 
         $this->db->where('id', $id_spk)->update('spk', array('status' => 'selesai'));
@@ -603,9 +603,9 @@ class Spk_model extends CI_Model
 
         if ($this->db->trans_status() === false) {
             $this->db->trans_rollback();
-            return array(false, 'Gagal mengubah status SPK.');
+            return array(false, translate('i18n_gagal_mengubah_status_spk'));
         }
         $this->db->trans_commit();
-        return array(true, 'SPK ditandai selesai. Status Sales Order otomatis menjadi Siap Kirim.');
+        return array(true, translate('i18n_spk_ditandai_selesai_status_sales'));
     }
 }

@@ -315,7 +315,7 @@
                                     <i class="bi bi-person-fill"></i>
                                 </div>
                                 <div class="d-none d-md-block text-end lh-sm">
-                                    <div class="fw-semibold" style="font-size:.85rem;"><?= $this->session->userdata('nama') ?: 'User'; ?></div>
+                                    <div class="fw-semibold" style="font-size:.85rem;"><?= $this->session->userdata('nama') ?: translate('i18n_user'); ?></div>
                                     <div class="text-muted" style="font-size:.72rem;"><?= $this->session->userdata('username'); ?></div>
                                 </div>
                             </div>

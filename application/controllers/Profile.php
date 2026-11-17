@@ -15,7 +15,7 @@ class Profile extends MY_Controller
     public function index()
     {
         $user_id = $this->session->userdata('user_id');
-        $data['title'] = 'Profil Saya';
+        $data['title'] = translate('i18n_profil_saya');
         $data['user']  = $this->User_model->get_by_id($user_id);
 
         $this->load->view('templates/header', $data);
@@ -102,9 +102,9 @@ class Profile extends MY_Controller
                 'username' => $username
             ]);
 
-            $this->session->set_flashdata('success', 'Profil berhasil diperbarui!');
+            $this->session->set_flashdata('success', translate('i18n_profil_berhasil_diperbarui'));
         } else {
-            $this->session->set_flashdata('error', 'Gagal memperbarui database.');
+            $this->session->set_flashdata('error', translate('i18n_gagal_memperbarui_database'));
         }
 
         redirect('profile');

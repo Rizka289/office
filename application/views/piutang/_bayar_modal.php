@@ -9,47 +9,47 @@
       <?= form_open('piutang/bayar/0', array('id' => 'formBayarPiutang')) ?>
       <input type="hidden" name="kembali" value="<?= html_escape($kembali) ?>">
       <div class="modal-header">
-        <h6 class="modal-title"><i class="bi bi-wallet2 me-2"></i>Catat pembayaran <span id="bp_no" class="fw-semibold"></span></h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        <h6 class="modal-title"><i class="bi bi-wallet2 me-2"></i><?= translate('i18n_catat_pembayaran') ?> <span id="bp_no" class="fw-semibold"></span></h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?= translate('i18n_tutup') ?>"></button>
       </div>
       <div class="modal-body">
         <div class="note mb-3 small">
           <div id="bp_customer" class="fw-semibold"></div>
-          Sisa tagihan: <b id="bp_sisa"></b><span id="bp_dp_wrap"> · Kurang DP: <b id="bp_dp"></b></span>
+          <?= translate('i18n_sisa_tagihan') ?> <b id="bp_sisa"></b><span id="bp_dp_wrap"> <?= translate('i18n_kurang_dp') ?> <b id="bp_dp"></b></span>
         </div>
         <div class="row g-2">
           <div class="col-6">
-            <label class="form-label small mb-1">Tanggal terima</label>
+            <label class="form-label small mb-1"><?= translate('i18n_tanggal_terima') ?></label>
             <input type="date" name="tanggal" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>" required>
           </div>
           <div class="col-6">
-            <label class="form-label small mb-1">Jenis</label>
+            <label class="form-label small mb-1"><?= translate('jenis') ?></label>
             <select name="jenis" id="bp_jenis" class="form-select form-select-sm">
-              <option value="dp">DP</option>
-              <option value="pelunasan">Pelunasan</option>
-              <option value="lainnya">Lainnya</option>
+              <option value="dp"><?= translate('i18n_dp') ?></option>
+              <option value="pelunasan"><?= translate('pelunasan') ?></option>
+              <option value="lainnya"><?= translate('lainnya') ?></option>
             </select>
           </div>
           <div class="col-12">
-            <label class="form-label small mb-1">Nominal (Rp)</label>
+            <label class="form-label small mb-1"><?= translate('nominal(rp)') ?></label>
             <input type="number" name="nominal" id="bp_nominal" class="form-control form-control-sm" min="1" step="0.01" required>
           </div>
           <div class="col-6">
-            <label class="form-label small mb-1">Metode</label>
-            <input type="text" name="metode" class="form-control form-control-sm" maxlength="50" placeholder="Transfer / Tunai / Giro">
+            <label class="form-label small mb-1"><?= translate('i18n_metode') ?></label>
+            <input type="text" name="metode" class="form-control form-control-sm" maxlength="50" placeholder="<?= translate('i18n_transfer_tunai_giro') ?>">
           </div>
           <div class="col-6">
-            <label class="form-label small mb-1">No. referensi</label>
-            <input type="text" name="no_referensi" class="form-control form-control-sm" maxlength="100" placeholder="No. bukti transfer">
+            <label class="form-label small mb-1"><?= translate('i18n_no_referensi') ?></label>
+            <input type="text" name="no_referensi" class="form-control form-control-sm" maxlength="100" placeholder="<?= translate('i18n_no_bukti_transfer') ?>">
           </div>
           <div class="col-12">
-            <input type="text" name="catatan" class="form-control form-control-sm" maxlength="255" placeholder="Catatan">
+            <input type="text" name="catatan" class="form-control form-control-sm" maxlength="255" placeholder="<?= translate('i18n_catatan') ?>">
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Batal</button>
-        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check2 me-1"></i>Simpan pembayaran</button>
+        <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
+        <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check2 me-1"></i><?= translate('i18n_simpan_pembayaran') ?></button>
       </div>
       <?= form_close() ?>
     </div>

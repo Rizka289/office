@@ -31,7 +31,7 @@
             </thead>
             <tbody id="userTableBody">
                 <tr>
-                    <td colspan="5" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="5" class="text-center text-muted"><?= translate('i18n_memuat_data') ?></td>
                 </tr>
             </tbody>
         </table>
@@ -39,7 +39,7 @@
     <!-- ================= INFO + PAGINATION ================= -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <small class="text-muted" id="customerInfo"></small>
-        <nav aria-label="Pagination Users">
+        <nav aria-label="<?= translate('i18n_pagination_users') ?>">
             <ul class="pagination pagination-sm mb-0" id="userPagination"></ul>
         </nav>
     </div>
@@ -51,7 +51,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalTambahUserLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('app_username') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formTambahUser" autocomplete="off">
                 <div class="modal-body">
@@ -72,11 +72,11 @@
                         <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
                         <select name="role" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('label_choice') ?> --</option>
-                            <option value="super_admin">Super Admin (kelola sistem &amp; user)</option>
-                            <option value="atasan">Atasan (lihat semua &amp; approve)</option>
-                            <option value="finance">Finance</option>
-                            <option value="staff_purchasing">Purchasing / Admin Penawaran</option>
-                            <option value="staff_gudang">Gudang</option>
+                            <option value="super_admin"><?= translate('i18n_super_admin_kelola_sistem_user') ?></option>
+                            <option value="atasan"><?= translate('i18n_atasan_lihat_semua_approve') ?></option>
+                            <option value="finance"><?= translate('i18n_finance') ?></option>
+                            <option value="staff_purchasing"><?= translate('i18n_purchasing_admin_penawaran') ?></option>
+                            <option value="staff_gudang"><?= translate('i18n_gudang') ?></option>
                         </select>
                     </div>
                 </div>
@@ -95,7 +95,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalEditUserLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formEditUser" autocomplete="off">
                 <div class="modal-body">
@@ -118,11 +118,11 @@
                         <label class="form-label small fw-bold"><?= translate('hak_akses') ?></label>
                         <select name="role" id="edit_role" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('label_choice') ?> --</option>
-                            <option value="super_admin">Super Admin (kelola sistem &amp; user)</option>
-                            <option value="atasan">Atasan (lihat semua &amp; approve)</option>
-                            <option value="finance">Finance</option>
-                            <option value="staff_purchasing">Purchasing / Admin Penawaran</option>
-                            <option value="staff_gudang">Gudang</option>
+                            <option value="super_admin"><?= translate('i18n_super_admin_kelola_sistem_user') ?></option>
+                            <option value="atasan"><?= translate('i18n_atasan_lihat_semua_approve') ?></option>
+                            <option value="finance"><?= translate('i18n_finance') ?></option>
+                            <option value="staff_purchasing"><?= translate('i18n_purchasing_admin_penawaran') ?></option>
+                            <option value="staff_gudang"><?= translate('i18n_gudang') ?></option>
                         </select>
                     </div>
                 </div>
@@ -169,8 +169,8 @@
                     '<td>' + escapeHtml(user.username) + '</td>' +
                     '<td>' + escapeHtml(user.role) + '</td>' +
                     '<td class="text-center">' +
-                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + user.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
-                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + user.id + '" data-nama="' + escapeHtml(user.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + user.id + '" title="<?= tj('update') ?>"><i class="bi bi-pencil"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + user.id + '" data-nama="' + escapeHtml(user.nama) + '" title="<?= tj('hapus') ?>"><i class="bi bi-trash"></i></button>' +
                     '</td>' +
                     '</tr>';
                 $tbody.append(tr);
@@ -220,13 +220,13 @@
 
                         var start = response.total === 0 ? 0 : ((response.current_page - 1) * response.per_page) + 1;
                         var end = Math.min(response.current_page * response.per_page, response.total);
-                        $('#userInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
+                        $('#userInfo').text('<?= tj('i18n_menampilkan') ?> ' + start + '-' + end + ' <?= tj('i18n_dari_lc') ?> ' + response.total + ' <?= tj('i18n_data_lc') ?>');
                     } else {
-                        $('#userTableBody').html('<tr><td colspan="5" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                        $('#userTableBody').html('<tr><td colspan="5" class="text-center text-danger"><?= tj('i18n_gagal_memuat_data') ?></td></tr>');
                     }
                 },
                 error: function() {
-                    $('#userTableBody').html('<tr><td colspan="5" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                    $('#userTableBody').html('<tr><td colspan="5" class="text-center text-danger"><?= tj('i18n_terjadi_kesalahan_saat_memuat_data') ?></td></tr>');
                 }
             });
         }
@@ -265,7 +265,7 @@
         // 1. AJAX TAMBAH USER
         $('#formTambahUser').on('submit', function(e) {
             e.preventDefault();
-            $('#btnSimpan').prop('disabled', true).text('Menyimpan...');
+            $('#btnSimpan').prop('disabled', true).text('<?= tj('i18n_menyimpan') ?>');
 
             $.ajax({
                 url: "<?= site_url('user/simpan'); ?>",
@@ -280,13 +280,13 @@
                         location.reload();
                     } else {
                         alert(response.message);
-                        $('#btnSimpan').prop('disabled', false).text('Simpan Data');
+                        $('#btnSimpan').prop('disabled', false).text('<?= tj('i18n_simpan_data') ?>');
                     }
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat menyimpan data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_menyimpan_data_2') ?>');
                     console.error(error);
-                    $('#btnSimpan').prop('disabled', false).text('Simpan Data');
+                    $('#btnSimpan').prop('disabled', false).text('<?= tj('i18n_simpan_data') ?>');
                 }
             });
         });
@@ -313,7 +313,7 @@
                     }
                 },
                 error: function() {
-                    alert('Terjadi kesalahan saat mengambil data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_mengambil_data') ?>');
                 }
             });
         });
@@ -321,7 +321,7 @@
         // 3. AJAX UPDATE USER
         $('#formEditUser').on('submit', function(e) {
             e.preventDefault();
-            $('#btnUpdate').prop('disabled', true).text('Memperbarui...');
+            $('#btnUpdate').prop('disabled', true).text('<?= tj('i18n_memperbarui') ?>');
 
             $.ajax({
                 url: "<?= site_url('user/update'); ?>",
@@ -336,13 +336,13 @@
                         location.reload();
                     } else {
                         alert(response.message);
-                        $('#btnUpdate').prop('disabled', false).text('Update Data');
+                        $('#btnUpdate').prop('disabled', false).text('<?= tj('i18n_update_data') ?>');
                     }
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat memperbarui data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_memperbarui_data_2') ?>');
                     console.error(error);
-                    $('#btnUpdate').prop('disabled', false).text('Update Data');
+                    $('#btnUpdate').prop('disabled', false).text('<?= tj('i18n_update_data') ?>');
                 }
             });
         });

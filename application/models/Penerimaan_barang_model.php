@@ -482,7 +482,7 @@ class Penerimaan_barang_model extends CI_Model
             }
         }
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = $this->last_error ?: 'Transaksi gagal tanpa pesan error spesifik.';
+            $this->last_error = $this->last_error ?: translate('i18n_transaksi_gagal_tanpa_pesan_error');
             $this->db->trans_rollback();
             return FALSE;
         }

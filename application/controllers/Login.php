@@ -50,7 +50,7 @@ class Login extends MY_Controller
 
             // Tolak login kalau role di database tidak dikenal sistem
             if (!in_array($user->role, self::ROLE_VALID, TRUE)) {
-                $this->session->set_flashdata('error', 'Role akun "' . html_escape($user->role) . '" tidak dikenali sistem. Hubungi admin untuk memperbaiki role user.');
+                $this->session->set_flashdata('error', translate('i18n_role_akun') . html_escape($user->role) . translate('i18n_q_tidak_dikenali_sistem'));
                 redirect('login');
                 return;
             }

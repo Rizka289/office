@@ -32,7 +32,7 @@
             </thead>
             <tbody id="supplierTableBody">
                 <tr>
-                    <td colspan="6" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="6" class="text-center text-muted"><?= translate('i18n_memuat_data') ?></td>
                 </tr>
             </tbody>
         </table>
@@ -41,7 +41,7 @@
     <!-- ================= INFO + PAGINATION ================= -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <small class="text-muted" id="supplierInfo"></small>
-        <nav aria-label="Pagination Supplier">
+        <nav aria-label="<?= translate('i18n_pagination_supplier') ?>">
             <ul class="pagination pagination-sm mb-0" id="supplierPagination"></ul>
         </nav>
     </div>
@@ -53,7 +53,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalTambahSupLabel"><i class="bi bi-person-plus"></i> <?= translate('add') . ' ' . translate('list_pemasok') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formTambahSup" autocomplete="off">
                 <div class="modal-body">
@@ -90,7 +90,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalEditSupLabel"><i class="bi bi-pencil-square"></i> <?= translate('update') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formEditSup" autocomplete="off">
                 <div class="modal-body">
@@ -179,12 +179,12 @@
             handleCsrfFromResponse(res);
 
             if (xhr.status === 403) {
-                alert('Token keamanan kedaluwarsa. Halaman akan dimuat ulang, silakan coba lagi.');
+                alert('<?= tj('i18n_token_keamanan_kedaluwarsa_halaman_akan') ?>');
                 location.reload();
                 return true;
             }
 
-            alert(res.message || (defaultMessage + ' (Status: ' + xhr.status + ')'));
+            alert(res.message || (defaultMessage + ' <?= tj('i18n_status') ?> ' + xhr.status + ')'));
             return false;
         }
 
@@ -209,8 +209,8 @@
                     '<td style="white-space:pre-line">' + escapeHtml(sup.alamat) + '</td>' +
                     '<td style="white-space:pre-line">' + escapeHtml(sup.deskripsi) + '</td>' +
                     '<td class="text-center">' +
-                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + sup.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
-                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + sup.id + '" data-nama="' + escapeHtml(sup.nama) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + sup.id + '" title="<?= tj('update') ?>"><i class="bi bi-pencil"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + sup.id + '" data-nama="' + escapeHtml(sup.nama) + '" title="<?= tj('hapus') ?>"><i class="bi bi-trash"></i></button>' +
                     '</td>' +
                     '</tr>';
                 $tbody.append(tr);
@@ -260,13 +260,13 @@
 
                         var start = response.total === 0 ? 0 : ((response.current_page - 1) * response.per_page) + 1;
                         var end = Math.min(response.current_page * response.per_page, response.total);
-                        $('#supplierInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
+                        $('#supplierInfo').text('<?= tj('i18n_menampilkan') ?> ' + start + '-' + end + ' <?= tj('i18n_dari_lc') ?> ' + response.total + ' <?= tj('i18n_data_lc') ?>');
                     } else {
-                        $('#supplierTableBody').html('<tr><td colspan="6" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                        $('#supplierTableBody').html('<tr><td colspan="6" class="text-center text-danger"><?= tj('i18n_gagal_memuat_data') ?></td></tr>');
                     }
                 },
                 error: function() {
-                    $('#supplierTableBody').html('<tr><td colspan="6" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                    $('#supplierTableBody').html('<tr><td colspan="6" class="text-center text-danger"><?= tj('i18n_terjadi_kesalahan_saat_memuat_data') ?></td></tr>');
                 }
             });
         }
@@ -310,7 +310,7 @@
         $('#formTambahSup').on('submit', function(e) {
             e.preventDefault();
             syncCsrf(); // pastikan token yang dikirim adalah yang terbaru
-            $('#btnSimpan').prop('disabled', true).text('Menyimpan...');
+            $('#btnSimpan').prop('disabled', true).text('<?= tj('i18n_menyimpan') ?>');
 
             $.ajax({
                 url: "<?= site_url('supplier/simpan'); ?>",
@@ -330,7 +330,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error(error);
-                    if (!handleAjaxError(xhr, 'Terjadi kesalahan saat menyimpan data')) {
+                    if (!handleAjaxError(xhr, '<?= tj('i18n_terjadi_kesalahan_saat_menyimpan_data') ?>')) {
                         $('#btnSimpan').prop('disabled', false).text(txtSimpan);
                     }
                 }
@@ -359,7 +359,7 @@
                     }
                 },
                 error: function() {
-                    alert('Terjadi kesalahan saat mengambil data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_mengambil_data') ?>');
                 }
             });
         });
@@ -368,7 +368,7 @@
         $('#formEditSup').on('submit', function(e) {
             e.preventDefault();
             syncCsrf(); // pastikan token yang dikirim adalah yang terbaru
-            $('#btnUpdate').prop('disabled', true).text('Memperbarui...');
+            $('#btnUpdate').prop('disabled', true).text('<?= tj('i18n_memperbarui') ?>');
 
             $.ajax({
                 url: "<?= site_url('supplier/update'); ?>",
@@ -388,7 +388,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error(error);
-                    if (!handleAjaxError(xhr, 'Terjadi kesalahan saat memperbarui data')) {
+                    if (!handleAjaxError(xhr, '<?= tj('i18n_terjadi_kesalahan_saat_memperbarui_data') ?>')) {
                         $('#btnUpdate').prop('disabled', false).text(txtUpdate);
                     }
                 }
@@ -427,7 +427,7 @@
                 },
                 error: function(xhr, status, error) {
                     console.error(error);
-                    handleAjaxError(xhr, 'Terjadi kesalahan saat menghapus data');
+                    handleAjaxError(xhr, '<?= tj('i18n_terjadi_kesalahan_saat_menghapus_data') ?>');
                 }
             });
         });

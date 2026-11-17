@@ -34,8 +34,8 @@ class Sales_order extends MY_Controller
             $periode = ($filter['q'] !== '') ? 'semua' : 'bulan_ini';
         }
 
-        $nama_bulan = array(1 => 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli',
-            'Agustus', 'September', 'Oktober', 'November', 'Desember');
+        $nama_bulan = array(1 => translate('i18n_januari'), translate('i18n_februari'), translate('i18n_maret'), translate('i18n_april'), translate('i18n_mei'), translate('i18n_juni'), translate('i18n_juli'),
+            translate('i18n_agustus'), translate('i18n_september'), translate('i18n_oktober'), translate('i18n_november'), translate('i18n_desember'));
         $tgl_indo = function ($ymd) use ($nama_bulan) {
             $t = strtotime($ymd);
             return $t ? date('j', $t) . ' ' . $nama_bulan[(int) date('n', $t)] . ' ' . date('Y', $t) : $ymd;
@@ -56,18 +56,18 @@ class Sales_order extends MY_Controller
             case 'tahun_ini':
                 $filter['dari']   = date('Y-01-01');
                 $filter['sampai'] = date('Y-12-31');
-                $label_periode    = 'Tahun ' . date('Y');
+                $label_periode    = (translate('i18n_tahun') . ' ') . date('Y');
                 break;
             case 'semua':
-                $label_periode = 'Semua periode';
+                $label_periode = translate('i18n_semua_periode');
                 break;
             default: // custom
                 if ($filter['dari'] !== '' && $filter['sampai'] !== '') {
                     $label_periode = $tgl_indo($filter['dari']) . ' – ' . $tgl_indo($filter['sampai']);
                 } elseif ($filter['dari'] !== '') {
-                    $label_periode = 'Sejak ' . $tgl_indo($filter['dari']);
+                    $label_periode = (translate('i18n_sejak') . ' ') . $tgl_indo($filter['dari']);
                 } else {
-                    $label_periode = 'Sampai ' . $tgl_indo($filter['sampai']);
+                    $label_periode = (translate('i18n_sampai') . ' ') . $tgl_indo($filter['sampai']);
                 }
         }
 
@@ -140,7 +140,7 @@ class Sales_order extends MY_Controller
             show_404();
         }
 
-        $data['title']       = 'Detail ' . $so['header']->no_so;
+        $data['title']       = (translate('i18n_detail_2') . ' ') . $so['header']->no_so;
         $data['page_title']  = translate('detai_so');
         $data['active_menu'] = 'sales_order';
         $so['pembayaran']    = $this->Sales_order_model->get_pembayaran($id);
@@ -173,13 +173,13 @@ class Sales_order extends MY_Controller
         $res = $id > 0 ? $this->Sales_order_model->get_penawaran_lengkap($id) : null;
 
         if (!$res || empty($res['header'])) {
-            return $this->_json(array('error' => 'Penawaran #' . $id . ' tidak ditemukan.'));
+            return $this->_json(array('error' => translate('i18n_penawaran_2') . $id . (' ' . translate('i18n_tidak_ditemukan'))));
         }
         if (($res['header']->status ?? '') !== 'approved') {
-            return $this->_json(array('error' => 'Penawaran ini belum di-approve (status: ' . ($res['header']->status ?? '-') . ').'));
+            return $this->_json(array('error' => (translate('i18n_penawaran_ini_belum_di_approve_status') . ' ') . ($res['header']->status ?? '-') . ').'));
         }
         if (empty($res['items'])) {
-            return $this->_json(array('error' => 'Penawaran ini tidak punya item, SO tidak bisa dibuat.'));
+            return $this->_json(array('error' => translate('i18n_penawaran_ini_tidak_punya_item_so_tidak')));
         }
         $this->_json($res);
     }
@@ -195,7 +195,7 @@ class Sales_order extends MY_Controller
         $out = json_encode($data, $flags);
         if ($out === false) {
             log_message('error', 'Sales_order JSON gagal: ' . json_last_error_msg());
-            $out = json_encode(array('error' => 'Data penawaran gagal dibaca (' . json_last_error_msg() . ').'));
+            $out = json_encode(array('error' => translate('i18n_data_penawaran_gagal_dibaca') . json_last_error_msg() . ').'));
         }
         $this->output->set_content_type('application/json', 'utf-8')->set_output($out);
     }
@@ -222,7 +222,7 @@ class Sales_order extends MY_Controller
 
         $termin_valid = array('100', '50-50', '30-70', 'custom');
         if (!$id_penawaran || !$tanggal || !strtotime($tanggal) || !in_array($termin, $termin_valid, true)) {
-            $this->session->set_flashdata('error', 'Penawaran, tanggal, dan termin wajib diisi.');
+            $this->session->set_flashdata('error', translate('i18n_penawaran_tanggal_dan_termin_wajib_diisi'));
             redirect('sales_order/tambah');
             return;
         }
@@ -234,7 +234,7 @@ class Sales_order extends MY_Controller
             $dp = 30;
         }
         if ($dp < 0 || $dp > 100) {
-            $this->session->set_flashdata('error', 'DP harus antara 0 dan 100 persen.');
+            $this->session->set_flashdata('error', translate('i18n_dp_harus_antara_0_dan_100_persen'));
             redirect('sales_order/tambah');
             return;
         }
@@ -243,7 +243,7 @@ class Sales_order extends MY_Controller
         $tgl_kirim = trim((string) $this->input->post('tgl_kirim', true));
         if ($tgl_kirim !== '') {
             if (!strtotime($tgl_kirim)) {
-                $this->session->set_flashdata('error', 'Tanggal target kirim tidak valid.');
+                $this->session->set_flashdata('error', translate('i18n_tanggal_target_kirim_tidak_valid'));
                 redirect('sales_order/tambah');
                 return;
             }
@@ -267,7 +267,7 @@ class Sales_order extends MY_Controller
         );
 
         if ($ok) {
-            $this->session->set_flashdata('success', 'Sales Order ' . $pesan . ' berhasil dibuat.');
+            $this->session->set_flashdata('success', (translate('i18n_sales_order') . ' ') . $pesan . (' ' . translate('i18n_berhasil_dibuat')));
             redirect('sales_order');
         } else {
             $this->session->set_flashdata('error', $pesan);
@@ -313,7 +313,7 @@ class Sales_order extends MY_Controller
         $tgl_kirim = trim((string) $this->input->post('tgl_kirim', true));
         if ($tgl_kirim !== '') {
             if (!strtotime($tgl_kirim)) {
-                $this->session->set_flashdata('error', 'Tanggal target kirim tidak valid.');
+                $this->session->set_flashdata('error', translate('i18n_tanggal_target_kirim_tidak_valid'));
                 redirect('sales_order/detail/' . $id);
                 return;
             }
@@ -324,13 +324,13 @@ class Sales_order extends MY_Controller
         $tanggal = trim((string) $this->input->post('tanggal', true));
         if ($tanggal !== '') {
             if (!strtotime($tanggal)) {
-                $this->session->set_flashdata('error', 'Tanggal SO tidak valid.');
+                $this->session->set_flashdata('error', translate('i18n_tanggal_so_tidak_valid'));
                 redirect('sales_order/detail/' . $id);
                 return;
             }
             $tanggal = date('Y-m-d', strtotime($tanggal));
             if ($tanggal > date('Y-m-d')) {
-                $this->session->set_flashdata('error', 'Tanggal SO tidak boleh melebihi hari ini.');
+                $this->session->set_flashdata('error', translate('i18n_tanggal_so_tidak_boleh_melebihi_hari_ini'));
                 redirect('sales_order/detail/' . $id);
                 return;
             }
@@ -359,7 +359,7 @@ class Sales_order extends MY_Controller
         $nominal = (float) $this->input->post('nominal');
 
         if (!$tanggal || !strtotime($tanggal) || !in_array($jenis, array('dp', 'pelunasan', 'lainnya'), true) || $nominal <= 0) {
-            $this->session->set_flashdata('error', 'Tanggal, jenis, dan nominal pembayaran wajib diisi dengan benar.');
+            $this->session->set_flashdata('error', translate('i18n_tanggal_jenis_dan_nominal_pembayaran'));
             redirect('sales_order/detail/' . $id);
             return;
         }

@@ -34,7 +34,7 @@
             </thead>
             <tbody id="locationTableBody">
                 <tr>
-                    <td colspan="8" class="text-center text-muted">Memuat data...</td>
+                    <td colspan="8" class="text-center text-muted"><?= translate('i18n_memuat_data') ?></td>
                 </tr>
             </tbody>
         </table>
@@ -42,7 +42,7 @@
     <!-- ================= INFO + PAGINATION ================= -->
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <small class="text-muted" id="locationInfo"></small>
-        <nav aria-label="Pagination Locations">
+        <nav aria-label="<?= translate('i18n_pagination_locations') ?>">
             <ul class="pagination pagination-sm mb-0" id="locationPagination"></ul>
         </nav>
     </div>
@@ -54,38 +54,38 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalTambahLocationLabel"><i class="bi bi-geo-alt"></i> <?= translate('add') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formTambahLocation" autocomplete="off">
                 <div class="modal-body">
                     <input type="hidden" name="<?= $this->security->get_csrf_token_name(); ?>" class="csrf-field" value="<?= $this->security->get_csrf_hash(); ?>">
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('kode') ?></label>
-                        <input type="text" name="location_code" class="form-control form-control-sm" placeholder="Contoh: A-01-01" required>
+                        <input type="text" name="location_code" class="form-control form-control-sm" placeholder="<?= translate('i18n_contoh_a_01_01') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('nama') ?></label>
-                        <input type="text" name="zone_name" class="form-control form-control-sm" placeholder="Contoh: Zona A" required>
+                        <input type="text" name="zone_name" class="form-control form-control-sm" placeholder="<?= translate('i18n_contoh_zona_a') ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('lorong') ?></label>
-                        <input type="text" name="aisle" class="form-control form-control-sm" placeholder="Contoh: Lorong 1">
+                        <input type="text" name="aisle" class="form-control form-control-sm" placeholder="<?= translate('i18n_contoh_lorong_1') ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('no_rak') ?></label>
-                        <input type="text" name="rack_number" class="form-control form-control-sm" placeholder="Contoh: Rak 01">
+                        <input type="text" name="rack_number" class="form-control form-control-sm" placeholder="<?= translate('i18n_contoh_rak_01') ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('tingkat') ?></label>
-                        <input type="text" name="level" class="form-control form-control-sm" placeholder="Contoh: 1">
+                        <input type="text" name="level" class="form-control form-control-sm" placeholder="<?= translate('i18n_contoh_1') ?>">
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('jenis_lok') ?></label>
                         <select name="location_type" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('label_choice') ?> --</option>
-                            <option value="STORAGE">STORAGE</option>
-                            <option value="QUARANTINE">QUARANTINE</option>
-                            <option value="TRANSIT">TRANSIT</option>
+                            <option value="STORAGE"><?= translate('i18n_storage') ?></option>
+                            <option value="QUARANTINE"><?= translate('i18n_quarantine') ?></option>
+                            <option value="TRANSIT"><?= translate('i18n_transit') ?></option>
                         </select>
                     </div>
                 </div>
@@ -104,7 +104,7 @@
         <div class="modal-content">
             <div class="modal-header" style="background: var(--brand); color: #fff;">
                 <h5 class="modal-title fs-6" id="modalEditLocationLabel"><i class="bi bi-pencil-square"></i><?= translate('update') ?></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="<?= translate('i18n_close') ?>"></button>
             </div>
             <form id="formEditLocation" autocomplete="off">
                 <div class="modal-body">
@@ -134,9 +134,9 @@
                         <label class="form-label small fw-bold"><?= translate('jenis_lok') ?></label>
                         <select name="location_type" id="edit_location_type" class="form-select form-select-sm" required>
                             <option value="">-- <?= translate('label_choice') ?> --</option>
-                            <option value="STORAGE">STORAGE</option>
-                            <option value="QUARANTINE">QUARANTINE</option>
-                            <option value="TRANSIT">TRANSIT</option>
+                            <option value="STORAGE"><?= translate('i18n_storage') ?></option>
+                            <option value="QUARANTINE"><?= translate('i18n_quarantine') ?></option>
+                            <option value="TRANSIT"><?= translate('i18n_transit') ?></option>
                         </select>
                     </div>
                 </div>
@@ -173,7 +173,7 @@
             $tbody.empty();
 
             if (!rows || rows.length === 0) {
-                $tbody.append('<tr><td colspan="8" class="text-center text-muted">Data lokasi rak tidak ditemukan.</td></tr>');
+                $tbody.append('<tr><td colspan="8" class="text-center text-muted"><?= tj('i18n_data_lokasi_rak_tidak_ditemukan') ?></td></tr>');
                 return;
             }
 
@@ -189,8 +189,8 @@
                     '<td>' + escapeHtml(locations.level) + '</td>' +
                     '<td>' + escapeHtml(locations.location_type) + '</td>' +
                     '<td class="text-center">' +
-                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + locations.id + '" title="Edit"><i class="bi bi-pencil"></i></button> ' +
-                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + locations.id + '" data-nama="' + escapeHtml(locations.location_code) + '" title="Hapus"><i class="bi bi-trash"></i></button>' +
+                    '<button class="btn btn-sm btn-outline-warning btn-edit" data-id="' + locations.id + '" title="<?= tj('update') ?>"><i class="bi bi-pencil"></i></button> ' +
+                    '<button class="btn btn-sm btn-outline-danger btn-delete" data-id="' + locations.id + '" data-nama="' + escapeHtml(locations.location_code) + '" title="<?= tj('hapus') ?>"><i class="bi bi-trash"></i></button>' +
                     '</td>' +
                     '</tr>';
                 $tbody.append(tr);
@@ -240,13 +240,13 @@
 
                         var start = response.total === 0 ? 0 : ((response.current_page - 1) * response.per_page) + 1;
                         var end = Math.min(response.current_page * response.per_page, response.total);
-                        $('#locationInfo').text('Menampilkan ' + start + '-' + end + ' dari ' + response.total + ' data');
+                        $('#locationInfo').text('<?= tj('i18n_menampilkan') ?> ' + start + '-' + end + ' <?= tj('i18n_dari_lc') ?> ' + response.total + ' <?= tj('i18n_data_lc') ?>');
                     } else {
-                        $('#locationTableBody').html('<tr><td colspan="8" class="text-center text-danger">Gagal memuat data.</td></tr>');
+                        $('#locationTableBody').html('<tr><td colspan="8" class="text-center text-danger"><?= tj('i18n_gagal_memuat_data') ?></td></tr>');
                     }
                 },
                 error: function() {
-                    $('#locationTableBody').html('<tr><td colspan="8" class="text-center text-danger">Terjadi kesalahan saat memuat data.</td></tr>');
+                    $('#locationTableBody').html('<tr><td colspan="8" class="text-center text-danger"><?= tj('i18n_terjadi_kesalahan_saat_memuat_data') ?></td></tr>');
                 }
             });
         }
@@ -283,7 +283,7 @@
         // 1. AJAX TAMBAH LOCATION
         $('#formTambahLocation').on('submit', function(e) {
             e.preventDefault();
-            $('#btnSimpanLocation').prop('disabled', true).text('Menyimpan...');
+            $('#btnSimpanLocation').prop('disabled', true).text('<?= tj('i18n_menyimpan') ?>');
 
             $.ajax({
                 url: simpanUrl,
@@ -299,12 +299,12 @@
                     } else {
                         alert(response.message);
                     }
-                    $('#btnSimpanLocation').prop('disabled', false).text('Simpan Data');
+                    $('#btnSimpanLocation').prop('disabled', false).text('<?= tj('i18n_simpan_data') ?>');
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat menyimpan data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_menyimpan_data_2') ?>');
                     console.error(error);
-                    $('#btnSimpanLocation').prop('disabled', false).text('Simpan Data');
+                    $('#btnSimpanLocation').prop('disabled', false).text('<?= tj('i18n_simpan_data') ?>');
                 }
             });
         });
@@ -333,7 +333,7 @@
                     }
                 },
                 error: function() {
-                    alert('Terjadi kesalahan saat mengambil data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_mengambil_data') ?>');
                 }
             });
         });
@@ -341,7 +341,7 @@
         // 3. AJAX UPDATE LOCATION
         $('#formEditLocation').on('submit', function(e) {
             e.preventDefault();
-            $('#btnUpdateLocation').prop('disabled', true).text('Memperbarui...');
+            $('#btnUpdateLocation').prop('disabled', true).text('<?= tj('i18n_memperbarui') ?>');
 
             $.ajax({
                 url: updateUrl,
@@ -357,12 +357,12 @@
                     } else {
                         alert(response.message);
                     }
-                    $('#btnUpdateLocation').prop('disabled', false).text('Update Data');
+                    $('#btnUpdateLocation').prop('disabled', false).text('<?= tj('i18n_update_data') ?>');
                 },
                 error: function(xhr, status, error) {
-                    alert('Terjadi kesalahan saat memperbarui data.');
+                    alert('<?= tj('i18n_terjadi_kesalahan_saat_memperbarui_data_2') ?>');
                     console.error(error);
-                    $('#btnUpdateLocation').prop('disabled', false).text('Update Data');
+                    $('#btnUpdateLocation').prop('disabled', false).text('<?= tj('i18n_update_data') ?>');
                 }
             });
         });
@@ -372,7 +372,7 @@
             var id = $(this).data('id');
             var nama = $(this).data('nama');
 
-            if (confirm('Apakah Anda yakin ingin menghapus lokasi "' + nama + '"?')) {
+            if (confirm('<?= tj('i18n_apakah_anda_yakin_ingin_menghapus_lokasi') ?>' + nama + '"?')) {
                 $.ajax({
                     url: deleteUrl + id,
                     type: "POST",
@@ -388,7 +388,7 @@
                         }
                     },
                     error: function(xhr, status, error) {
-                        alert('Terjadi kesalahan saat menghapus data.');
+                        alert('<?= tj('i18n_terjadi_kesalahan_saat_menghapus_data_2') ?>');
                         console.error(error);
                     }
                 });

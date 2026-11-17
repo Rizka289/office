@@ -21,12 +21,12 @@
 <?php
 // warna & label badge per status (sama dengan halaman detail SO)
 $status_badge = array(
-    'draft'     => array('bg-secondary',         'Draft'),
-    'confirmed' => array('bg-primary',           'Dikonfirmasi'),
-    'produksi'  => array('bg-warning text-dark', 'Produksi'),
-    'terkirim'  => array('bg-info text-dark',    'Terkirim'),
-    'selesai'   => array('bg-success',           'Selesai'),
-    'batal'     => array('bg-danger',            'Batal'),
+    'draft'     => array('bg-secondary',         translate('i18n_draft')),
+    'confirmed' => array('bg-primary',           translate('i18n_dikonfirmasi')),
+    'produksi'  => array('bg-warning text-dark', translate('label_bar')),
+    'terkirim'  => array('bg-info text-dark',    translate('kirim')),
+    'selesai'   => array('bg-success',           translate('selesai')),
+    'batal'     => array('bg-danger',            translate('btn_batal')),
 );
 $rp = function ($n) {
     return 'Rp ' . number_format((float) $n, 0, ',', '.');
@@ -38,13 +38,13 @@ $rp = function ($n) {
   <?php if ($this->session->flashdata('success')): ?>
     <div class="alert alert-success alert-dismissible fade show" role="alert">
       <i class="bi bi-check-circle me-1"></i><?= html_escape($this->session->flashdata('success')) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_close') ?>"></button>
     </div>
   <?php endif; ?>
   <?php if ($this->session->flashdata('error')): ?>
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
       <i class="bi bi-exclamation-circle me-1"></i><?= html_escape($this->session->flashdata('error')) ?>
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<?= translate('i18n_close') ?>"></button>
     </div>
   <?php endif; ?>
 
@@ -56,17 +56,17 @@ $rp = function ($n) {
       if (!empty($filter_q)) { $qs['q'] = $filter_q; }
       return site_url('sales_order') . '?' . http_build_query($qs);
     };
-    $tombol_periode = array('bulan_ini' => 'Bulan ini', 'bulan_lalu' => 'Bulan lalu', 'tahun_ini' => 'Tahun ini', 'semua' => 'Semua');
+    $tombol_periode = array('bulan_ini' => translate('i18n_bulan_ini'), 'bulan_lalu' => translate('i18n_bulan_lalu'), 'tahun_ini' => translate('i18n_tahun_ini'), 'semua' => translate('i18n_semua'));
   ?>
   <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
     <div class="small text-muted">
-      <i class="bi bi-calendar3 me-1"></i>Ringkasan periode:
-      <span class="fw-semibold text-dark"><?= html_escape($label_periode ?? 'Semua periode'); ?></span>
+      <i class="bi bi-calendar3 me-1"></i><?= translate('i18n_ringkasan_periode') ?>
+      <span class="fw-semibold text-dark"><?= html_escape($label_periode ?? translate('i18n_semua_periode')); ?></span>
       <?php if (!empty($filter_q)): ?>
-        · pencarian "<span class="fw-semibold text-dark"><?= html_escape($filter_q); ?></span>"
+        <?= translate('i18n_pencarian') ?><span class="fw-semibold text-dark"><?= html_escape($filter_q); ?></span>"
       <?php endif; ?>
     </div>
-    <div class="btn-group btn-group-sm" role="group" aria-label="Pilih periode">
+    <div class="btn-group btn-group-sm" role="group" aria-label="<?= translate('i18n_pilih_periode') ?>">
       <?php foreach ($tombol_periode as $kode => $teks): ?>
         <a href="<?= $q_periode($kode); ?>" class="btn <?= $periode === $kode ? 'btn-success' : 'btn-outline-secondary'; ?>"><?= $teks; ?></a>
       <?php endforeach; ?>
@@ -89,8 +89,8 @@ $rp = function ($n) {
         <div class="kpi-icon bg-total"><i class="bi bi-cart-check"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($total_nilai ?? 0); ?></div>
-          <div class="kpi-label text-muted small">Nilai SO dibuat</div>
-          <div class="text-muted small"><?= (int) ($total_so ?? 0); ?> SO · menurut tgl SO</div>
+          <div class="kpi-label text-muted small"><?= translate('i18n_nilai_so_dibuat') ?></div>
+          <div class="text-muted small"><?= (int) ($total_so ?? 0); ?> <?= translate('i18n_so_menurut_tgl_so') ?></div>
         </div>
       </div>
     </div>
@@ -99,12 +99,12 @@ $rp = function ($n) {
         <div class="kpi-icon bg-nilai"><i class="bi bi-cash-stack"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($um['total']); ?></div>
-          <div class="kpi-label text-muted small">Uang masuk</div>
-          <div class="text-muted small" title="Dihitung dari tanggal pembayaran, termasuk pelunasan SO bulan sebelumnya">
-            DP <?= $rp($um['dp']); ?> · Pelunasan <?= $rp($um['pelunasan']); ?><?= $um['lainnya'] > 0 ? ' · Lainnya ' . $rp($um['lainnya']) : ''; ?>
+          <div class="kpi-label text-muted small"><?= translate('i18n_uang_masuk') ?></div>
+          <div class="text-muted small" title="<?= translate('i18n_dihitung_dari_tanggal_pembayaran') ?>">
+            <?= translate('i18n_dp') ?> <?= $rp($um['dp']); ?> <?= translate('i18n_pelunasan') ?> <?= $rp($um['pelunasan']); ?><?= $um['lainnya'] > 0 ? (' ' . translate('i18n_lainnya') . ' ') . $rp($um['lainnya']) : ''; ?>
           </div>
           <?php if ($um['pph'] > 0): ?>
-            <div class="text-muted" style="font-size:.72rem">+ bukti potong PPh <?= $rp($um['pph']); ?></div>
+            <div class="text-muted" style="font-size:.72rem"><?= translate('i18n_bukti_potong_pph') ?> <?= $rp($um['pph']); ?></div>
           <?php endif; ?>
         </div>
       </div>
@@ -115,10 +115,10 @@ $rp = function ($n) {
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($pt['total']); ?></div>
           <div class="kpi-label text-muted small">
-            Total piutang s/d hari ini
-            <?php if ($boleh_piutang): ?><a href="<?= site_url('piutang'); ?>" class="ms-1" title="Buka menu Piutang"><i class="bi bi-box-arrow-up-right"></i></a><?php endif; ?>
+            <?= translate('i18n_total_piutang_s_d_hari_ini') ?>
+            <?php if ($boleh_piutang): ?><a href="<?= site_url('piutang'); ?>" class="ms-1" title="<?= translate('i18n_buka_menu_piutang') ?>"><i class="bi bi-box-arrow-up-right"></i></a><?php endif; ?>
           </div>
-          <div class="text-muted small"><?= (int) $pt['jml_so']; ?> SO belum lunas<?php if ($pt['lama'] > 0): ?> · <?= $rp($pt['lama']); ?> dari periode sebelumnya<?php endif; ?></div>
+          <div class="text-muted small"><?= (int) $pt['jml_so']; ?> <?= translate('i18n_so_belum_lunas') ?><?php if ($pt['lama'] > 0): ?> · <?= $rp($pt['lama']); ?> <?= translate('i18n_dari_periode_sebelumnya') ?><?php endif; ?></div>
         </div>
       </div>
     </div>
@@ -127,8 +127,8 @@ $rp = function ($n) {
         <div class="kpi-icon bg-terima"><i class="bi bi-wallet2"></i></div>
         <div>
           <div class="kpi-value fw-bold fs-5"><?= $rp($sisa_diterima ?? 0); ?></div>
-          <div class="kpi-label text-muted small">Sisa tagihan SO periode ini</div>
-          <div class="text-muted small"><?= (int) ($jml_belum_lunas ?? 0); ?> SO belum lunas</div>
+          <div class="kpi-label text-muted small"><?= translate('i18n_sisa_tagihan_so_periode_ini') ?></div>
+          <div class="text-muted small"><?= (int) ($jml_belum_lunas ?? 0); ?> <?= translate('i18n_so_belum_lunas') ?></div>
         </div>
       </div>
     </div>
@@ -158,7 +158,7 @@ $rp = function ($n) {
       <input type="date" name="sampai" class="form-control" value="<?= html_escape($filter_sampai ?? ''); ?>">
     </div>
     <div class="col-6 col-md-1 d-grid">
-      <button type="submit" class="btn btn-outline-secondary" title="Filter"><i class="bi bi-funnel"></i></button>
+      <button type="submit" class="btn btn-outline-secondary" title="<?= translate('i18n_filter') ?>"><i class="bi bi-funnel"></i></button>
     </div>
     <div class="col-12 col-md-2 d-grid">
       <a href="<?= site_url('sales_order/tambah'); ?>" class="btn btn-success">
@@ -210,7 +210,7 @@ $rp = function ($n) {
                   <?php if ($st === 'batal'): ?>
                     <span class="text-muted">-</span>
                   <?php elseif ($lunas): ?>
-                    <span class="badge bg-success">LUNAS</span>
+                    <span class="badge bg-success"><?= translate('i18n_lunas_2') ?></span>
                   <?php else: ?>
                     <?= $rp($sisa); ?>
                   <?php endif; ?>
@@ -220,11 +220,11 @@ $rp = function ($n) {
                 </td>
                 <td class="text-center text-nowrap">
                   <a href="<?= site_url('sales_order/detail/' . (int) $row->id); ?>"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Lihat Detail">
+                    class="btn btn-icon-sm btn-outline-secondary" title="<?= translate('i18n_lihat_detail') ?>">
                     <i class="bi bi-eye"></i>
                   </a>
                   <a href="<?= site_url('sales_order/cetak/' . (int) $row->id); ?>" target="_blank"
-                    class="btn btn-icon-sm btn-outline-secondary" title="Cetak Invoice">
+                    class="btn btn-icon-sm btn-outline-secondary" title="<?= translate('i18n_cetak_invoice') ?>">
                     <i class="bi bi-printer"></i>
                   </a>
                 </td>
@@ -234,9 +234,9 @@ $rp = function ($n) {
             <tr class="empty-row">
               <td colspan="11">
                 <i class="bi bi-inbox"></i>
-                Belum ada data Sales Order<?= (!empty($filter_q)) ? ' untuk pencarian "' . html_escape($filter_q) . '"' : ''; ?> pada periode <?= html_escape($label_periode ?? '-'); ?>.
+                <?= translate('i18n_belum_ada_data_sales_order') ?><?= (!empty($filter_q)) ? (' ' . translate('i18n_untuk_pencarian')) . html_escape($filter_q) . '"' : ''; ?> <?= translate('i18n_pada_periode') ?> <?= html_escape($label_periode ?? '-'); ?>.
                 <?php if (($periode ?? '') !== 'semua'): ?>
-                  <a href="<?= $q_periode('semua'); ?>">Tampilkan semua periode</a>
+                  <a href="<?= $q_periode('semua'); ?>"><?= translate('i18n_tampilkan_semua_periode') ?></a>
                 <?php endif; ?>
               </td>
             </tr>

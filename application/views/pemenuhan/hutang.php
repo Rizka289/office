@@ -14,27 +14,27 @@ arsort($per_sup);
 <div class="pm container-fluid py-3">
 
   <div class="hero mb-3">
-    <div class="judul"><i class="bi bi-cash-coin me-2"></i>Hutang Supplier</div>
-    <div class="meta">PO yang sudah disetujui atasan dan belum lunas dibayar</div>
+    <div class="judul"><i class="bi bi-cash-coin me-2"></i><?= translate('i18n_hutang_supplier') ?></div>
+    <div class="meta"><?= translate('i18n_po_yang_sudah_disetujui_atasan_dan_belum') ?></div>
   </div>
 
   <?php $this->load->view('pemenuhan/_flash'); ?>
 
   <div class="row g-3 mb-3">
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted">Total nilai PO</div><div class="fs-5 fw-semibold"><?= $rp($tot_po) ?></div><div class="muted"><?= count($po_hutang) ?> PO</div></div></div></div>
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted">Sudah dibayar (DP / termin)</div><div class="fs-5 fw-semibold text-success"><?= $rp($tot_bayar) ?></div></div></div></div>
-    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted">Sisa hutang</div><div class="fs-5 fw-semibold text-danger"><?= $rp($tot_sisa) ?></div></div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted"><?= translate('i18n_total_nilai_po') ?></div><div class="fs-5 fw-semibold"><?= $rp($tot_po) ?></div><div class="muted"><?= count($po_hutang) ?> <?= translate('i18n_po') ?></div></div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted"><?= translate('i18n_sudah_dibayar_dp_termin') ?></div><div class="fs-5 fw-semibold text-success"><?= $rp($tot_bayar) ?></div></div></div></div>
+    <div class="col-sm-4"><div class="card h-100"><div class="card-body"><div class="muted"><?= translate('i18n_sisa_hutang') ?></div><div class="fs-5 fw-semibold text-danger"><?= $rp($tot_sisa) ?></div></div></div></div>
   </div>
 
   <div class="row g-3">
     <div class="col-lg-9">
       <div class="card">
-        <div class="card-header"><i class="bi bi-list-ul me-2"></i>Daftar PO belum lunas</div>
+        <div class="card-header"><i class="bi bi-list-ul me-2"></i><?= translate('i18n_daftar_po_belum_lunas') ?></div>
         <div class="table-responsive">
           <table class="table table-sm table-hover align-middle mb-0">
-            <thead class="table-light"><tr><th>No. PO</th><th>Supplier</th><th>SO / Customer</th><th>Status PO</th><th>Bayar</th><th class="text-end">Total</th><th class="text-end">Dibayar</th><th class="text-end">Sisa</th><th></th></tr></thead>
+            <thead class="table-light"><tr><th><?= translate('i18n_no_po_2') ?></th><th><?= translate('i18n_supplier') ?></th><th><?= translate('i18n_so_customer') ?></th><th><?= translate('i18n_status_po') ?></th><th><?= translate('i18n_bayar') ?></th><th class="text-end"><?= translate('total') ?></th><th class="text-end"><?= translate('i18n_dibayar') ?></th><th class="text-end"><?= translate('i18n_sisa') ?></th><th></th></tr></thead>
             <tbody>
-              <?php if (!$po_hutang): ?><tr><td colspan="9" class="text-center text-muted py-4">Tidak ada hutang ke supplier.</td></tr><?php endif; ?>
+              <?php if (!$po_hutang): ?><tr><td colspan="9" class="text-center text-muted py-4"><?= translate('i18n_tidak_ada_hutang_ke_supplier') ?></td></tr><?php endif; ?>
               <?php foreach ($po_hutang as $p): ?>
                 <tr>
                   <td class="fw-semibold"><a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>"><?= html_escape($p->no_po) ?></a><div class="muted"><?= $tgl($p->tanggal) ?></div></td>
@@ -47,7 +47,7 @@ arsort($per_sup);
                   <td class="text-end fw-semibold text-danger"><?= $rp((float) $p->total - (float) $p->total_bayar) ?></td>
                   <td class="text-end">
                     <?php if (!empty($izin['bayar'])): ?>
-                      <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>#pembayaran" class="btn btn-sm btn-success py-0">Bayar</a>
+                      <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>#pembayaran" class="btn btn-sm btn-success py-0"><?= translate('i18n_bayar') ?></a>
                     <?php else: ?>
                       <a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>" class="btn btn-sm btn-outline-secondary py-0"><i class="bi bi-eye"></i></a>
                     <?php endif; ?>
@@ -61,7 +61,7 @@ arsort($per_sup);
     </div>
     <div class="col-lg-3">
       <div class="card">
-        <div class="card-header"><i class="bi bi-building me-2"></i>Sisa per supplier</div>
+        <div class="card-header"><i class="bi bi-building me-2"></i><?= translate('i18n_sisa_per_supplier') ?></div>
         <ul class="list-group list-group-flush">
           <?php if (!$per_sup): ?><li class="list-group-item text-muted small">-</li><?php endif; ?>
           <?php foreach ($per_sup as $nama => $sisa): ?>

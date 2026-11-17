@@ -16,7 +16,7 @@
       <h5 class="mb-1"><i class="bi bi-cart-check me-2"></i><?= translate('lbl_buat_so') ?></h5>
       <small><?= translate('info_so') ?></small>
     </div>
-    <div class="fs-5 fw-semibold">No. SO: <span id="no_so_label"><?= html_escape($no_so) ?></span></div>
+    <div class="fs-5 fw-semibold"><?= translate('i18n_no_so_2') ?> <span id="no_so_label"><?= html_escape($no_so) ?></span></div>
   </div>
 
   <?php if ($this->session->flashdata('error')): ?>
@@ -35,9 +35,9 @@
             <label class="form-label"><?= translate('info_pilih_penawaran') ?><span class="text-danger">*</span></label>
             <?php /* Dropdown biasa (bukan datalist): pasti terpilih id-nya di semua browser */ ?>
             <input type="text" id="filter_penawaran" class="form-control form-control-sm mb-1"
-                   placeholder="Cari no. surat / nama customer..." autocomplete="off" <?= empty($penawaran_list) ? 'disabled' : '' ?>>
+                   placeholder="<?= translate('i18n_cari_no_surat_nama_customer') ?>" autocomplete="off" <?= empty($penawaran_list) ? 'disabled' : '' ?>>
             <select name="id_penawaran" id="id_penawaran" class="form-select" required <?= empty($penawaran_list) ? 'disabled' : '' ?>>
-              <option value="">-- Pilih penawaran (<?= count($penawaran_list) ?>) --</option>
+              <option value=""><?= translate('i18n_pilih_penawaran') ?><?= count($penawaran_list) ?>) --</option>
               <?php foreach ($penawaran_list as $p): ?>
                 <option value="<?= (int) $p->id ?>"><?= html_escape($p->no_surat . ' - ' . $p->nama_customer) ?></option>
               <?php endforeach; ?>
@@ -45,7 +45,7 @@
             <?php if (empty($penawaran_list)): ?>
               <div class="form-text text-warning">
                 <?= translate('ket_search_penawaran') ?><br>
-                Hanya penawaran berstatus <b>approved</b> yang belum dibuatkan SO yang muncul di sini.
+                <?= translate('i18n_hanya_penawaran_berstatus') ?> <b><?= translate('i18n_approved') ?></b> <?= translate('i18n_yang_belum_dibuatkan_so_yang_muncul_di') ?>
               </div>
             <?php endif; ?>
             <div class="form-text text-danger d-none" id="info_error"></div>
@@ -73,7 +73,7 @@
           </div>
           <div class="col-md-3">
             <label class="form-label"><?= translate('no_po_pelanggan') ?></label>
-            <input type="text" name="no_po_customer" class="form-control" maxlength="50" placeholder="Jika customer kirim PO">
+            <input type="text" name="no_po_customer" class="form-control" maxlength="50" placeholder="<?= translate('i18n_jika_customer_kirim_po') ?>">
           </div>
           <div class="col-md-3">
             <label class="form-label"><?= translate('target_kirim') ?></label>
@@ -89,16 +89,16 @@
             </select>
           </div>
           <div class="col-md-3 d-none" id="wrap_dp">
-            <label class="form-label">DP (%)</label>
+            <label class="form-label"><?= translate('i18n_dp_2') ?></label>
             <input type="number" name="dp_persen" id="dp_persen" class="form-control" min="0" max="100" step="0.01" value="0">
           </div>
           <div class="col-md-6">
             <label class="form-label"><?= translate('almt_kirim') ?></label>
-            <textarea name="alamat_kirim" id="alamat_kirim" class="form-control" rows="2" placeholder="Diisi otomatis dari alamat customer, boleh diubah"></textarea>
+            <textarea name="alamat_kirim" id="alamat_kirim" class="form-control" rows="2" placeholder="<?= translate('i18n_diisi_otomatis_dari_alamat_customer') ?>"></textarea>
           </div>
           <div class="col-md-6">
             <label class="form-label"><?= translate('catatan') ?></label>
-            <textarea name="catatan" class="form-control" rows="2" placeholder="Mis. akses lokasi, jam kerja, permintaan khusus"></textarea>
+            <textarea name="catatan" class="form-control" rows="2" placeholder="<?= translate('i18n_mis_akses_lokasi_jam_kerja_permintaan') ?>"></textarea>
           </div>
         </div>
       </div>
@@ -125,7 +125,7 @@
             </tr>
           </thead>
           <tbody id="tbody_item">
-            <tr><td colspan="8" class="text-center text-muted py-4">Pilih penawaran untuk menampilkan item.</td></tr>
+            <tr><td colspan="8" class="text-center text-muted py-4"><?= translate('i18n_pilih_penawaran_untuk_menampilkan_item') ?></td></tr>
           </tbody>
         </table>
       </div>
@@ -135,20 +135,20 @@
     <div class="row justify-content-end">
       <div class="col-lg-5">
         <div class="card so-card mb-3">
-          <div class="card-header"><i class="bi bi-receipt me-2"></i>Ringkasan</div>
+          <div class="card-header"><i class="bi bi-receipt me-2"></i><?= translate('rincian') ?></div>
           <div class="card-body">
-            <div class="d-flex justify-content-between mb-1"><span>Subtotal</span><span id="r_subtotal">Rp 0</span></div>
-            <div class="d-flex justify-content-between mb-1" id="wrap_pasang" style="display:none!important"><span>Biaya pasang</span><span id="r_pasang">Rp 0</span></div>
-            <div class="d-flex justify-content-between mb-1" id="wrap_ongkir" style="display:none!important"><span>Biaya ongkir</span><span id="r_ongkir">Rp 0</span></div>
-            <div class="d-flex justify-content-between mb-1"><span id="l_ppn">PPN</span><span id="r_ppn">Rp 0</span></div>
-            <div class="d-flex justify-content-between mb-1" id="wrap_pph" style="display:none!important"><span id="l_pph">PPh</span><span id="r_pph">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1"><span><?= translate('subtotal') ?></span><span id="r_subtotal">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1" id="wrap_pasang" style="display:none!important"><span><?= translate('i18n_biaya_pasang') ?></span><span id="r_pasang">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1" id="wrap_ongkir" style="display:none!important"><span><?= translate('i18n_biaya_ongkir') ?></span><span id="r_ongkir">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1"><span id="l_ppn"><?= translate('ppn') ?></span><span id="r_ppn">Rp 0</span></div>
+            <div class="d-flex justify-content-between mb-1" id="wrap_pph" style="display:none!important"><span id="l_pph"><?= translate('pph') ?></span><span id="r_pph">Rp 0</span></div>
             <div class="mb-3"></div>
             <div class="so-total">
-              <div class="small text-muted">Grand total</div>
+              <div class="small text-muted"><?= translate('i18n_grand_total') ?></div>
               <div class="fs-4 fw-bold" id="r_grand">Rp 0</div>
             </div>
             <div class="d-flex justify-content-between mt-3 small" id="wrap_dp_info" style="display:none!important">
-              <span>DP</span><span id="r_dp">Rp 0</span>
+              <span><?= translate('i18n_dp') ?></span><span id="r_dp">Rp 0</span>
             </div>
           </div>
         </div>
@@ -157,9 +157,9 @@
 
     <div class="card so-card">
       <div class="card-body d-flex justify-content-end gap-2">
-        <a href="<?= site_url('sales_order') ?>" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Batal</a>
+        <a href="<?= site_url('sales_order') ?>" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i><?= translate('btn_batal') ?></a>
         <button type="submit" class="btn btn-success" id="btn_simpan" disabled>
-          <i class="bi bi-check2-square me-1"></i>Simpan Sales Order
+          <i class="bi bi-check2-square me-1"></i><?= translate('i18n_simpan_sales_order') ?>
         </button>
       </div>
     </div>
@@ -212,10 +212,10 @@
 
   form.addEventListener('submit', function (e) {
     if (sedangKirim) { e.preventDefault(); return; }            // cegah klik ganda
-    if (!sel.value) { e.preventDefault(); alert('Pilih penawaran dulu.'); sel.focus(); return; }
+    if (!sel.value) { e.preventDefault(); alert('<?= tj('i18n_pilih_penawaran_dulu') ?>'); sel.focus(); return; }
     sedangKirim = true;
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Menyimpan...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span><?= tj('i18n_menyimpan') ?>';
   });
 
   function loadPenawaran(id) {
@@ -226,11 +226,11 @@
     fetch(urlGet + encodeURIComponent(id), {credentials: 'same-origin', headers: {'X-Requested-With': 'XMLHttpRequest'}})
       .then(function (r) {
         return r.text().then(function (t) {
-          if (!r.ok) { throw new Error('Server error HTTP ' + r.status); }
+          if (!r.ok) { throw new Error('<?= tj('i18n_server_error_http') ?> ' + r.status); }
           try { return JSON.parse(t); }
           catch (e) {
             // Biasanya karena ada PHP error/warning atau sesi login habis (redirect ke halaman login)
-            throw new Error('Respon server bukan JSON. Cek log PHP / coba login ulang.');
+            throw new Error('<?= tj('i18n_respon_server_bukan_json_cek_log_php') ?>');
           }
         });
       })
@@ -246,11 +246,11 @@
         d.items.forEach(function (it, i) {
           var tambahan = '';
           if (it.aksesoris && it.aksesoris.length) {
-            tambahan += '<div class="small text-muted">Aksesoris: ' +
+            tambahan += '<div class="small text-muted"><?= tj('i18n_aksesoris') ?> ' +
               it.aksesoris.map(function (a) { return esc(a.nama) + ' (' + num(a.qty, 2) + ')'; }).join(', ') + '</div>';
           }
           if (it.kaca && it.kaca.length) {
-            tambahan += '<div class="small text-muted">Kaca: ' +
+            tambahan += '<div class="small text-muted"><?= tj('i18n_kaca') ?> ' +
               it.kaca.map(function (k) { return esc(k.nama); }).join(', ') + '</div>';
           }
           rows += '<tr>' +
@@ -266,17 +266,17 @@
             '<td class="text-end">' + rp(it.total_harga) + '</td></tr>';
         });
         document.getElementById('tbody_item').innerHTML = rows ||
-          '<tr><td colspan="8" class="text-center text-muted py-4">Penawaran ini belum punya item.</td></tr>';
+          '<tr><td colspan="8" class="text-center text-muted py-4"><?= tj('i18n_penawaran_ini_belum_punya_item') ?></td></tr>';
 
         document.getElementById('r_subtotal').textContent = rp(h.subtotal);
         document.getElementById('r_pasang').textContent = rp(h.biaya_pasang);
         document.getElementById('r_ongkir').textContent = rp(h.biaya_ongkir);
         tampil('wrap_pasang', Number(h.biaya_pasang) > 0);
         tampil('wrap_ongkir', Number(h.biaya_ongkir) > 0);
-        document.getElementById('l_ppn').textContent = 'PPN ' + num(h.ppn_persen, 2) + '%';
+        document.getElementById('l_ppn').textContent = '<?= tj('ppn') ?> ' + num(h.ppn_persen, 2) + '%';
         document.getElementById('r_ppn').textContent = rp(h.ppn_nominal);
         // PPh sudah dipotong di penawaran (grand total = dasar + PPN - PPh), hanya ditampilkan
-        document.getElementById('l_pph').textContent = 'PPh ' + num(h.pph_persen, 2) + '% (dipotong customer)';
+        document.getElementById('l_pph').textContent = '<?= tj('pph') ?> ' + num(h.pph_persen, 2) + '<?= tj('i18n_dipotong_customer') ?>';
         document.getElementById('r_pph').textContent = '- ' + rp(h.pph_nominal);
         tampil('wrap_pph', Number(h.pph_nominal) > 0);
         document.getElementById('r_grand').textContent = rp(h.grand_total);
@@ -286,7 +286,7 @@
       })
       .catch(function (err) {
         if (seq !== reqSeq) { return; }
-        tampilError('Gagal mengambil data penawaran: ' + err.message);
+        tampilError('<?= tj('i18n_gagal_mengambil_data_penawaran') ?> ' + err.message);
         reset();
       });
   }
@@ -295,7 +295,7 @@
     ['v_customer', 'v_tgl_penawaran'].forEach(function (i) { document.getElementById(i).value = ''; });
     if (!alamatDiubah) { alamatEl.value = ''; }
     document.getElementById('tbody_item').innerHTML =
-      '<tr><td colspan="8" class="text-center text-muted py-4">Pilih penawaran untuk menampilkan item.</td></tr>';
+      '<tr><td colspan="8" class="text-center text-muted py-4"><?= tj('i18n_pilih_penawaran_untuk_menampilkan_item') ?></td></tr>';
     ['r_subtotal', 'r_pasang', 'r_ongkir', 'r_ppn', 'r_pph', 'r_grand'].forEach(function (i) {
       document.getElementById(i).textContent = 'Rp 0';
     });

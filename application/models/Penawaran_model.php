@@ -362,7 +362,7 @@ class Penawaran_model extends CI_Model
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = 'Transaksi database gagal, penawaran tidak disimpan.';
+            $this->last_error = translate('i18n_transaksi_database_gagal_penawaran_tidak');
             return false;
         }
 
@@ -383,11 +383,11 @@ class Penawaran_model extends CI_Model
         if (!$row || in_array($row->status, ['approved', 'batal'], true)) {
             $this->db->trans_complete();
             if (!$row) {
-                $this->last_error = 'Data penawaran tidak ditemukan.';
+                $this->last_error = translate('i18n_data_penawaran_tidak_ditemukan');
             } elseif ($row->status === 'batal') {
-                $this->last_error = 'Penawaran sudah dibatalkan. Aktifkan kembali dulu kalau ingin diubah.';
+                $this->last_error = translate('i18n_penawaran_sudah_dibatalkan_aktifkan');
             } else {
-                $this->last_error = 'Penawaran sudah di-approve dan tidak bisa diubah.';
+                $this->last_error = translate('i18n_penawaran_sudah_di_approve_dan_tidak');
             }
             return false;
         }
@@ -405,7 +405,7 @@ class Penawaran_model extends CI_Model
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = 'Transaksi database gagal, perubahan tidak disimpan.';
+            $this->last_error = translate('i18n_transaksi_database_gagal_perubahan_tidak');
             return false;
         }
 
@@ -426,7 +426,7 @@ class Penawaran_model extends CI_Model
 
         if (!$row) {
             $this->db->trans_complete();
-            $this->last_error = 'Data penawaran tidak ditemukan.';
+            $this->last_error = translate('i18n_data_penawaran_tidak_ditemukan');
             return false;
         }
 
@@ -440,7 +440,7 @@ class Penawaran_model extends CI_Model
         $this->db->trans_complete();
 
         if ($this->db->trans_status() === FALSE) {
-            $this->last_error = 'Transaksi database gagal, penawaran tidak dihapus.';
+            $this->last_error = translate('i18n_transaksi_database_gagal_penawaran_tidak_2');
             return false;
         }
 

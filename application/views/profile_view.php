@@ -28,14 +28,14 @@
                             ? base_url('uploads/profiles/' . $user->foto) 
                             : base_url('assets/images/default-avatar.png'); // Siapkan foto default jika kosong
                     ?>
-                    <img src="<?= $foto_path; ?>" alt="Foto Profil" class="rounded-circle img-thumbnail mb-2" style="width: 120px; height: 120px; object-fit: cover;">
+                    <img src="<?= $foto_path; ?>" alt="<?= translate('i18n_foto_profil') ?>" class="rounded-circle img-thumbnail mb-2" style="width: 120px; height: 120px; object-fit: cover;">
                     <div>
                         <label for="foto" class="btn btn-sm btn-outline-secondary mt-1">
-                            <i class="bi bi-camera me-1"></i> Ubah Foto Profil
+                            <i class="bi bi-camera me-1"></i> <?= translate('i18n_ubah_foto_profil') ?>
                         </label>
                         <input type="file" name="foto" id="foto" class="d-none" accept="image/*" onchange="previewImage(this)">
                     </div>
-                    <small class="text-muted d-block mt-1">Format: JPG, PNG, WEBP (Max: 2MB)</small>
+                    <small class="text-muted d-block mt-1"><?= translate('i18n_format_jpg_png_webp_max_2mb') ?></small>
                 </div>
 
                 <div class="mb-3">
@@ -54,7 +54,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label small fw-semibold"><?= translate('new_pwd') ?> <span class="text-muted fw-normal">(Opsional)</span></label>
+                    <label class="form-label small fw-semibold"><?= translate('new_pwd') ?> <span class="text-muted fw-normal"><?= translate('i18n_opsional_3') ?></span></label>
                     <input type="password" name="password" class="form-control" placeholder="<?= translate('placeholder') ?>">
                 </div>
 

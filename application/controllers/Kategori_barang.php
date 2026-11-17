@@ -22,7 +22,7 @@ class Kategori_barang extends MY_Controller
     private function mustBePost()
     {
         if ($this->input->method() !== 'post') {
-            $this->respond(['status' => false, 'message' => 'Metode request tidak valid.']);
+            $this->respond(['status' => false, 'message' => translate('i18n_metode_request_tidak_valid')]);
             return false;
         }
         return true;
@@ -36,7 +36,7 @@ class Kategori_barang extends MY_Controller
  
     public function index()
     {
-        $data['title']        = 'Manajemen Kategori Barang';
+        $data['title']        = translate('i18n_manajemen_kategori_barang');
         $data['page_title']   = translate('kategori_barang');
         $data['active_menu']  = 'kategori';
 
@@ -83,12 +83,12 @@ class Kategori_barang extends MY_Controller
 
         // Pakai === '' (bukan empty()) supaya nilai "0" tidak dianggap kosong
         if ($kode === '' || $nama === '' || $deskripsi === '') {
-            $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->respond(['status' => false, 'message' => translate('i18n_semua_field_wajib_diisi')]);
             return;
         }
 
         if ($this->Kategori_barang_model->kode_exists($kode)) {
-            $this->respond(['status' => false, 'message' => 'Kode kategori sudah digunakan, gunakan kode lain.']);
+            $this->respond(['status' => false, 'message' => translate('i18n_kode_kategori_sudah_digunakan_gunakan')]);
             return;
         }
 
@@ -104,7 +104,7 @@ class Kategori_barang extends MY_Controller
         $this->respond(
             $simpan
                 ? ['status' => true, 'message' => translate('message_sukses')]
-                : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message('Gagal menyimpan data')]
+                : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message(translate('i18n_gagal_menyimpan_data'))]
         );
     }
 
@@ -112,7 +112,7 @@ class Kategori_barang extends MY_Controller
     public function get_by_id($id = null)
     {
         if (!$this->isValidId($id)) {
-            $this->respond(['status' => false, 'message' => 'ID tidak valid']);
+            $this->respond(['status' => false, 'message' => translate('i18n_id_tidak_valid')]);
             return;
         }
 
@@ -121,7 +121,7 @@ class Kategori_barang extends MY_Controller
         $this->respond(
             $row
                 ? ['status' => true, 'data' => $row]
-                : ['status' => false, 'message' => 'Data tidak ditemukan']
+                : ['status' => false, 'message' => translate('i18n_data_tidak_ditemukan')]
         );
     }
 
@@ -138,18 +138,18 @@ class Kategori_barang extends MY_Controller
         $deskripsi = trim((string) $this->input->post('deskripsi', true));
 
         if (!$this->isValidId($id) || $kode === '' || $nama === '' || $deskripsi === '') {
-            $this->respond(['status' => false, 'message' => 'Semua field wajib diisi!']);
+            $this->respond(['status' => false, 'message' => translate('i18n_semua_field_wajib_diisi')]);
             return;
         }
 
         if (!$this->Kategori_barang_model->get_by_id($id)) {
-            $this->respond(['status' => false, 'message' => 'Data tidak ditemukan (mungkin sudah dihapus).']);
+            $this->respond(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan_mungkin_sudah')]);
             return;
         }
 
         // Cek kode kembar, kecuali terhadap dirinya sendiri
         if ($this->Kategori_barang_model->kode_exists($kode, $id)) {
-            $this->respond(['status' => false, 'message' => 'Kode kategori sudah digunakan, gunakan kode lain.']);
+            $this->respond(['status' => false, 'message' => translate('i18n_kode_kategori_sudah_digunakan_gunakan')]);
             return;
         }
 
@@ -164,7 +164,7 @@ class Kategori_barang extends MY_Controller
         $this->respond(
             $update
                 ? ['status' => true, 'message' => translate('message_update')]
-                : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message('Gagal memperbarui data')]
+                : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message(translate('message_update_gagal'))]
         );
     }
 
@@ -176,12 +176,12 @@ class Kategori_barang extends MY_Controller
         }
 
         if (!$this->isValidId($id)) {
-            $this->respond(['status' => false, 'message' => 'ID tidak valid']);
+            $this->respond(['status' => false, 'message' => translate('i18n_id_tidak_valid')]);
             return;
         }
 
         if (!$this->Kategori_barang_model->get_by_id($id)) {
-            $this->respond(['status' => false, 'message' => 'Data tidak ditemukan (mungkin sudah dihapus).']);
+            $this->respond(['status' => false, 'message' => translate('i18n_data_tidak_ditemukan_mungkin_sudah')]);
             return;
         }
 
@@ -190,7 +190,7 @@ class Kategori_barang extends MY_Controller
         $this->respond(
             $hapus
                 ? ['status' => true, 'message' => translate('message_delete_sukses')]
-                : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message('Gagal menghapus data')]
+                : ['status' => false, 'message' => $this->Kategori_barang_model->get_error_message(translate('i18n_gagal_menghapus_data'))]
         );
     }
 }

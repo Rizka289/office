@@ -2,9 +2,21 @@
 
 <?php
 
-// Luas selalu ditampilkan 2 angka di belakang koma (dibulatkan). Contoh: 1.649 -> 1.65, 10 -> 10.00
-$fmt_luas = function ($v) {
-  return number_format(round((float) $v, 2), 2, '.', '');
+// Luas 2 angka di belakang koma, pembulatan biasa (angka ke-3 >= 5 naik), sama dengan form & server.
+// Contoh: 0.4767 -> 0.48, 1.752 -> 1.75, 10 -> 10.00
+$luas2 = function ($v) {
+  $v = (float) $v;
+  if ($v <= 0) return 0;
+  return round(round($v * 1000000) / 10000) / 100;
+};
+$fmt_luas = function ($v) use ($luas2) {
+  return number_format($luas2($v), 2, '.', '');
+};
+
+// TOTAL luas = luas per unit x qty, BARU dibulatkan 2 angka (sama dengan Penawaran::_total_luas).
+// 1095 x 800 x 2 = 1.752 -> 1.75
+$total_luas = function ($luas_unit, $qty) use ($luas2) {
+  return $luas2((float) $luas_unit * (float) $qty);
 };
 
 // Ukuran yang ditampilkan di cetak = dasar perhitungan luas penagihan.
@@ -742,7 +754,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
           <th>Deskripsi<br><span class="cn">描述</span></th>
           <th>Lebar (mm)<br><span class="cn">宽 (mm)</span></th>
           <th>Tinggi (mm)<br><span class="cn">高 (mm)</span></th>
-          <th><?= $is_manual_cetak ? 'Luas (m²)' : 'Total Luas (m²)'; ?><br><span class="cn">总面积 (m²)</span></th>
+          <th>Total Luas (m²)<br><span class="cn">总面积 (m²)</span></th>
           <th>Qty<br><span class="cn">数量</span></th>
           <th><?= $is_manual_cetak ? 'Harga / m²' : 'Harga / Unit'; ?></th>
           <th>Total Harga<br><span class="cn">总计</span></th>
@@ -817,7 +829,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <?php
               $lebar_it = (int) $it->lebar_mm;
               $tinggi_it = (int) $it->tinggi_mm;
-              $luas_it = (float) ($it->luas_m2 ?? 0);
+              // Total luas = luas per unit x qty, dibulatkan 2 angka di belakang koma
+              $luas_it = $total_luas($it->luas_m2 ?? 0, max(1, (int) $it->qty));
 
               // total_harga di database = barang + aksesoris + kaca; baris barang
               // hanya menampilkan bagian barangnya (aksesoris & kaca punya baris sendiri).
@@ -885,26 +898,27 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             $b_qty  = (int) ($br_aks->qty_books ?? 0);
             $b_hrg  = (float) ($br_aks->harga_m2_books ?? 0);
             if ($b_luas > 0 && $b_qty > 0) {
+              $b_luas_total = $total_luas($b_luas, $b_qty);
               $books_rows[] = (object) [
                 'nama'      => 'Books Penutup',
                 'lebar_mm'  => $br_aks->lebar_m2_books,
                 'tinggi_mm' => $br_aks->tinggi_m2_books,
-                'luas'      => $b_luas,
+                'luas'      => $b_luas_total,
                 'qty'       => $b_qty,
                 'harga'     => $b_hrg,
-                'total'     => $b_luas * $b_qty * $b_hrg,
+                'total'     => $b_luas_total * $b_hrg,
               ];
             }
             // Biaya Instalasi (rolling door): luas billing x qty x tarif pasang per m²
             $i_qty = (float) ($br_aks->qty_instalasi ?? 0);
             $i_hrg = (float) ($br_aks->harga_m2_instalasi ?? 0);
             if ($i_qty > 0 || $i_hrg > 0) {
-              $i_luas = (float) ($br_aks->luas_billing_m2 ?? $br_aks->luas_m2 ?? 0);
+              $i_luas = $total_luas($br_aks->luas_billing_m2 ?? $br_aks->luas_m2 ?? 0, $i_qty);
               $inst_rows[] = (object) [
                 'luas'  => $i_luas,
                 'qty'   => $i_qty,
                 'harga' => $i_hrg,
-                'total' => $i_luas * $i_qty * $i_hrg,
+                'total' => $i_luas * $i_hrg,
               ];
             }
             foreach (($br_aks->aksesoris ?? []) as $ak_row) {
@@ -976,7 +990,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <?php else: ?>
                 <td class="num"><?= $uk_l; ?></td>
                 <td class="num"><?= $uk_t; ?></td>
-                <td class="num"><?= $fmt_luas($it->luas_billing_m2 ?? $it->luas_m2); ?></td>
+                <td class="num"><?= $fmt_luas($total_luas($it->luas_billing_m2 ?? $it->luas_m2, (int) $it->qty)); ?></td>
               <?php endif; ?>
               <td class="num"><?= (int) $it->qty; ?></td>
               <td class="money">Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
@@ -988,9 +1002,9 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 $total_aks_it += isset($ak_it->total_harga) ? (float) $ak_it->total_harga : (int) $ak_it->qty * (float) $ak_it->harga;
               }
               // Books penutup juga sudah termasuk di total_harga; tampil di baris sendiri
-              $total_aks_it += (float) ($it->luas_m2_books ?? 0) * (int) ($it->qty_books ?? 0) * (float) ($it->harga_m2_books ?? 0);
+              $total_aks_it += $total_luas($it->luas_m2_books ?? 0, (int) ($it->qty_books ?? 0)) * (float) ($it->harga_m2_books ?? 0);
               // Biaya instalasi juga sudah termasuk di total_harga; tampil di baris sendiri
-              $total_aks_it += (float) ($it->luas_billing_m2 ?? $it->luas_m2 ?? 0) * (float) ($it->qty_instalasi ?? 0) * (float) ($it->harga_m2_instalasi ?? 0);
+              $total_aks_it += $total_luas($it->luas_billing_m2 ?? $it->luas_m2 ?? 0, (float) ($it->qty_instalasi ?? 0)) * (float) ($it->harga_m2_instalasi ?? 0);
               // Detail kaca juga sudah termasuk di total_harga; tampil di baris sendiri
               foreach (($it->kaca ?? []) as $kc_it) {
                 $total_aks_it += isset($kc_it->total_harga) ? (float) $kc_it->total_harga : (float) $kc_it->luas * (float) $kc_it->harga;

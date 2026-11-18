@@ -239,14 +239,16 @@ class Penawaran extends MY_Controller
 
             $ru = $this->_is_rolling_door($kategori_rumus) ? $this->_rumus_ukuran_valid($rumus_ukuran[$i] ?? '') : null;
 
-            // Luas dibulatkan 2 angka di belakang koma (mis. 1,649 -> 1,65),
-            // dihitung dari mm² langsung supaya tidak terjadi pembulatan ganda.
-            $luas_riil    = round(($l * $t) / 1000000, 2);
-            $luas_billing = round($this->_luas_billing($kategori_rumus, $luas_riil, $l, $t, $ru), 2);
+            // Luas per unit TIDAK dibulatkan (disimpan 6 desimal). Yang dibulatkan 2 angka
+            // di belakang koma hanya HASIL AKHIR total luas = lebar x tinggi x qty.
+            // Mis. 1095 x 800 x 2 = 1,752 m² -> 1,75 (bukan 0,88 x 2 = 1,76).
+            $luas_riil    = $this->_luas_mm($l, $t);
+            $luas_billing = round($this->_luas_billing($kategori_rumus, $luas_riil, $l, $t, $ru), 6);
+            $luas_total   = $this->_total_luas($luas_billing, $q);
 
             $total = ($kategori_rumus === 'unit_fix')
                 ? $q * $harga_m2
-                : $luas_billing * $q * $harga_m2;
+                : $luas_total * $harga_m2;
 
             // Aksesoris
             $aks_list  = [];
@@ -303,10 +305,10 @@ class Penawaran extends MY_Controller
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $books_l     = max(0, (int) ($lebar_m2[$i] ?? 0));
                 $books_t     = max(0, (int) ($tinggi_m2[$i] ?? 0));
-                $books_luas  = round(($books_l * $books_t) / 1000000, 2);
+                $books_luas  = $this->_luas_mm($books_l, $books_t);
                 $books_q     = max(0, (int) ($qty_m2[$i] ?? 0));
                 $books_h     = max(0, (float) ($harga_books[$i] ?? 0));
-                $books_total = round($books_luas * $books_q * $books_h, 2);
+                $books_total = round($this->_total_luas($books_luas, $books_q) * $books_h, 2);
             }
             $total += $books_total;
 
@@ -317,7 +319,7 @@ class Penawaran extends MY_Controller
             if ($this->_is_rolling_door($kategori_rumus)) {
                 $instalasi_h     = max(0, (float) ($harga_instalasi[$i] ?? 0));
                 $instalasi_qty     = max(0, (float) ($qty_instalasi[$i] ?? 0));
-                $instalasi_total = round($luas_billing * $instalasi_qty * $instalasi_h, 2);
+                $instalasi_total = round($this->_total_luas($luas_billing, $instalasi_qty) * $instalasi_h, 2);
             }
             $total += $instalasi_total;
 
@@ -430,9 +432,10 @@ class Penawaran extends MY_Controller
             $l     = max(0, (int) ($lebar_mm[$i] ?? 0));
             $t     = max(0, (int) ($tinggi_mm[$i] ?? 0));
             // Luas manual boleh diketik sendiri (mis. "1,65"). Kalau kosong / 0,
-            // dihitung dari Lebar x Tinggi. Selalu dibulatkan 2 angka di belakang koma.
-            $luas_ketik = round(max(0, $this->_ke_angka($luas_input[$i] ?? '')), 2);
-            $luas       = ($luas_ketik > 0) ? $luas_ketik : round(($l * $t) / 1000000, 2);
+            // dihitung dari Lebar x Tinggi. Luas per unit tidak dibulatkan; yang dipotong
+            // 2 angka di belakang koma hanya total luas (luas x qty), sama dengan penawaran rumus.
+            $luas_ketik = round(max(0, $this->_ke_angka($luas_input[$i] ?? '')), 6);
+            $luas       = ($luas_ketik > 0) ? $luas_ketik : $this->_luas_mm($l, $t);
 
             // Aksesoris (+ foto per aksesoris)
             $aks_list  = [];
@@ -501,7 +504,7 @@ class Penawaran extends MY_Controller
             //                    pakai Qty x Harga supaya total tidak 0.
             $total_barang = 0;
             if ($ada_barang) {
-                $total_barang = ($sat === 'unit' || $luas <= 0) ? ($q * $h) : ($luas * $q * $h);
+                $total_barang = ($sat === 'unit' || $luas <= 0) ? ($q * $h) : ($this->_total_luas($luas, $q) * $h);
             }
             $total = round($total_barang, 2) + $total_aks + $total_kaca;
 
@@ -655,6 +658,30 @@ class Penawaran extends MY_Controller
         return (float) $v;
     }
 
+    // Pembulatan biasa ke 2 angka di belakang koma (angka ke-3 >= 5 naik), sama dengan Excel ROUND.
+    // Dibulatkan ke 6 desimal dulu supaya galat float tidak mengubah hasil (1,005 -> 1,01).
+    // 0,4767 -> 0,48 ; 0,876 -> 0,88 ; 1,752 -> 1,75
+    private function _potong2($v)
+    {
+        $v = (float) $v;
+        if ($v <= 0) return 0.0;
+        $m = round($v * 1000000);          // 6 desimal sebagai bilangan bulat
+        return round($m / 10000) / 100;    // bulatkan ke 2 desimal
+    }
+
+    // Luas per unit (m²) dari lebar x tinggi (mm), TIDAK dibulatkan: 1095 x 800 -> 0,876
+    private function _luas_mm($lebar_mm, $tinggi_mm)
+    {
+        return round(max(0, (int) $lebar_mm) * max(0, (int) $tinggi_mm) / 1000000, 6);
+    }
+
+    // TOTAL luas = luas per unit x qty, BARU dibulatkan 2 angka (pembulatan biasa).
+    // 1095 x 800 x 2 = 1,752 -> 1,75 (bukan 0,88 x 2 = 1,76)
+    private function _total_luas($luas_unit, $qty)
+    {
+        return $this->_potong2((float) $luas_unit * (float) $qty);
+    }
+
     // Rolling door: tahan api, baja, otomatis (ejaan "rooling" / tanpa "door_" juga dikenali)
     private function _is_rolling_door($kategori)
     {
@@ -686,7 +713,7 @@ class Penawaran extends MY_Controller
         // Rolling door (tahan api / baja / otomatis): luas dari ukuran tagih, minimal 10 m²
         if ($this->_is_rolling_door($kategori)) {
             list($lb, $tb) = $this->_ukuran_rolling($lebar_mm, $tinggi_mm, $this->_rumus_ukuran_valid((string) $rumus_ukuran));
-            return max(round(($lb * $tb) / 1000000, 2), 10.0);
+            return max($this->_luas_mm($lb, $tb), 10.0);
         }
         switch ($kategori) {
             case 'jendela_sliding':
@@ -724,8 +751,7 @@ class Penawaran extends MY_Controller
     {
         $jasa = max(0, (float) $biaya_pasang);
         foreach ($items as $it) {
-            $jasa += (float) ($it['luas_billing_m2'] ?? 0)
-                * (float) ($it['qty_instalasi'] ?? 0)
+            $jasa += $this->_total_luas($it['luas_billing_m2'] ?? 0, $it['qty_instalasi'] ?? 0)
                 * (float) ($it['harga_m2_instalasi'] ?? 0);
         }
         return round($jasa, 2);

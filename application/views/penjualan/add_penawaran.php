@@ -543,7 +543,7 @@ if ($is_edit && !empty($items_edit)) {
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label"><?= translate('i18n_luas_m2') ?></label>
-          <input type="text" inputmode="decimal" name="luas_m2[]" class="form-control it-luas" value="" placeholder="0,00" autocomplete="off">
+          <input type="text" inputmode="decimal" name="luas_m2[]" class="form-control it-luas" value="" placeholder="0,000" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label"><?= translate('i18n_qty_2') ?></label>
@@ -665,8 +665,9 @@ if ($is_edit && !empty($items_edit)) {
           <input type="number" name="tinggi_mm[]" min="0" class="form-control it-tinggi" placeholder="0">
         </div>
         <div class="col-6 col-md-2">
-          <label class="form-label"><?= translate('i18n_luas_m2') ?></label>
+          <label class="form-label">Total <?= translate('i18n_luas_m2') ?></label>
           <input type="text" class="form-control it-luas" value="0.00" readonly>
+          <div class="form-text it-luas-info"></div>
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label"><?= translate('i18n_qty_2') ?> <span class="text-danger">*</span></label>
@@ -746,7 +747,7 @@ if ($is_edit && !empty($items_edit)) {
           <input type="number" min="0" step="1" name="tinggi_m2_books[]" class="form-control it-books-tinggi" placeholder="<?= translate('i18n_mis_600') ?>">
         </div>
         <div class="col-md-3 books-blok d-none">
-          <label class="form-label"><?= translate('i18n_luas_m2') ?></label>
+          <label class="form-label">Total <?= translate('i18n_luas_m2') ?></label>
           <input type="text" class="form-control it-books-luas" value="0.00" readonly tabindex="-1">
         </div>
         <div class="col-md-3 books-blok d-none">
@@ -949,10 +950,16 @@ if ($is_edit && !empty($items_edit)) {
       set('.it-rumus-ukuran', d.rumus_ukuran === 't500' ? 't500' : 'l200_t600');
       if (IS_MANUAL) {
         var luasSimpan = parseFloat(d.luas_m2) || 0;
-        var luasHitung = Math.round(((parseInt(d.lebar_mm, 10) || 0) * (parseInt(d.tinggi_mm, 10) || 0)) / 10000) / 100;
-        if (luasSimpan > 0 && Math.abs(luasSimpan - luasHitung) > 0.001) {
+        var mm2Simpan = (parseInt(d.lebar_mm, 10) || 0) * (parseInt(d.tinggi_mm, 10) || 0);
+        var luasHitung = luasDariMm(parseInt(d.lebar_mm, 10) || 0, parseInt(d.tinggi_mm, 10) || 0);
+        // Data lama tersimpan dengan pembulatan (0,876 -> 0,88): tetap dianggap otomatis,
+        // jadi saat disimpan ulang luasnya ikut terkoreksi ke 0,87.
+        var luasLama = Math.round(mm2Simpan / 10000) / 100;      // data lama: dibulatkan
+        var luasPotong = Math.floor(mm2Simpan / 10000) / 100;    // data lama: dipotong
+        if (luasSimpan > 0 && Math.abs(luasSimpan - luasHitung) > 0.000001 &&
+          Math.abs(luasSimpan - luasLama) > 0.000001 && Math.abs(luasSimpan - luasPotong) > 0.000001) {
           card.dataset.luasManual = '1';
-          set('.it-luas', luasSimpan.toFixed(2));
+          set('.it-luas', fmtLuasUnit(luasSimpan));
         }
       }
       set('.it-qty', d.qty > 0 ? d.qty : 1);
@@ -1157,25 +1164,74 @@ if ($is_edit && !empty($items_edit)) {
       return [lebarMm + 200, tinggiMm + 600];
     }
 
-    // Bulatkan luas ke 2 angka di belakang koma (mis. 1,649 -> 1,65)
+    // Potong (BUKAN bulatkan) luas ke 2 angka di belakang koma: 0,876 -> 0,87 ; 1,649 -> 1,64.
+    // +1e-6 menahan galat float (1,65 yang tersimpan 1,6499999 tetap 1,65). Sama dengan server.
+    // Pembulatan biasa ke 2 angka (angka ke-3 >= 5 naik), sama dengan server & Excel ROUND.
+    // 0,4767 -> 0,48 ; 1,752 -> 1,75
     function bulat2(n) {
-      return Math.round((n + Number.EPSILON) * 100) / 100;
+      n = Number(n) || 0;
+      if (n <= 0) return 0;
+      var m = Math.round(n * 1000000);
+      return Math.round(m / 10000) / 100;
     }
 
+    // Luas per unit (m²) dari lebar x tinggi (mm), TIDAK dibulatkan: 1095 x 800 -> 0,876
+    function luasDariMm(lebarMm, tinggiMm) {
+      var mm2 = Math.max(0, Math.round(lebarMm || 0)) * Math.max(0, Math.round(tinggiMm || 0));
+      return Math.round(mm2) / 1000000;
+    }
+
+    // TOTAL luas = luas per unit x qty, BARU dibulatkan 2 angka: 1095 x 800 x 2 = 1,752 -> 1,75
+    function totalLuas(luasUnit, qty) {
+      return bulat2((Number(luasUnit) || 0) * (Number(qty) || 0));
+    }
+
+    // Tampilan luas per unit tanpa pembulatan berlebih: 0.876 -> "0.876", 1.5 -> "1.50"
+    function fmtLuasUnit(n) {
+      n = Math.round((Number(n) || 0) * 1000000) / 1000000;
+      var t = String(n);
+      var des = (t.split('.')[1] || '').length;
+      return des < 2 ? n.toFixed(2) : t;
+    }
+
+    // HARUS sama dengan Penawaran::_luas_billing() di controller
     function luasBilling(kategori, luasRiil, lebarMm, tinggiMm, rumusUkuran) {
       var luas = luasRiil;
-      if (kategori === 'jendela_sliding') {
-        luas = Math.max(luasRiil, 1.3);
-      } else if (kategori === 'jendela_swing_b1' || kategori === 'jendela_swing_b2') {
-        luas = Math.max(luasRiil, 1.4);
-        if (luas > 3 && luas < 5) luas += 1.3;
-      } else if (kategori === 'pintu_baja') {
-        luas = Math.max(luasRiil, 2);
-      } else if (isRollingDoor(kategori)) {
+      if (isRollingDoor(kategori)) {
         var uk = ukuranRolling(lebarMm, tinggiMm, rumusUkuran);
-        luas = Math.max(Math.round((uk[0] * uk[1]) / 10000) / 100, 10);
+        luas = Math.max(luasDariMm(uk[0], uk[1]), 10);
+      } else {
+        switch (kategori) {
+          case 'jendela_sliding':
+            luas = Math.max(luasRiil, 1.3);
+            break;
+          case 'jendela_swing_b1':
+          case 'jendela_jungkit':
+            luas = Math.max(luasRiil, 1.4);
+            break;
+          case 'jendela_swing_b2':
+            luas = Math.max(luasRiil, 1.4);
+            if (luasRiil > 3 && luasRiil < 5) luas = luasRiil + 1.3;
+            break;
+          case 'jendela_jalusi':
+          case 'jendela_mati':
+            luas = Math.max(luasRiil, 1.0);
+            break;
+          case 'pintu_baja':
+          case 'pintu_kayu':
+          case 'pintu_alumunium':
+          case 'pintu_tahan_api':
+            luas = Math.max(luasRiil, 2.0);
+            break;
+          case 'pintu_baja_double':
+          case 'pintu_alumunium_double':
+          case 'pintu_tahan_api_double':
+            luas = Math.max(luasRiil, 3.9);
+            break;
+        }
       }
-      return bulat2(luas);
+      // Luas billing PER UNIT, tidak dibulatkan (yang dipotong hanya total luas x qty)
+      return Math.round(luas * 1000000) / 1000000;
     }
 
     function hitungBaris(card) {
@@ -1187,22 +1243,31 @@ if ($is_edit && !empty($items_edit)) {
       var kategori = kategoriBaris(card);
       var elRumusUk = card.querySelector('.it-rumus-ukuran');
       var rumusUk = elRumusUk ? elRumusUk.value : 'l200_t600';
-      // Luas dibulatkan 2 angka di belakang koma (dihitung dari mm² langsung, sama dengan server)
-      var luasRiil = Math.round((lebar * tinggi) / 10000) / 100;
-      var luas = luasBilling(kategori, luasRiil, lebar, tinggi, rumusUk);
+      // Luas per unit tidak dibulatkan; TOTAL luas (luas x qty) dibulatkan 2 angka (sama dengan server)
+      var luasRiil = luasDariMm(lebar, tinggi);
+      var luas = luasBilling(kategori, luasRiil, lebar, tinggi, rumusUk); // per unit
       var inpLuas = card.querySelector('.it-luas');
       if (IS_MANUAL) {
         // Mode manual: tanpa luas minimum / aturan kategori.
-        // Luas diketik sendiri -> pakai ketikan; kalau tidak -> Lebar x Tinggi.
+        // Luas (per unit) diketik sendiri -> pakai ketikan; kalau tidak -> Lebar x Tinggi.
         if (card.dataset.luasManual === '1') {
-          luas = bulat2(toNum(inpLuas.value));
+          luas = Math.round(toNum(inpLuas.value) * 1000000) / 1000000;
         } else {
           luas = luasRiil;
           // Jangan timpa isian yang sedang diketik
-          if (inpLuas && document.activeElement !== inpLuas) inpLuas.value = luas > 0 ? luas.toFixed(2) : '';
+          if (inpLuas && document.activeElement !== inpLuas) inpLuas.value = luas > 0 ? fmtLuasUnit(luas) : '';
         }
-      } else if (inpLuas) {
-        inpLuas.value = luas.toFixed(2);
+      }
+      var luasTotal = totalLuas(luas, qty);
+      if (!IS_MANUAL && inpLuas) {
+        // Mode rumus: kolom Luas menampilkan TOTAL luas (lebar x tinggi x qty, dibulatkan 2 angka)
+        inpLuas.value = luasTotal.toFixed(2);
+        var elLuasInfo = card.querySelector('.it-luas-info');
+        if (elLuasInfo) {
+          elLuasInfo.textContent = (luas > 0 && kategori !== 'unit_fix')
+            ? fmtLuasUnit(luas).replace('.', ',') + ' m² × ' + qty
+            : '';
+        }
       }
 
       var totalAksesoris = 0;
@@ -1232,7 +1297,7 @@ if ($is_edit && !empty($items_edit)) {
       var elUkTagih = card.querySelector('.it-ukuran-tagih');
       if (elUkTagih && rolling) {
         var ukT = ukuranRolling(lebar, tinggi, rumusUk);
-        elUkTagih.textContent = '<?= tj('i18n_ukuran_tagih') ?> ' + ukT[0] + ' × ' + ukT[1] + ' <?= tj('i18n_mm_luas') ?> ' + luas.toFixed(2) + ' <?= tj('i18n_m2_minimal_10_m2') ?>';
+        elUkTagih.textContent = '<?= tj('i18n_ukuran_tagih') ?> ' + ukT[0] + ' × ' + ukT[1] + ' <?= tj('i18n_mm_luas') ?> ' + fmtLuasUnit(luas).replace('.', ',') + ' <?= tj('i18n_m2_minimal_10_m2') ?>';
       }
 
       // Toggle Books Penutup
@@ -1245,8 +1310,8 @@ if ($is_edit && !empty($items_edit)) {
         var bTinggi = parseFloat(card.querySelector('.it-books-tinggi').value) || 0;
         var bQty = parseFloat(card.querySelector('.it-books-qty').value) || 0;
         var bHarga = parseFloat(card.querySelector('.it-books-harga').value) || 0;
-        var bLuas = Math.round((bLebar * bTinggi) / 10000) / 100;
-        totalBooks = bLuas * bQty * bHarga;
+        var bLuas = totalLuas(luasDariMm(bLebar, bTinggi), bQty); // total luas books (x qty)
+        totalBooks = bLuas * bHarga;
         var elBLuas = card.querySelector('.it-books-luas');
         if (elBLuas) elBLuas.value = bLuas.toFixed(2);
         var elBTotal = card.querySelector('.it-books-total');
@@ -1262,7 +1327,7 @@ if ($is_edit && !empty($items_edit)) {
         var hInstalasi = parseFloat(card.querySelector('.it-instalasi-harga').value) || 0;
         var qInstalasi = parseFloat(card.querySelector('.it-instalasi-qty').value) || 0;
         // Rumus: Luas Billing x Qty x Harga Pasang per m²
-        totalInstalasi = luas * qInstalasi * hInstalasi;
+        totalInstalasi = totalLuas(luas, qInstalasi) * hInstalasi;
         var elInstTotal = card.querySelector('.it-instalasi-total');
         if (elInstTotal) elInstTotal.value = rupiah(totalInstalasi);
       }
@@ -1275,17 +1340,18 @@ if ($is_edit && !empty($items_edit)) {
         var perUnit = elSatuan && elSatuan.value === 'unit';
         var elHargaLbl = card.querySelector('.it-harga-label');
         if (elHargaLbl) elHargaLbl.textContent = perUnit ? '<?= tj('i18n_harga_unit') ?>' : '<?= tj('i18n_harga_m2') ?>';
-        totalBarang = (perUnit || luas <= 0 ? 1 : luas) * qty * harga;
+        totalBarang = (perUnit || luas <= 0) ? (qty * harga) : (luasTotal * harga);
         var elTB = card.querySelector('.it-total-barang');
         if (elTB) elTB.value = rupiah(totalBarang);
         var elInfo = card.querySelector('.it-rumus-info');
         if (elInfo) {
           elInfo.textContent = (perUnit || luas <= 0)
             ? qty + ' × ' + rupiah(harga)
-            : luas.toFixed(2).replace('.', ',') + ' m² × ' + qty + ' × ' + rupiah(harga);
+            : fmtLuasUnit(luas).replace('.', ',') + ' m² × ' + qty + ' = ' +
+              luasTotal.toFixed(2).replace('.', ',') + ' m² × ' + rupiah(harga);
         }
       } else {
-        totalBarang = (kategori === 'unit_fix') ? (qty * harga) : (luas * qty * harga);
+        totalBarang = (kategori === 'unit_fix') ? (qty * harga) : (luasTotal * harga);
       }
       var total = totalBarang + totalAksesoris + totalKaca + totalBooks + totalInstalasi;
       card.querySelector('.item-subtotal').textContent = rupiah(total);
@@ -1396,13 +1462,13 @@ if ($is_edit && !empty($items_edit)) {
       if (cardInp) segarkan();
     });
 
-    // Mode manual: setelah selesai mengetik luas, rapikan jadi 2 angka di belakang koma
+    // Mode manual: setelah selesai mengetik luas per unit, rapikan tampilannya (tidak dibulatkan)
     wrap.addEventListener('focusout', function(e) {
       if (!IS_MANUAL || !e.target.classList.contains('it-luas')) return;
       var card = e.target.closest('.item-card');
       if (card.dataset.luasManual === '1') {
-        var v = bulat2(toNum(e.target.value));
-        e.target.value = v > 0 ? v.toFixed(2) : '';
+        var v = Math.round(toNum(e.target.value) * 1000000) / 1000000;
+        e.target.value = v > 0 ? fmtLuasUnit(v) : '';
         if (v <= 0) card.dataset.luasManual = '';
       }
       segarkan();

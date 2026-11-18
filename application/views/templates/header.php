@@ -524,67 +524,17 @@
 
     /**
      * NOTIFIKASI per role (lonceng di topbar + badge di menu).
-     * Tambah notifikasi role lain cukup di blok ini.
+     * Tambah notifikasi role lain cukup di helpers/notif_helper.php.
      *   atasan / super_admin : Penawaran & PO menunggu persetujuan
      */
-    $notif_list  = array();   // tiap item: judul, sub, url, waktu
-    $notif_badge = array();   // key menu => jumlah
-    $notif_count = array('penawaran' => 0, 'po' => 0); // jumlah per jenis (untuk ringkasan dropdown)
-    if (in_array($current_role, array('atasan', 'super_admin'), true)) {
-        $CI        =& get_instance();
-        $db_debug  = $CI->db->db_debug;
-        $CI->db->db_debug = false; // kalau tabel/kolom belum ada, header tetap tampil
-
-        // 1) Penawaran yang belum di-approve (status draft / selain 'approved')
-        $qp = $CI->db->query(
-            "SELECT pen.id, pen.no_surat, pen.grand_total, pen.tanggal, cus.nama AS nama_customer, u.nama AS nama_pembuat
-               FROM penawaran pen
-               LEFT JOIN customer cus ON cus.id = pen.id_customer
-               LEFT JOIN users u      ON u.id = pen.id_user
-              WHERE pen.status IS NULL OR pen.status <> 'approved'
-              ORDER BY pen.id ASC"
-        );
-        foreach ($qp ? $qp->result() : array() as $r) {
-            $notif_list[] = array(
-                'ikon'  => 'bi-tags-fill text-primary',
-                'judul' => (translate('i18n_penawaran') . ' ') . $r->no_surat . (' ' . translate('i18n_menunggu_approval_2')),
-                'sub'   => trim(($r->nama_customer ?: '-') . (' ' . translate('i18n_rp_2') . ' ') . number_format((float) $r->grand_total, 0, ',', '.')
-                    . ($r->nama_pembuat ? (' ' . translate('i18n_oleh') . ' ') . $r->nama_pembuat : '')),
-                'url'   => site_url('penawaran/detail/' . (int) $r->id),
-                'waktu' => $r->tanggal ? date('d M Y', strtotime($r->tanggal)) : '',
-            );
-            $notif_count['penawaran']++;
-        }
-
-        // 2) PO yang masih draft
-        $q = $CI->db->query(
-            "SELECT po.id, po.no_po, po.total, po.tanggal, s.nama AS nama_supplier, so.no_so, u.nama AS nama_pembuat
-               FROM pm_po po
-               LEFT JOIN supplier s     ON s.id = po.id_supplier
-               LEFT JOIN sales_order so ON so.id = po.id_so
-               LEFT JOIN users u        ON u.id = po.id_user
-              WHERE po.status = 'draft'
-              ORDER BY po.id ASC"
-        );
-        $CI->db->db_debug = $db_debug;
-        foreach ($q ? $q->result() : array() as $r) {
-            $notif_list[] = array(
-                'ikon'  => 'bi-hourglass-split text-warning',
-                'judul' => 'PO ' . $r->no_po . (' ' . translate('i18n_menunggu_approval_2')),
-                'sub'   => trim(($r->nama_supplier ?: '-') . (' ' . translate('i18n_rp_2') . ' ') . number_format((float) $r->total, 0, ',', '.')
-                    . ($r->nama_pembuat ? (' ' . translate('i18n_oleh') . ' ') . $r->nama_pembuat : '')),
-                'url'   => site_url('pemenuhan/po_detail/' . (int) $r->id),
-                'waktu' => $r->tanggal ? date('d M Y', strtotime($r->tanggal)) : '',
-            );
-            $notif_count['po']++;
-        }
-        if ($notif_count['penawaran']) {
-            $notif_badge['penawaran'] = $notif_count['penawaran'];
-        }
-        if ($notif_count['po']) {
-            $notif_badge['po'] = $notif_count['po'];
-        }
-    }
+    // Logika notifikasi dipindah ke helpers/notif_helper.php supaya bisa dipakai juga di Dashboard.
+    // Hasilnya di-cache per request, jadi header + dashboard tidak query dua kali.
+    $CI =& get_instance();
+    $CI->load->helper('notif');
+    $_notif      = get_notifikasi($current_role);
+    $notif_list  = $_notif['list'];   // tiap item: judul, sub, url, waktu
+    $notif_badge = $_notif['badge'];  // key menu => jumlah
+    $notif_count = $_notif['count'];  // jumlah per jenis (untuk ringkasan dropdown)
 
     function render_navigation($menu_id, $menu_groups, $current_role, $active_menu = '', $notif_badge = array())
     {

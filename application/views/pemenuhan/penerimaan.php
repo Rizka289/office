@@ -31,7 +31,7 @@ $hari_ini = strtotime(date('Y-m-d'));
             <tr>
               <td class="fw-semibold"><a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>"><?= html_escape($p->no_po) ?></a><div class="muted"><?= $tgl($p->tanggal) ?></div></td>
               <td><?= html_escape($p->nama_supplier) ?></td>
-              <td><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape($p->nama_customer) ?></div></td>
+              <td><?php if ($p->id_so): ?><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape((string) $p->nama_customer) ?></div><?php else: ?><span class="badge text-bg-secondary fw-normal">Bahan / Stok</span><?php endif; ?></td>
               <td><?= $drop ? '<span class="badge text-bg-info fw-normal">' . translate('i18n_langsung_ke_customer') . '</span>' : '<span class="badge text-bg-light fw-normal">' . translate('i18n_gudang') . '</span>' ?></td>
               <td class="<?= $telat ? 'text-danger fw-semibold' : '' ?>"><?= $tgl($p->tgl_butuh) ?><?= $telat ? ' <i class="bi bi-exclamation-circle" title="' . translate('i18n_lewat_tanggal_dibutuhkan') . '"></i>' : '' ?></td>
               <td>

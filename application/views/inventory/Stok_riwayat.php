@@ -8,7 +8,13 @@
 </style>
 
 <div class="container-fluid">
-    
+
+    <?php if ($this->session->flashdata('success')): ?>
+        <div class="alert alert-success"><?= htmlspecialchars($this->session->flashdata('success')); ?></div>
+    <?php endif; ?>
+    <?php if ($this->session->flashdata('error')): ?>
+        <div class="alert alert-danger"><?= htmlspecialchars($this->session->flashdata('error')); ?></div>
+    <?php endif; ?>
 
     <!-- Form Filter -->
     <div class="card shadow mb-4">
@@ -72,13 +78,21 @@
                             <th><?= translate('stok_stlh') ?></th>
                             <th><?= translate('deskripsi') ?></th>
                             <th><?= translate('petugas') ?></th>
+                            <th class="text-center" data-orderable="false"><?= translate('aksi') ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (!empty($riwayat)): ?>
+                            <?php
+                            // Urutkan TERBARU di atas (DESC): tanggal dulu, kalau tanggal sama pakai id
+                            usort($riwayat, function ($a, $b) {
+                                $cmp = strcmp((string) $b['created_at'], (string) $a['created_at']);
+                                return $cmp !== 0 ? $cmp : ((int) ($b['id'] ?? 0) <=> (int) ($a['id'] ?? 0));
+                            });
+                            ?>
                             <?php foreach ($riwayat as $row): ?>
                                 <tr>
-                                    <td><?= date('d-m-Y H:i', strtotime($row['created_at'])); ?></td>
+                                    <td data-order="<?= sprintf('%s#%010d', $row['created_at'], (int) ($row['id'] ?? 0)); ?>"><?= date('d-m-Y H:i', strtotime($row['created_at'])); ?></td>
                                     <td><?= htmlspecialchars($row['kode_barang'] ?? ''); ?></td>
                                     <td><?= htmlspecialchars($row['nama'] ?? $row['id_barang']); ?></td>
                                     <td><?= htmlspecialchars($row['warna'] ?? ''); ?></td>
@@ -92,11 +106,28 @@
                                     <td><strong><?= $row['stok_sesudah']; ?></strong></td>
                                     <td><?= htmlspecialchars($row['keterangan'] ?? ''); ?></td>
                                     <td><?= htmlspecialchars($row['username'] ?? '-'); ?></td>
+                                    <td class="text-center">
+                                        <?php if (!empty($is_admin) && isset($id_bisa_hapus[(int) $row['id']])): ?>
+                                            <?= form_open('stok_riwayat/hapus', [
+                                                'class'    => 'd-inline',
+                                                'onsubmit' => "return confirm('Hapus data stok opname ini?\\nStok akan dikembalikan seperti sebelum input ini.');"
+                                            ]); ?>
+                                                <input type="hidden" name="id" value="<?= (int) $row['id']; ?>">
+                                                <input type="hidden" name="filter_barang" value="<?= htmlspecialchars((string) $filter_barang); ?>">
+                                                <input type="hidden" name="filter_location" value="<?= htmlspecialchars((string) $filter_location); ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Hapus">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="13" class="text-center"><?= translate('i18n_belum_ada_data_riwayat_stok') ?></td>
+                                <td colspan="15" class="text-center"><?= translate('i18n_belum_ada_data_riwayat_stok') ?></td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -122,6 +153,12 @@ window.addEventListener('load', function () {
             searching: function () { return '<?= tj('i18n_mencari') ?>'; }
         }
     });
+
+    // Kalau tabel dipasang DataTables (biasanya dari footer template),
+    // DataTables otomatis mengurutkan kolom pertama ASC -> paksa jadi DESC
+    if ($.fn.DataTable && $.fn.DataTable.isDataTable('#dataTable')) {
+        $('#dataTable').DataTable().order([0, 'desc']).draw();
+    }
 
     // Opsional: langsung filter saat pilihan berubah (hapus blok ini kalau tidak mau)
     // $('.select2-filter').on('change', function () {

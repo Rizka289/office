@@ -104,11 +104,13 @@ $terbilang = function ($x) use (&$terbilang) {
 $no_inv = str_replace('/SO-', '/INV-', (string) $h->no_so);
 
 // Termin & pembayaran
-$grand      = (float) $h->grand_total;
+// Konsinyasi (titip jual): yang ditagih hanya barang yang sudah dilaporkan laku
+$konsinyasi = ($h->jenis_penjualan ?? 'biasa') === 'konsinyasi';
+$grand      = $konsinyasi ? (float) ($h->nilai_laku ?? 0) : (float) $h->grand_total;
 $dp_persen  = (float) $h->dp_persen;
 $dp_nilai   = round($grand * $dp_persen / 100);
 $sisa_tagih = max(0, $grand - $total_bayar);
-$lunas      = $grand > 0 && $sisa_tagih <= 0.005;
+$lunas      = $konsinyasi ? ($h->status === 'selesai') : ($grand > 0 && $sisa_tagih <= 0.005);
 
 // Pisahkan uang yang benar-benar masuk vs PPh yang dipotong customer (bukti potong)
 $pph_so      = (float) $h->pph_nominal;
@@ -129,7 +131,9 @@ $label_jenis = array(
   'pph'       => 'PPh dipotong customer',
   'lainnya'   => 'Lainnya',
 );
-if ($h->termin === '100' || $dp_persen <= 0) {
+if ($konsinyasi) {
+  $termin_teks = 'Konsinyasi (titip jual) - ditagih sesuai barang yang laku';
+} elseif ($h->termin === '100' || $dp_persen <= 0) {
   $termin_teks = 'Pembayaran 100%';
 } else {
   $termin_teks = 'DP ' . $num($dp_persen, 2) . '% / Pelunasan ' . $num(100 - $dp_persen, 2) . '%';
@@ -732,12 +736,22 @@ $dash = function ($n, $d = 2) use ($num) {
           <?php endif; ?>
           <?php if ((float) $h->pph_persen > 0): ?>
             <tr>
-              <td>PPh <?= $num($h->pph_persen, 2) ?>%</td>
+              <td>PPh <?= $num($h->pph_persen, 2) ?>% (dipotong customer)</td>
               <td class="r"><?= $rp($h->pph_nominal) ?></td>
             </tr>
           <?php endif; ?>
+          <?php if ($konsinyasi): ?>
+            <tr>
+              <td>Nilai barang titipan (konsinyasi)</td>
+              <td class="r"><?= $rp($h->grand_total) ?></td>
+            </tr>
+            <tr>
+              <td>Barang belum laku / ditarik (tidak ditagih)</td>
+              <td class="r">- <?= $rp(max(0, (float) $h->grand_total - $grand)) ?></td>
+            </tr>
+          <?php endif; ?>
           <tr class="grand">
-            <td>TOTAL TAGIHAN</td>
+            <td>TOTAL TAGIHAN<?= $konsinyasi ? ' (BARANG LAKU)' : '' ?></td>
             <td class="r"><?= $rp($grand) ?></td>
           </tr>
           <tr>

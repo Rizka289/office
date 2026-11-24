@@ -111,6 +111,9 @@ class Sales_order_model extends CI_Model
 
     public function get_all_sales_order($filter = array())
     {
+        // tagihan = grand_total, atau nilai barang laku untuk konsinyasi
+        $this->load->helper('konsinyasi');
+        $tagihan = sql_tagihan_so('so');
         $this->db->select(
             "so.*, c.nama AS nama_customer,
             (SELECT COUNT(*) FROM sales_order_detail sod WHERE sod.id_so = so.id) AS total_item,
@@ -120,7 +123,8 @@ class Sales_order_model extends CI_Model
                 WHERE sp.id_so = so.id) AS total_diterima,
             (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
                 WHERE sp.id_so = so.id AND sp.jenis = 'pph') AS total_pph,
-            (so.grand_total - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+            {$tagihan} AS tagihan,
+            ({$tagihan} - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
                 WHERE sp.id_so = so.id)) AS sisa_bayar",
             false
         )
@@ -197,8 +201,9 @@ class Sales_order_model extends CI_Model
     // ------------------------------------------------------------------
     public function get_piutang_berjalan($batas_lama = '', $q = '')
     {
+        $this->load->helper('konsinyasi');
         $this->db->select("so.id, so.tanggal,
-                (so.grand_total - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
+                (" . sql_tagihan_so('so') . " - (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp
                     WHERE sp.id_so = so.id)) AS sisa", false)
             ->from('sales_order so')
             ->join('customer c', 'c.id = so.id_customer', 'left')
@@ -295,6 +300,14 @@ class Sales_order_model extends CI_Model
 
         $no = $this->generate_no($input['tanggal'], true);
 
+        // Konsinyasi (titip jual): jenis & masa ikut dari penawaran. Tidak ada DP karena
+        // yang ditagih hanya barang yang laku (form SO juga mengunci termin 100%).
+        $jenis = (($p->jenis_penjualan ?? 'biasa') === 'konsinyasi') ? 'konsinyasi' : 'biasa';
+        if ($jenis === 'konsinyasi') {
+            $input['termin']    = '100';
+            $input['dp_persen'] = 0;
+        }
+
         // ---- Tabel 1: header ----
         $header = $this->_saring_kolom('sales_order', array(
             'no_so'          => $no['no_so'],
@@ -319,7 +332,14 @@ class Sales_order_model extends CI_Model
             'catatan'        => $input['catatan'],
             'status'         => 'draft',
             'id_user'        => $id_user,
+            'jenis_penjualan' => $jenis,
+            'masa_konsinyasi' => $jenis === 'konsinyasi' ? ((int) ($p->masa_konsinyasi ?? 0) ?: 60) : null,
+            'nilai_laku'      => 0,
         ));
+        if ($jenis === 'konsinyasi' && !isset($header['jenis_penjualan'])) {
+            $this->db->trans_rollback();
+            return array(false, translate('i18n_ksy_migrasi_belum'));
+        }
         if (!$this->db->insert('sales_order', $header)) {
             return $this->_gagal(translate('i18n_gagal_menyimpan_header_sales_order'));
         }
@@ -478,6 +498,15 @@ class Sales_order_model extends CI_Model
             ->get('sales_order_pembayaran')->result();
     }
 
+    // Nilai yang boleh ditagih dari 1 SO: biasa = grand_total, konsinyasi = nilai barang yang laku
+    public function tagihan($so)
+    {
+        if (($so->jenis_penjualan ?? 'biasa') === 'konsinyasi') {
+            return (float) ($so->nilai_laku ?? 0);
+        }
+        return (float) $so->grand_total;
+    }
+
     public function total_dibayar($id_so)
     {
         $r = $this->db->select_sum('nominal', 'total')->where('id_so', (int) $id_so)
@@ -500,12 +529,17 @@ class Sales_order_model extends CI_Model
     private function _proses_pembayaran($id_so, $d, $id_user)
     {
         $this->db->trans_begin();
-        $so = $this->db->query('SELECT id, status, grand_total FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id_so))->row();
+        $so = $this->db->query('SELECT * FROM sales_order WHERE id = ? FOR UPDATE', array((int) $id_so))->row();
         if (!$so || in_array($so->status, array('batal', 'selesai'), true)) {
             $this->db->trans_rollback();
             return array(false, translate('i18n_so_tidak_ditemukan_atau_sudah_batal_2'));
         }
-        $sisa = (float) $so->grand_total - $this->total_dibayar($id_so);
+        // Konsinyasi: yang boleh ditagih hanya nilai barang yang sudah dilaporkan laku
+        $sisa = $this->tagihan($so) - $this->total_dibayar($id_so);
+        if (($so->jenis_penjualan ?? 'biasa') === 'konsinyasi' && $d['nominal'] > $sisa + 0.005) {
+            $this->db->trans_rollback();
+            return array(false, (translate('i18n_ksy_bayar_melebihi_laku') . ' ') . number_format(max(0, $sisa), 0, ',', '.') . ').');
+        }
         if ($d['nominal'] > $sisa + 0.005) {
             $this->db->trans_rollback();
             return array(false, (translate('i18n_nominal_melebihi_sisa_tagihan_rp') . ' ') . number_format($sisa, 0, ',', '.') . ').');

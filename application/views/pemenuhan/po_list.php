@@ -32,7 +32,10 @@ $url_filter = function ($kode) use ($q) {
       <div class="meta"><?= translate('i18n_pesanan_ke_supplier_approval_atasan') ?></div>
     </div>
     <?php if (!empty($izin['atur'])): ?>
-      <a href="<?= site_url('pemenuhan') ?>" class="btn btn-light btn-sm"><i class="bi bi-plus-lg me-1"></i><?= translate('i18n_buat_po_dari_proses_pesanan') ?></a>
+      <div class="d-flex gap-2 flex-wrap">
+        <a href="<?= site_url('pemenuhan/po_bebas') ?>" class="btn btn-warning btn-sm"><i class="bi bi-box2 me-1"></i>PO Bahan / Stok</a>
+        <a href="<?= site_url('pemenuhan') ?>" class="btn btn-light btn-sm"><i class="bi bi-plus-lg me-1"></i><?= translate('i18n_buat_po_dari_proses_pesanan') ?></a>
+      </div>
     <?php endif; ?>
   </div>
 
@@ -74,7 +77,7 @@ $url_filter = function ($kode) use ($q) {
                 <div class="muted"><?= $tgl($p->tanggal) ?><?= $p->nama_pembuat ? ' &middot; ' . html_escape($p->nama_pembuat) : '' ?></div>
               </td>
               <td><?= html_escape($p->nama_supplier) ?></td>
-              <td><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape($p->nama_customer) ?></div></td>
+              <td><?php if ($p->id_so): ?><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape((string) $p->nama_customer) ?></div><?php else: ?><span class="badge text-bg-secondary fw-normal">Bahan / Stok</span><?php endif; ?></td>
               <td><?= $p->jenis === 'dropship' ? '<span class="badge text-bg-info fw-normal">Dropship</span>' : '<span class="badge text-bg-light fw-normal">' . translate('i18n_ke_gudang') . '</span>' ?></td>
               <td class="text-end"><?= $rp($p->total) ?></td>
               <td>

@@ -146,8 +146,62 @@ class Penawaran extends MY_Controller
         $data['header'] = $penawaran['header'];
         $data['items']  = $penawaran['items'];
         $data['termin'] = in_array($termin, ['50_50', '100'], TRUE) ? $termin : '50_50';
+        $data['mode_excel'] = FALSE;
 
         $this->load->view('penjualan/penawaran_cetak', $data);
+    }
+
+    // Export penawaran ke Excel (.xlsx). Memakai view cetak yang sama (mode_excel = TRUE),
+    // jadi isi & susunan barisnya selalu sama dengan hasil cetak.
+    public function excel($id)
+    {
+        $id = (int)$id;
+        $penawaran = $this->Penawaran_model->get_penawaran_detail($id);
+
+        if (!$penawaran) {
+            show_404();
+        }
+
+        $termin = $this->input->get('termin', TRUE);
+
+        $data['header']     = $penawaran['header'];
+        $data['items']      = $penawaran['items'];
+        $data['termin']     = in_array($termin, ['50_50', '100'], TRUE) ? $termin : '50_50';
+        $data['mode_excel'] = TRUE;
+        // Diisi view: daftar foto yang dipakai (nama di <img>, path file, mime)
+        $data['foto_xl']    = new ArrayObject();
+
+        $html = $this->load->view('penjualan/penawaran_cetak', $data, TRUE);
+
+        // HTML -> file .xlsx asli (foto tertanam di sel). Lihat libraries/Html_xlsx.php
+        $this->load->library('html_xlsx');
+
+        // Pastikan view & library di server sudah versi terbaru (mencegah hasil berantakan
+        // karena campuran file lama dan baru)
+        $kurang = [];
+        if (strpos($html, '<meta name="versi-excel" content="4">') === false) {
+            $kurang[] = 'application/views/penjualan/penawaran_cetak.php';
+        }
+        if (!defined('Html_xlsx::VERSI') || Html_xlsx::VERSI < 4) {
+            $kurang[] = 'application/libraries/Html_xlsx.php';
+        }
+        if ($kurang) {
+            show_error('Export Excel belum bisa dipakai: file berikut di server masih versi lama, ganti dengan versi terbaru:<br>- '
+                . implode('<br>- ', $kurang)
+                . (function_exists('opcache_reset') ? '<br><br>Kalau sudah diganti tapi pesan ini tetap muncul, tunggu 1-2 menit (cache PHP) lalu coba lagi.' : ''), 500, 'File Export Excel Belum Lengkap');
+        }
+        $isi = $this->html_xlsx->buat($html, $data['foto_xl']->getArrayCopy(), 'Penawaran');
+
+        // Nama file aman: "Penawaran_001-PNW-XI-2026.xlsx"
+        $nama_file = 'Penawaran_' . trim(preg_replace('/[^A-Za-z0-9_-]+/', '-', (string) $penawaran['header']->no_surat), '-') . '.xlsx';
+
+        $this->output
+            ->set_content_type('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            ->set_header('Content-Disposition: attachment; filename="' . $nama_file . '"')
+            ->set_header('Content-Length: ' . strlen($isi))
+            ->set_header('Cache-Control: max-age=0, no-cache, no-store, must-revalidate')
+            ->set_header('Pragma: no-cache')
+            ->set_output($isi);
     }
 
     public function tambah()

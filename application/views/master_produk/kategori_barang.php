@@ -71,6 +71,10 @@
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
                         <textarea name="deskripsi" class="form-control form-control-sm" rows="3" placeholder="<?= translate('p_deskripsi') ?>" autocomplete="off" required></textarea>
                     </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="pakai_handle" value="1" id="add_pakai_handle">
+                        <label class="form-check-label small" for="add_pakai_handle"><b>Potong stok handle / aksesoris</b> saat surat jalan<br><span class="text-muted">Centang untuk pintu kamar / kamar mandi. Jangan dicentang untuk rolling door, jendela, dll.</span></label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
@@ -103,6 +107,10 @@
                     <div class="mb-3">
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
                         <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-sm" rows="3" placeholder="<?= translate('i18n_masukkan_deskripsi') ?>" required></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="pakai_handle" value="1" id="edit_pakai_handle">
+                        <label class="form-check-label small" for="edit_pakai_handle"><b>Potong stok handle / aksesoris</b> saat surat jalan<br><span class="text-muted">Centang untuk pintu kamar / kamar mandi. Jangan dicentang untuk rolling door, jendela, dll.</span></label>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -265,7 +273,7 @@
                     '<tr>' +
                         '<td>' + (startNo + idx) + '</td>' +
                         '<td class="fw-semibold">' + escapeHtml(kat.kode_kategori) + '</td>' +
-                        '<td>' + escapeHtml(kat.nama_kategori) + '</td>' +
+                        '<td>' + escapeHtml(kat.nama_kategori) + (String(kat.pakai_handle) === '1' ? ' <span class="badge text-bg-info fw-normal" title="Stok handle/aksesoris dipotong saat surat jalan">potong handle</span>' : '') + '</td>' +
                         '<td>' + escapeHtml(kat.deskripsi) + '</td>' +
                         '<td>' + escapeHtml(kat.created_at || '-') + '</td>' +
                         '<td class="text-center">' +
@@ -373,6 +381,7 @@
                     $('#edit_kode').val(response.data.kode_kategori);
                     $('#edit_nama').val(response.data.nama_kategori);
                     $('#edit_deskripsi').val(response.data.deskripsi);
+                    $('#edit_pakai_handle').prop('checked', String(response.data.pakai_handle) === '1');
 
                     $('#modalEditKatBarang').modal('show');
                 } else {

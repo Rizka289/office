@@ -240,6 +240,28 @@ $masa_konsinyasi = in_array((int) ($header->masa_konsinyasi ?? 0), [30, 60], tru
             </a>
           </li>
           <?php endif; ?>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            <h6 class="dropdown-header"><i class="bi bi-file-earmark-excel me-1"></i>Excel (.xlsx)</h6>
+          </li>
+          <?php if ($is_konsinyasi): ?>
+          <li>
+            <a class="dropdown-item" href="<?= site_url('penawaran/excel/' . (int) $header->id); ?>">
+              <?= translate('i18n_penawaran_konsinyasi_s_k') ?> <?= $masa_konsinyasi; ?> <?= translate('i18n_hari_2') ?>
+            </a>
+          </li>
+          <?php else: ?>
+          <li>
+            <a class="dropdown-item" href="<?= site_url('penawaran/excel/' . (int) $header->id . '?termin=50_50'); ?>">
+             <?= translate('lbl_50%') ?>
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" href="<?= site_url('penawaran/excel/' . (int) $header->id . '?termin=100'); ?>">
+             <?= translate('lbl_100%') ?>
+            </a>
+          </li>
+          <?php endif; ?>
         </ul>
       </div>
       <a href="<?= site_url('penawaran'); ?>" class="btn btn-outline-secondary">

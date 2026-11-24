@@ -39,7 +39,7 @@ arsort($per_sup);
                 <tr>
                   <td class="fw-semibold"><a href="<?= site_url('pemenuhan/po_detail/' . (int) $p->id) ?>"><?= html_escape($p->no_po) ?></a><div class="muted"><?= $tgl($p->tanggal) ?></div></td>
                   <td><?= html_escape($p->nama_supplier) ?></td>
-                  <td><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape($p->nama_customer) ?></div></td>
+                  <td><?php if ($p->id_so): ?><?= html_escape($p->no_so) ?><div class="muted"><?= html_escape((string) $p->nama_customer) ?></div><?php else: ?><span class="badge text-bg-secondary fw-normal">Bahan / Stok</span><?php endif; ?></td>
                   <td><?= $badge('po', $p->status) ?></td>
                   <td><?= $badge('bayar', $p->status_bayar ?? 'belum') ?></td>
                   <td class="text-end"><?= $rp($p->total) ?></td>

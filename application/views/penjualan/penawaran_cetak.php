@@ -2,6 +2,23 @@
 
 <?php
 
+// ---- MODE EXCEL (Penawaran::excel) ----
+// View yang sama dipakai untuk export .xls. Bedanya di mode Excel:
+// - tanpa kolom GAMBAR & tombol cetak,
+// - spesifikasi ditulis sebagai baris teks (Excel tidak bisa membaca tabel di dalam tabel),
+// - sel angka diberi x:num (nilai mentah) supaya terbaca sebagai ANGKA (bisa dijumlah)
+//   apa pun setelan regional komputer pengguna.
+$mode_excel = !empty($mode_excel);
+$xn = function ($v, $dec = 2) use ($mode_excel) {
+  if (!$mode_excel || $v === null || $v === '' || (float) $v == 0) return '';
+  return ' x:num="' . number_format((float) $v, $dec, '.', '') . '"';
+};
+// Pindah baris di dalam satu sel Excel
+$br_xl = $mode_excel ? '<br style="mso-data-placement:same-cell">' : '<br>';
+$nl_xl = function ($s) use ($br_xl) {
+  return str_replace("\n", $br_xl, html_escape(str_replace("\r", '', trim((string) $s))));
+};
+
 // Luas 2 angka di belakang koma, pembulatan biasa (angka ke-3 >= 5 naik), sama dengan form & server.
 // Contoh: 0.4767 -> 0.48, 1.752 -> 1.75, 10 -> 10.00
 $luas2 = function ($v) {
@@ -112,6 +129,51 @@ $foto_ada = function ($nama) {
   $nama = trim((string) $nama);
   return $nama !== '' && preg_match('/^[A-Za-z0-9_.-]+$/', $nama) && is_file(FCPATH . 'uploads/penawaran/' . $nama);
 };
+// ---- Foto di Excel: file disematkan ke dalam .xls (format MHT) oleh Penawaran::excel().
+// $foto_xl (ArrayObject dari controller) mengumpulkan daftar file; <img> cukup menyebut namanya.
+$foto_xl = (isset($foto_xl) && $foto_xl instanceof ArrayObject) ? $foto_xl : new ArrayObject();
+$img_xl = function ($rel_path, $alt, $maks = 80) use ($foto_xl) {
+  // Hanya file di dalam folder uploads/ (cegah path traversal)
+  $akar = realpath(FCPATH . 'uploads');
+  $abs  = realpath(FCPATH . ltrim((string) $rel_path, '/'));
+  if ($akar === false || $abs === false || strpos($abs, $akar . DIRECTORY_SEPARATOR) !== 0 || !is_file($abs)) {
+    return '';
+  }
+  $info = @getimagesize($abs);
+  if (!$info) return '';
+  // File yang sama cukup disematkan sekali
+  foreach ($foto_xl as $f) {
+    if ($f['path'] === $abs) {
+      $nama = $f['nama']; $lw = $f['w']; $lh = $f['h'];
+      break;
+    }
+  }
+  if (!isset($nama)) {
+    $data = null;
+    $ext  = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif'][$info[2]] ?? null;
+    if ($ext !== null) {
+      $data = file_get_contents($abs);
+    } elseif (function_exists('imagecreatefromstring')) {
+      // webp / bmp dll. -> PNG supaya terbaca di semua versi Excel
+      $gd = @imagecreatefromstring(file_get_contents($abs));
+      if ($gd) {
+        ob_start(); imagepng($gd); $data = ob_get_clean(); imagedestroy($gd);
+        $ext = 'png';
+      }
+    }
+    if ($data === null || $data === false) return '';
+    $nama = 'foto' . (count($foto_xl) + 1) . '.' . $ext;
+    $lw = $info[0]; $lh = $info[1];
+    $foto_xl[] = ['nama' => $nama, 'path' => $abs, 'data' => $data, 'w' => $lw, 'h' => $lh,
+      'mime' => ['jpg' => 'image/jpeg', 'png' => 'image/png', 'gif' => 'image/gif'][$ext]];
+  }
+  // Perkecil proporsional supaya muat di kotak $maks x $maks px
+  $skala = min(1, $maks / max(1, $lw), $maks / max(1, $lh));
+  $w = max(1, (int) round($lw * $skala));
+  $h = max(1, (int) round($lh * $skala));
+  return '<img src="penawaran_files/' . $nama . '" width="' . $w . '" height="' . $h . '" alt="' . html_escape($alt) . '">';
+};
+
 $ada_foto_manual = false;
 if ($is_manual_cetak) {
   foreach ($items as $it_f) {
@@ -169,7 +231,7 @@ $spek_tampil = [
   'pintu_kayu'             => ['nama', 'warna', 'komponen', 'kusen_daun'],
 
   // Fix unit: Warna, Jenis
-  'unit_fix'               => ['warna', 'nama', 'komponen', 'kusen_daun', 'finishing','tebal'],
+  'unit_fix'               => [ 'nama', 'warna',  'komponen', 'kusen_daun', 'finishing','tebal'],
 
 
   'default'                => ['nama', 'warna', 'komponen', 'kusen_daun', 'tebal'],
@@ -180,7 +242,61 @@ $rumus_label_tipe = ['rolling_door_baja', 'rolling_door_tahan_api', 'rolling_doo
 // Render tabel spesifikasi untuk daftar baris tertentu ($kolom_list).
 // Dipakai dua kali bila ada Books Penutup: bagian atas (sampai Dimensi lubang
 // dinding) dan bagian bawah (Komponen dst.), dipisah oleh baris Ukuran Books Penutup.
-$render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
+$render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) use ($mode_excel, $br_xl, $nl_xl) {
+  if ($mode_excel) {
+    // Excel: satu sel berisi baris-baris "Label: nilai"
+    $baris = [];
+    foreach ($kolom_list as $kolom) {
+      switch ($kolom) {
+        case 'nama':
+          $baris[] = '<b>' . $label_nama . ' / 类型: ' . html_escape($grp['jenis_item']) . '</b>';
+          break;
+        case 'warna':
+          if (!empty($grp['warna'])) $baris[] = 'Warna / 颜色: ' . html_escape($grp['warna']);
+          break;
+        case 'tebal':
+          if (!empty($grp['tebal'])) $baris[] = 'Tebal (mm) / 厚的: ' . html_escape($grp['tebal']);
+          break;
+        case 'komponen':
+          if (!empty($grp['komponen'])) $baris[] = 'Komponen / 成分: ' . $br_xl . $nl_xl($grp['komponen']);
+          break;
+        case 'dimensi':
+          foreach ($grp['baris'] as $br) {
+            $baris[] = 'Dimensi lubang dinding / 墙体开孔尺寸: ' . (int) $br->lebar_mm . ' x ' . (int) $br->tinggi_mm . ' mm';
+          }
+          break;
+        case 'kusen_daun':
+          if (!empty($grp['komponen_kusen']) || !empty($grp['komponen_daun'])) {
+            $baris[] = 'Ketebalan Plate Aluminium / 铝板厚度: Kusen ' . html_escape($grp['komponen_kusen'] ?: '-')
+              . ' mm | Daun ' . html_escape($grp['komponen_daun'] ?: '-') . ' mm';
+          }
+          break;
+        case 'finishing':
+          if (!empty($grp['finishing'])) $baris[] = 'Finishing / 精加工: ' . html_escape($grp['finishing']);
+          break;
+        case 'tipe_motor':
+          if (!empty($grp['tipe_motor'])) $baris[] = 'Tipe Motor: ' . html_escape($grp['tipe_motor']);
+          break;
+        case 'input_power':
+          if (!empty($grp['input_power'])) $baris[] = 'Input Power: ' . html_escape($grp['input_power']);
+          break;
+        case 'voltage':
+          if (!empty($grp['voltage'])) $baris[] = 'Voltage: ' . html_escape($grp['voltage']);
+          break;
+        case 'books_penutup':
+          if (!empty($grp['books_penutup'])) $baris[] = 'Books Penutup / 卷帘门罩壳: ' . $br_xl . $nl_xl($grp['books_penutup']);
+          break;
+        case 'kelengkapan':
+          if (!empty($grp['kelengkapan'])) $baris[] = 'Kelengkapan: ' . $br_xl . $nl_xl($grp['kelengkapan']);
+          break;
+      }
+    }
+    if ($tampil_ket && !empty($grp['keterangan'])) {
+      $baris[] = 'Keterangan / 信息: ' . $br_xl . $nl_xl(implode("\n", $grp['keterangan']));
+    }
+    echo implode($br_xl, $baris);
+    return;
+  }
 ?>
   <table class="spek-table">
     <?php foreach ($kolom_list as $kolom): ?>
@@ -310,6 +426,33 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
 };
 ?>
 
+<?php if ($mode_excel): ?>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="versi-excel" content="4">
+  <!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Penawaran</x:Name><x:WorksheetOptions><x:Print><x:ValidPrinterInfo/></x:Print></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->
+  <style>
+    body, td, th { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #222; }
+    table { border-collapse: collapse; }
+    td { vertical-align: top; }
+    .judul { font-size: 14pt; font-weight: bold; color: #14512f; text-align: center; }
+    .tengah { text-align: center; }
+    .cn { color: #6b8a76; font-size: 8pt; }
+    .teks { mso-number-format: "\@"; }
+    .lepas { white-space: nowrap; }
+    table.item-table th { background: #eaf5ee; color: #14512f; font-weight: bold; text-align: center; vertical-align: middle; border: .5pt solid #9aa5a0; }
+    table.item-table td { border: .5pt solid #9aa5a0; }
+    td.deskripsi-cell { white-space: normal; mso-number-format: "\@"; }
+    td.num { text-align: center; }
+    td.luas { mso-number-format: "0.00"; }
+    td.money, td.tval { text-align: right; mso-number-format: "\0022Rp \0022\#\,\#\#0"; }
+    td.tlabel { text-align: right; }
+    td.tval { font-weight: bold; }
+    tr.grand td { font-weight: bold; color: #14512f; border-top: 1.5pt solid #1f7a45; }
+  </style>
+</head>
+<?php else: ?>
 <!DOCTYPE html>
 <html lang="id">
 
@@ -350,7 +493,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
 
     body {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 12px;
+      font-size: 13.5px;
       color: #222;
       margin: 0;
       padding: 24px;
@@ -426,7 +569,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
 
     .kop-info h2 {
       margin: 0 0 3px 0;
-      font-size: 20px;
+      font-size: 23px;
       font-weight: 700;
       color: var(--brand-dark);
       letter-spacing: 0.5px;
@@ -434,21 +577,21 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     }
 
     .kop-info .sub-title {
-      font-size: 12px;
+      font-size: 14px;
       color: #333;
       font-weight: 600;
       margin-bottom: 4px;
     }
 
     .kop-info .alamat-kontak {
-      font-size: 11px;
+      font-size: 12.5px;
       color: #555;
       line-height: 1.4;
     }
 
     .cn {
       display: inline-block;
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 400;
       color: #6b8a76;
     }
@@ -457,7 +600,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     .info-surat {
       width: 100%;
       margin-bottom: 16px;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .info-surat td {
@@ -466,7 +609,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     }
 
     .info-surat td.label {
-      width: 170px;
+      width: 200px;
       color: #555;
     }
 
@@ -484,8 +627,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     table.item-table>thead>tr>th,
     table.item-table>tbody>tr>td {
       border: 1px solid #d7dbd9;
-      padding: 6px 8px;
-      font-size: 11px;
+      padding: 7px 9px;
+      font-size: 13px;
     }
 
     table.item-table>thead th {
@@ -499,6 +642,12 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       vertical-align: top;
     }
 
+    /* Kolom angka (lebar, tinggi, luas, qty, harga, total) di TENGAH baris */
+    table.item-table>tbody>tr>td.num,
+    table.item-table>tbody>tr>td.money {
+      vertical-align: middle;
+    }
+
     table.item-table .num {
       text-align: center;
       white-space: nowrap;
@@ -510,7 +659,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     }
 
     .gambar-cell {
-      width: 12%;
+      width: 11%;
       text-align: center;
       padding: 6px !important;
     }
@@ -542,7 +691,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     }
 
     .deskripsi-cell {
-      width: 28%;
+      width: 36%;
     }
 
     table.spek-table {
@@ -552,8 +701,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
 
     table.spek-table td {
       border: none;
-      padding: 2px 0;
-      font-size: 11px;
+      padding: 3px 0;
+      font-size: 13px;
       vertical-align: top;
     }
 
@@ -567,7 +716,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     table.spek-table .spek-nama {
       font-weight: 700;
       color: var(--brand-dark);
-      font-size: 12px;
+      font-size: 14.5px;
     }
 
     table.komponen-table {
@@ -579,8 +728,8 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     table.komponen-table th,
     table.komponen-table td {
       border: 1px solid #e3e8e5;
-      padding: 3px 5px;
-      font-size: 10px;
+      padding: 4px 6px;
+      font-size: 12px;
       text-align: center;
     }
 
@@ -603,7 +752,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
 
     table.total-table td {
       padding: 5px 8px;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     table.total-table td.tlabel {
@@ -622,13 +771,13 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     table.total-table tr.grand td {
       border-top: 2px solid var(--brand);
       font-weight: 700;
-      font-size: 13px;
+      font-size: 16px;
       color: var(--brand-dark);
       padding-top: 8px;
     }
 
     .syarat {
-      font-size: 10.5px;
+      font-size: 12.5px;
       color: #555;
       margin-bottom: 28px;
     }
@@ -646,14 +795,14 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
 
     .ttd .box {
       text-align: center;
-      width: 220px;
+      width: 290px;
     }
 
     .ttd .line {
       margin-top: 60px;
       border-top: 1px solid #333;
       padding-top: 4px;
-      font-size: 11px;
+      font-size: 13px;
     }
 
     @media print {
@@ -681,13 +830,43 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
     }
   </style>
 </head>
+<?php endif; ?>
 
 <body>
 
   <div class="sheet">
 
+  <?php
+  // Jumlah kolom tabel item: 8 dengan kolom GAMBAR, 7 tanpa (penawaran manual tanpa foto)
+  $jk = ($is_manual_cetak && !$ada_foto_manual) ? 7 : 8;
+  ?>
+  <?php if ($mode_excel): ?>
+    <!-- Kop Surat (Excel). <col> di tabel pertama menentukan lebar kolom sheet. -->
+    <table>
+      <?php if ($jk === 8): ?><col width="100"><?php endif; ?>
+      <col width="360"><col width="80"><col width="80"><col width="95"><col width="55"><col width="140"><col width="150">
+      <?php
+      // Logo di kolom A (4 baris kop), teks kop di kolom sisanya
+      $logo_xl  = $img_xl('uploads/logo/Logo.jpeg', 'Logo', 70);
+      $kop_span = $jk - 1;
+      ?>
+      <tr>
+        <td rowspan="4" class="logo-kop"><?= $logo_xl; ?></td>
+        <td colspan="<?= $kop_span; ?>" class="judul">PT OUPAI PINTU JENDELA INDONESIA</td>
+      </tr>
+      <tr><td colspan="<?= $kop_span; ?>" class="tengah"><b>Manufaktur Pintu &amp; Jendela</b> <span class="cn">| 门窗制造厂</span></td></tr>
+      <tr><td colspan="<?= $kop_span; ?>" class="tengah">Jl. Prof. Dr. Hamka No.45, Tambakaji, 50185, Kec. Ngaliyan Kota Semarang, Jawa Tengah, Indonesia</td></tr>
+      <tr><td colspan="<?= $kop_span; ?>" class="tengah">Telp: 085819570958 &bull; Email: ptoupaipintujendelaindonesia@gmail.com</td></tr>
+      <tr><td colspan="<?= $jk; ?>" style="border-bottom: 2pt double #1f7a45;"></td></tr>
+      <tr><td colspan="<?= $jk; ?>"></td></tr>
+    </table>
+  <?php else: ?>
+
     <!-- Tombol Aksi (Tidak Ikut Tercetak) -->
     <div class="action-bar no-print">
+      <a href="<?= site_url('penawaran/excel/' . (int) $header->id . '?termin=' . rawurlencode($termin ?? '50_50')); ?>" class="btn-cetak btn-excel" style="text-decoration:none; background:#217346;">
+        <i class="bi bi-file-earmark-excel"></i> Download Excel
+      </a>
       <button onclick="window.print()" class="btn-cetak">
         <i class="bi bi-printer"></i> Cetak / Simpan PDF
       </button>
@@ -707,41 +886,49 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
         </div>
       </div>
     </div>
+  <?php endif; ?>
 
+    <?php
+    // Excel: label 2 kolom kalau ada kolom GAMBAR (supaya tidak terpotong), ":" 1 kolom, nilai sisanya
+    $span_label = ($mode_excel && $jk === 8) ? 2 : 1;
+    $label_info = $span_label > 1 ? ' colspan="2"' : '';
+    $nilai_info = $mode_excel ? ' colspan="' . ($jk - $span_label) . '" class="teks"' : '';
+    ?>
     <!-- Info Surat -->
     <table class="info-surat">
       <tr>
-        <td class="label">Tanggal / 日期 </td>
-        <td class="sep">:</td>
-        <td><?= date('d/m/Y', strtotime($header->tanggal)); ?></td>
+        <td class="label"<?= $label_info ?? ''; ?>>Tanggal / 日期 </td>
+        <?php if (!$mode_excel): ?><td class="sep">:</td><?php endif; ?>
+        <td<?= $nilai_info; ?>><?= $mode_excel ? ': ' : ''; ?><?= date('d/m/Y', strtotime($header->tanggal)); ?></td>
       </tr>
       <tr>
-        <td class="label">No. Surat / 参考编号</td>
-        <td class="sep">:</td>
-        <td><?= html_escape($header->no_surat); ?></td>
+        <td class="label"<?= $label_info ?? ''; ?>>No. Surat / 参考编号</td>
+        <?php if (!$mode_excel): ?><td class="sep">:</td><?php endif; ?>
+        <td<?= $nilai_info; ?>><?= $mode_excel ? ': ' : ''; ?><?= html_escape($header->no_surat); ?></td>
       </tr>
       <?php if (($header->jenis_penjualan ?? 'biasa') === 'konsinyasi'): ?>
       <tr>
-        <td class="label">Sifat / 性质</td>
-        <td class="sep">:</td>
-        <td><strong>Konsinyasi (titip jual)</strong> &mdash; hanya barang yang terjual yang ditagihkan sesuai harga ini; barang yang tidak terjual ditarik kembali.</td>
+        <td class="label"<?= $label_info ?? ''; ?>>Sifat / 性质</td>
+        <?php if (!$mode_excel): ?><td class="sep">:</td><?php endif; ?>
+        <td<?= $nilai_info; ?>><?= $mode_excel ? ': ' : ''; ?><strong>Konsinyasi (titip jual)</strong> &mdash; hanya barang yang terjual yang ditagihkan sesuai harga ini; barang yang tidak terjual ditarik kembali.</td>
       </tr>
       <?php endif; ?>
       <tr>
-        <td class="label">Nama Perusahaan Klien / 客户公司名称 </td>
-        <td class="sep">:</td>
-        <td><?= html_escape($header->customer ?? '-'); ?></td>
+        <td class="label"<?= $label_info ?? ''; ?>>Nama Perusahaan Klien / 客户公司名称 </td>
+        <?php if (!$mode_excel): ?><td class="sep">:</td><?php endif; ?>
+        <td<?= $nilai_info; ?>><?= $mode_excel ? ': ' : ''; ?><?= html_escape($header->customer ?? '-'); ?></td>
       </tr>
       <tr>
-        <td class="label">Informasi Kontak / 联系信息</td>
-        <td class="sep">:</td>
-        <td><?= !empty($header->customer_telepon) ? html_escape($header->customer_telepon) : '-'; ?></td>
+        <td class="label"<?= $label_info ?? ''; ?>>Informasi Kontak / 联系信息</td>
+        <?php if (!$mode_excel): ?><td class="sep">:</td><?php endif; ?>
+        <td<?= $nilai_info; ?>><?= $mode_excel ? ': ' : ''; ?><?= !empty($header->customer_telepon) ? html_escape($header->customer_telepon) : '-'; ?></td>
       </tr>
       <tr>
-        <td class="label">Alamat Surat / 邮寄地址</td>
-        <td class="sep">:</td>
-        <td><?= !empty($header->customer_alamat) ? html_escape($header->customer_alamat) : '-'; ?></td>
+        <td class="label"<?= $label_info ?? ''; ?>>Alamat Surat / 邮寄地址</td>
+        <?php if (!$mode_excel): ?><td class="sep">:</td><?php endif; ?>
+        <td<?= $nilai_info; ?>><?= $mode_excel ? ': ' : ''; ?><?= !empty($header->customer_alamat) ? html_escape($header->customer_alamat) : '-'; ?></td>
       </tr>
+      <?php if ($mode_excel): ?><tr><td colspan="<?= $jk; ?>"></td></tr><?php endif; ?>
     </table>
 
     <!-- Tabel Item -->
@@ -765,12 +952,15 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
         <?php if ($is_manual_cetak): ?>
           <?php
           // Baris aksesoris: [foto] | nama | - | - | - | qty | harga | total
-          $baris_aks_manual = function ($ak) use ($ada_foto_manual, $foto_ada, $fmt_luas, &$rp_isi) {
+          $baris_aks_manual = function ($ak) use ($ada_foto_manual, $foto_ada, $fmt_luas, &$rp_isi, $xn, $mode_excel, $img_xl) {
+            $ak_img_xl = ($mode_excel && $foto_ada($ak->foto ?? '')) ? $img_xl('uploads/penawaran/' . $ak->foto, $ak->nama, 55) : '';
             ?>
-            <tr class="aksesoris-row">
+            <tr class="aksesoris-row"<?= $ak_img_xl !== '' ? ' style="height:45pt"' : ''; ?>>
               <?php if ($ada_foto_manual): ?>
                 <td class="gambar-cell aks">
-                  <?php if ($foto_ada($ak->foto ?? '')): ?>
+                  <?php if ($mode_excel): ?>
+                    <?= $ak_img_xl; ?>
+                  <?php elseif ($foto_ada($ak->foto ?? '')): ?>
                     <img src="<?= base_url('uploads/penawaran/' . rawurlencode($ak->foto)); ?>" alt="<?= html_escape($ak->nama); ?>">
                   <?php endif; ?>
                 </td>
@@ -783,24 +973,26 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <td class="num"></td>
               <td class="num"></td>
               <td class="num"><?= (int) $ak->qty; ?></td>
-              <td class="money"><?= $rp_isi($ak->harga); ?></td>
-              <td class="money"><?= $rp_isi(isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga); ?></td>
+              <?php $ak_tot = isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga; ?>
+              <td class="money"<?= $xn($ak->harga); ?>><?= $rp_isi($ak->harga); ?></td>
+              <td class="money"<?= $xn($ak_tot); ?>><?= $rp_isi($ak_tot); ?></td>
             </tr>
             <?php
           };
 
           // Baris detail kaca: [kosong] | nama | - | - | luas | - | harga/m² | total
-          $baris_kaca_manual = function ($kc) use ($ada_foto_manual, $fmt_luas, &$rp_isi) {
+          $baris_kaca_manual = function ($kc) use ($ada_foto_manual, $fmt_luas, &$rp_isi, $xn) {
             ?>
             <tr class="kaca-row">
               <?php if ($ada_foto_manual): ?><td class="gambar-cell aks"></td><?php endif; ?>
               <td class="deskripsi-cell"><?= html_escape($kc->nama); ?></td>
               <td class="num"></td>
               <td class="num"></td>
-              <td class="num"><?= (float) $kc->luas > 0 ? $fmt_luas($kc->luas) : ''; ?></td>
+              <?php $kc_tot = isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga; ?>
+              <td class="num luas"<?= $xn($kc->luas); ?>><?= (float) $kc->luas > 0 ? $fmt_luas($kc->luas) : ''; ?></td>
               <td class="num"></td>
-              <td class="money"><?= $rp_isi($kc->harga); ?></td>
-              <td class="money"><?= $rp_isi(isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga); ?></td>
+              <td class="money"<?= $xn($kc->harga); ?>><?= $rp_isi($kc->harga); ?></td>
+              <td class="money"<?= $xn($kc_tot); ?>><?= $rp_isi($kc_tot); ?></td>
             </tr>
             <?php
           };
@@ -847,7 +1039,9 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 <?php if ($baris_pertama): ?>
                   <?php if ($ada_foto_manual): ?>
                     <td class="gambar-cell" rowspan="<?= $jumlah_baris; ?>">
-                      <?php if ($foto_ada($grp['foto'] ?? '')): ?>
+                      <?php if ($mode_excel): ?>
+                        <?= $foto_ada($grp['foto'] ?? '') ? $img_xl('uploads/penawaran/' . $grp['foto'], $grp['jenis_item']) : ''; ?>
+                      <?php elseif ($foto_ada($grp['foto'] ?? '')): ?>
                         <img src="<?= base_url('uploads/penawaran/' . rawurlencode($grp['foto'])); ?>" alt="<?= html_escape($grp['jenis_item']); ?>">
                       <?php endif; ?>
                     </td>
@@ -862,11 +1056,11 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                 <?php else: ?>
                   <td class="num"><?= $lebar_it > 0 ? $lebar_it : ''; ?></td>
                   <td class="num"><?= $tinggi_it > 0 ? $tinggi_it : ''; ?></td>
-                  <td class="num"><?= $luas_it > 0 ? $fmt_luas($luas_it) : ''; ?></td>
+                  <td class="num luas"<?= $xn($luas_it); ?>><?= $luas_it > 0 ? $fmt_luas($luas_it) : ''; ?></td>
                 <?php endif; ?>
                 <td class="num"><?= (int) $it->qty > 0 ? (int) $it->qty : ''; ?></td>
-                <td class="money"><?= $rp_isi($it->harga_unit); ?></td>
-                <td class="money"><?= $rp_isi($total_barang_it); ?></td>
+                <td class="money"<?= $xn($it->harga_unit); ?>><?= $rp_isi($it->harga_unit); ?></td>
+                <td class="money"<?= $xn($total_barang_it); ?>><?= $rp_isi($total_barang_it); ?></td>
               </tr>
               <?php $baris_pertama = FALSE; ?>
             <?php endforeach; ?>
@@ -955,7 +1149,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             $spek_atas  = array_slice($baris_spek_grp, 0, $pos_dim + 1);
             $spek_bawah = array_slice($baris_spek_grp, $pos_dim + 1);
           }
-          $jumlah_baris_total = $jumlah_baris + count($books_rows) + ($ada_bawah ? 1 : 0) + count($aks_rows) + count($inst_rows);
+          $jumlah_baris_total = $jumlah_baris + count($books_rows) + ($ada_bawah ? 1 : 0) + count($aks_rows) + count($kc_rows) + count($inst_rows);
 
           $baris_pertama = TRUE;
           ?>
@@ -963,7 +1157,15 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
             <tr>
               <?php if ($baris_pertama): ?>
                 <td class="gambar-cell" rowspan="<?= $jumlah_baris_total; ?>">
-                  <?php if (!empty($grp['foto'])): ?>
+                  <?php if ($mode_excel): ?>
+                    <?php
+                    $img_grp = !empty($grp['foto']) ? $img_xl('uploads/penawaran/' . $grp['foto'], $grp['jenis_item']) : '';
+                    if ($img_grp === '' && !empty($grp['gambar'])) {
+                      $img_grp = $img_xl($folder_gambar_barang . $grp['gambar'], $grp['jenis_item']);
+                    }
+                    echo $img_grp;
+                    ?>
+                  <?php elseif (!empty($grp['foto'])): ?>
                     <img src="<?= base_url('uploads/penawaran/' . $grp['foto']); ?>"
                       alt="<?= html_escape($grp['jenis_item']); ?>"
                       onerror="this.parentElement.innerHTML='<div class=&quot;gambar-kosong&quot;><i class=&quot;bi bi-image&quot;></i></div>'">
@@ -990,10 +1192,11 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <?php else: ?>
                 <td class="num"><?= $uk_l; ?></td>
                 <td class="num"><?= $uk_t; ?></td>
-                <td class="num"><?= $fmt_luas($total_luas($it->luas_billing_m2 ?? $it->luas_m2, (int) $it->qty)); ?></td>
+                <?php $luas_tot_it = $total_luas($it->luas_billing_m2 ?? $it->luas_m2, (int) $it->qty); ?>
+                <td class="num luas"<?= $xn($luas_tot_it); ?>><?= $fmt_luas($luas_tot_it); ?></td>
               <?php endif; ?>
               <td class="num"><?= (int) $it->qty; ?></td>
-              <td class="money">Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($it->harga_unit); ?>>Rp <?= number_format((float) $it->harga_unit, 0, ',', '.'); ?></td>
               <?php
               // total_harga di database sudah termasuk aksesoris; di baris barang
               // tampilkan bagian barangnya saja (aksesoris punya baris sendiri di bawah).
@@ -1011,7 +1214,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               }
               $total_barang_it = max(0, (float) $it->total_harga - $total_aks_it);
               ?>
-              <td class="money">Rp <?= number_format($total_barang_it, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($total_barang_it); ?>>Rp <?= number_format($total_barang_it, 0, ',', '.'); ?></td>
             </tr>
             <?php $baris_pertama = FALSE; ?>
           <?php endforeach; ?>
@@ -1020,6 +1223,9 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
           <?php foreach ($books_rows as $bk): ?>
             <tr class="books-row">
               <td class="deskripsi-cell">
+                <?php if ($mode_excel): ?>
+                Ukuran Books Penutup / 卷帘门罩壳尺寸: <?= $bk->lebar_mm !== null ? (int) round((float) $bk->lebar_mm) : ''; ?> x <?= $bk->tinggi_mm !== null ? (int) round((float) $bk->tinggi_mm) : ''; ?> mm
+                <?php else: ?>
                 <table class="spek-table">
                   <tr>
                     <td class="spek-label" style="vertical-align: middle; width: 35%; white-space: normal;">
@@ -1043,13 +1249,14 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
                     </td>
                   </tr>
                 </table>
+                <?php endif; ?>
               </td>
               <td class="num"><?= $bk->lebar_mm !== null ? (int) round((float) $bk->lebar_mm) : ''; ?></td>
               <td class="num"><?= $bk->tinggi_mm !== null ? (int) round((float) $bk->tinggi_mm) : ''; ?></td>
-              <td class="num"><?= $fmt_luas($bk->luas); ?></td>
+              <td class="num luas"<?= $xn($bk->luas); ?>><?= $fmt_luas($bk->luas); ?></td>
               <td class="num"><?= (int) $bk->qty; ?></td>
-              <td class="money">Rp <?= number_format((float) $bk->harga, 0, ',', '.'); ?></td>
-              <td class="money">Rp <?= number_format((float) $bk->total, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($bk->harga); ?>>Rp <?= number_format((float) $bk->harga, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($bk->total); ?>>Rp <?= number_format((float) $bk->total, 0, ',', '.'); ?></td>
             </tr>
           <?php endforeach; ?>
 
@@ -1080,22 +1287,22 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <td class="num"></td>
               <td class="num"></td>
               <td class="num"><?= (int) $ak->qty; ?></td>
-              <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
-              <td class="money">Rp <?= number_format((float) $ak->total, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($ak->harga); ?>>Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($ak->total); ?>>Rp <?= number_format((float) $ak->total, 0, ',', '.'); ?></td>
             </tr>
           <?php endforeach; ?>
 
           <?php /* Baris kaca (paling bawah): nama -> Deskripsi, qty -> Qty, harga -> Harga / Unit */ ?>
           <?php foreach ($kc_rows as $kaca): ?>
             <tr class="kaca-row">
-              <td class="deskripsi-cell" colspan="4" style="text-align: right;">
+              <td class="deskripsi-cell" colspan="3" style="text-align: right;">
                 <?= html_escape($kaca->nama); ?>
               </td>
              
-              <td class="num"><?=  $fmt_luas($kaca->luas) ; ?></td>
+              <td class="num luas"<?= $xn($kaca->luas); ?>><?=  $fmt_luas($kaca->luas) ; ?></td>
               <td class="num"></td>
-              <td class="money">Rp <?= number_format((float) $kaca->harga, 0, ',', '.'); ?></td>
-              <td class="money">Rp <?= number_format((float) $kaca->total, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($kaca->harga); ?>>Rp <?= number_format((float) $kaca->harga, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($kaca->total); ?>>Rp <?= number_format((float) $kaca->total, 0, ',', '.'); ?></td>
             </tr>
           <?php endforeach; ?>
 
@@ -1108,10 +1315,11 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               </td>
               <td class="num"></td>
               <td class="num"></td>
-              <td class="num"><?= ($ins->qty > 0 && $ins->harga > 0 && $ins->luas > 0) ? $fmt_luas($ins->luas) : ''; ?></td>
+              <?php $ins_tampil_luas = ($ins->qty > 0 && $ins->harga > 0 && $ins->luas > 0); ?>
+              <td class="num luas"<?= $ins_tampil_luas ? $xn($ins->luas) : ''; ?>><?= $ins_tampil_luas ? $fmt_luas($ins->luas) : ''; ?></td>
               <td class="num"><?= $ins->qty > 0 ? (int) $ins->qty : ''; ?></td>
-              <td class="money"><?= $ins->harga > 0 ? 'Rp ' . number_format($ins->harga, 0, ',', '.') : ''; ?></td>
-              <td class="money"><?= $ins->total > 0 ? 'Rp ' . number_format($ins->total, 0, ',', '.') : ''; ?></td>
+              <td class="money"<?= $xn($ins->harga); ?>><?= $ins->harga > 0 ? 'Rp ' . number_format($ins->harga, 0, ',', '.') : ''; ?></td>
+              <td class="money"<?= $xn($ins->total); ?>><?= $ins->total > 0 ? 'Rp ' . number_format($ins->total, 0, ',', '.') : ''; ?></td>
             </tr>
           <?php endforeach; ?>
         <?php endforeach; ?>
@@ -1129,20 +1337,22 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
               <td class="num"></td>
               <td class="num"></td>
               <td class="num"><?= (int) $ak->qty; ?></td>
-              <td class="money">Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
-              <td class="money">Rp <?= number_format(isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga, 0, ',', '.'); ?></td>
+              <?php $ak_tot = isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga; ?>
+              <td class="money"<?= $xn($ak->harga); ?>>Rp <?= number_format((float) $ak->harga, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($ak_tot); ?>>Rp <?= number_format(isset($ak->total_harga) ? (float) $ak->total_harga : (int) $ak->qty * (float) $ak->harga, 0, ',', '.'); ?></td>
             </tr>
           <?php endforeach; ?>
           <?php foreach (($ik->kaca ?? []) as $kc): ?>
             <tr class="kaca-row">
               <td></td>
+              <?php $kc_tot = isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga; ?>
               <td class="deskripsi-cell"><?= html_escape($kc->nama); ?></td>
               <td class="num"></td>
               <td class="num"></td>
-              <td class="num"><?= $fmt_luas($kc->luas); ?></td>
+              <td class="num luas"<?= $xn($kc->luas); ?>><?= $fmt_luas($kc->luas); ?></td>
               <td class="num"></td>
-              <td class="money">Rp <?= number_format((float) $kc->harga, 0, ',', '.'); ?></td>
-              <td class="money">Rp <?= number_format(isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($kc->harga); ?>>Rp <?= number_format((float) $kc->harga, 0, ',', '.'); ?></td>
+              <td class="money"<?= $xn($kc_tot); ?>>Rp <?= number_format(isset($kc->total_harga) ? (float) $kc->total_harga : (float) $kc->luas * (float) $kc->harga, 0, ',', '.'); ?></td>
             </tr>
           <?php endforeach; ?>
         <?php endforeach; ?>
@@ -1150,38 +1360,47 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       </tbody>
     </table>
 
+    <?php // Excel: label menempati 6 kolom, nilai tepat di kolom Total Harga
+    $tl = $mode_excel ? ' colspan="' . ($jk - 1) . '"' : ''; ?>
     <table class="total-table">
+      <?php if ($mode_excel): ?><tr><td colspan="<?= $jk; ?>"></td></tr><?php endif; ?>
+      <?php if ($mode_excel): ?>
       <tr>
-        <td class="tlabel">Jumlah unit / 单元数量 : <?= $jumlah_unit; ?></td>
-        <td class="tval">Subtotal: Rp <?= number_format((float) $header->subtotal, 0, ',', '.'); ?></td>
+        <td class="tlabel"<?= $tl; ?>>Jumlah unit / 单元数量</td>
+        <td class="tqty"><?= (int) $jumlah_unit; ?></td>
+      </tr>
+      <?php endif; ?>
+      <tr>
+        <td class="tlabel"<?= $tl; ?>><?= $mode_excel ? 'Subtotal / 小计' : 'Jumlah unit / 单元数量 : ' . $jumlah_unit; ?></td>
+        <td class="tval"<?= $xn($header->subtotal); ?>>Subtotal: Rp <?= number_format((float) $header->subtotal, 0, ',', '.'); ?></td>
       </tr>
       <?php if ((float) ($header->biaya_pasang ?? 0) > 0): ?>
           <tr>
-            <td class="tlabel">Biaya Pemasangan /  安装费用</td>
-            <td class="tval">Rp <?= number_format((float) $header->biaya_pasang, 0, ',', '.'); ?></td>
+            <td class="tlabel"<?= $tl; ?>>Biaya Pemasangan /  安装费用</td>
+            <td class="tval"<?= $xn($header->biaya_pasang); ?>>Rp <?= number_format((float) $header->biaya_pasang, 0, ',', '.'); ?></td>
           </tr>
       <?php endif; ?>
       <?php if ((float) ($header->biaya_ongkir ?? 0) > 0): ?>
         <tr>
-          <td class="tlabel">Biaya Pengiriman / 运费</td>
-          <td class="tval">Rp <?= number_format((float) $header->biaya_ongkir, 0, ',', '.'); ?></td>
+          <td class="tlabel"<?= $tl; ?>>Biaya Pengiriman / 运费</td>
+          <td class="tval"<?= $xn($header->biaya_ongkir); ?>>Rp <?= number_format((float) $header->biaya_ongkir, 0, ',', '.'); ?></td>
         </tr>
       <?php endif; ?>
       <?php if ((float) $header->ppn_persen > 0): ?>
         <tr>
-          <td class="tlabel">PPN <?= rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.'); ?>%</td>
-          <td class="tval">Rp <?= number_format((float) $header->ppn_nominal, 0, ',', '.'); ?></td>
+          <td class="tlabel"<?= $tl; ?>>PPN <?= rtrim(rtrim(number_format($header->ppn_persen, 2), '0'), '.'); ?>%</td>
+          <td class="tval"<?= $xn($header->ppn_nominal); ?>>Rp <?= number_format((float) $header->ppn_nominal, 0, ',', '.'); ?></td>
         </tr>
       <?php endif; ?>
       <?php if ((float) $header->pph_persen > 0): ?>
         <tr>
-          <td class="tlabel">PPh <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)<?= !empty($header->pph_ongkir) ? ', termasuk ongkir' : ''; ?></td>
-          <td class="tval">- Rp <?= number_format((float) $header->pph_nominal, 0, ',', '.'); ?></td>
+          <td class="tlabel"<?= $tl; ?>>PPh <?= rtrim(rtrim(number_format($header->pph_persen, 2), '0'), '.'); ?>% (dipotong customer)<?= !empty($header->pph_ongkir) ? ', termasuk ongkir' : ''; ?></td>
+          <td class="tval"<?= $xn(-(float) $header->pph_nominal); ?>>- Rp <?= number_format((float) $header->pph_nominal, 0, ',', '.'); ?></td>
         </tr>
       <?php endif; ?>
       <tr class="grand">
-        <td class="tlabel">Grand Total</td>
-        <td class="tval">Rp <?= number_format((float) $header->grand_total, 0, ',', '.'); ?></td>
+        <td class="tlabel"<?= $tl; ?>>Grand Total</td>
+        <td class="tval"<?= $xn($header->grand_total); ?>>Rp <?= number_format((float) $header->grand_total, 0, ',', '.'); ?></td>
       </tr>
     </table>
 
@@ -1219,6 +1438,42 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
       : 'Pembayaran transfer ke Bank BCA 8715845471 atas nama MAHMUDI / 请将款项转账至 BCA 银行 8715845471 账户，收款人为 MAHMUDI。';
     ?>
 
+    <?php if ($mode_excel): ?>
+    <?php /* Excel: teks panjang ditaruh di kolom A tanpa wrap supaya tampil melewati kolom kosong di kanannya */ ?>
+    <?php
+    $syarat_xl = [
+      $teks_bayar,
+      $teks_bank,
+      'Barang pesanan yang sudah diproduksi tidak dapat dibatalkan / 已生产完毕的订单商品无法取消。',
+      'Penawaran ini tidak bisa untuk dipilih pilih itemnya, apabila ada perubahan dibuatkan penawaran baru / 此优惠不适用于特定商品。如有变更，我们将提供新的优惠。',
+      'Toleransi untuk produksi &plusmn; 2.0mm / 生产容差 &plusmn; 2.0mm',
+      $teks_biaya,
+    ];
+    ?>
+    <table>
+      <tr><td colspan="<?= $jk; ?>"></td></tr>
+      <tr><td class="lepas"><b>Syarat &amp; Ketentuan:</b></td></tr>
+      <?php foreach ($syarat_xl as $no_s => $s_teks): ?>
+        <tr><td colspan="<?= $jk; ?>" class="teks wrap"><?= ($no_s + 1) . '. ' . $s_teks; ?></td></tr>
+      <?php endforeach; ?>
+      <?php if (!empty($header->catatan)): ?>
+        <tr><td colspan="<?= $jk; ?>"></td></tr>
+        <tr><td colspan="<?= $jk; ?>" class="teks wrap"><b>Catatan tambahan:</b> <?= $nl_xl($header->catatan); ?></td></tr>
+      <?php endif; ?>
+      <tr><td colspan="<?= $jk; ?>"></td></tr>
+      <tr>
+        <td class="tengah"<?= $jk === 8 ? ' colspan="2"' : ''; ?>>Hormat kami,</td>
+        <td colspan="2"></td>
+        <td colspan="3" class="tengah">Disetujui oleh,</td>
+      </tr>
+      <tr><td colspan="<?= $jk; ?>" style="height:60px"></td></tr>
+      <tr>
+        <td class="tengah" style="border-top:.5pt solid #333;"<?= $jk === 8 ? ' colspan="2"' : ''; ?>>PT OUPAI PINTU JENDELA INDONESIA</td>
+        <td colspan="2"></td>
+        <td colspan="3" class="tengah" style="border-top:.5pt solid #333;"><?= html_escape($header->customer ?? '-'); ?></td>
+      </tr>
+    </table>
+    <?php else: ?>
     <div class="syarat">
       <strong>Syarat &amp; Ketentuan:</strong>
       <ol>
@@ -1246,6 +1501,7 @@ $render_spek = function ($kolom_list, $grp, $label_nama, $tampil_ket) {
         <div class="line"><?= html_escape($header->customer ?? '-'); ?></div>
       </div>
     </div>
+    <?php endif; ?>
 
   </div>
 

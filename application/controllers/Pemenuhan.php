@@ -283,6 +283,71 @@ class Pemenuhan extends MY_Controller
         }
     }
 
+    // ---------- PO BAHAN / STOK (tanpa Sales Order) ----------
+    // Pembelian di luar penawaran, mis. aluminium / kaca / aksesoris untuk produksi sendiri.
+
+    public function po_bebas()
+    {
+        $this->_wajib_izin('atur', 'pemenuhan/po');
+        $p = $this->Pemenuhan_model->perusahaan();
+        $data['title']           = 'Buat PO Bahan / Stok';
+        $data['siap']            = $this->Pemenuhan_model->po_bebas_siap();
+        $data['supplier_list']   = $this->Supplier_model->get_aktif();
+        $data['barang_list']     = $this->Pemenuhan_model->get_barang_beli();
+        $data['ada_tabel_biaya'] = $this->Pemenuhan_model->ada_tabel_biaya_po();
+        $data['ada_kolom_ppn']   = $this->Pemenuhan_model->ada_kolom_ppn_po();
+        $data['tarif_ppn']       = Pemenuhan_model::TARIF_PPN_PO;
+        $data['alamat_default']  = 'Gudang ' . $p['nama'] . "\n" . $p['alamat'];
+        $data['active_menu']     = 'po';
+        $this->_view('pemenuhan/po_bebas_form', $data);
+    }
+
+    public function po_bebas_simpan()
+    {
+        $this->_wajib_post();
+        $this->_wajib_izin('atur', 'pemenuhan/po');
+        $hdr = array(
+            'tanggal'      => $this->_tgl($this->input->post('tanggal')) ?: date('Y-m-d'),
+            'id_supplier'  => (int) $this->input->post('id_supplier'),
+            'tgl_butuh'    => $this->_tgl($this->input->post('tgl_butuh')),
+            'alamat_kirim' => trim((string) $this->input->post('alamat_kirim', true)),
+            'catatan'      => trim((string) $this->input->post('catatan', true)),
+            'pakai_ppn'    => (bool) $this->input->post('pakai_ppn'),
+        );
+        $id_b   = (array) $this->input->post('line_barang');
+        $nama   = (array) $this->input->post('line_nama', true);
+        $spek   = (array) $this->input->post('line_spek', true);
+        $qty    = (array) $this->input->post('line_qty');
+        $satuan = (array) $this->input->post('line_satuan', true);
+        $harga  = (array) $this->input->post('line_harga');
+        $lines  = array();
+        foreach ($nama as $i => $nm) {
+            $lines[] = array(
+                'id_barang'   => (int) ($id_b[$i] ?? 0),
+                'nama_barang' => (string) $nm,
+                'spesifikasi' => (string) ($spek[$i] ?? ''),
+                'qty'         => (float) str_replace(',', '.', (string) ($qty[$i] ?? 0)),
+                'satuan'      => (string) ($satuan[$i] ?? ''),
+                'harga'       => (float) ($harga[$i] ?? 0),
+            );
+        }
+        $b_nama = (array) $this->input->post('biaya_nama', true);
+        $b_nom  = (array) $this->input->post('biaya_nominal');
+        $b_ket  = (array) $this->input->post('biaya_ket', true);
+        $biaya  = array();
+        foreach ($b_nama as $i => $nm) {
+            $biaya[] = array(
+                'nama'       => (string) $nm,
+                'hitung'     => 'borongan',
+                'nominal'    => (float) ($b_nom[$i] ?? 0),
+                'keterangan' => (string) ($b_ket[$i] ?? ''),
+            );
+        }
+        $hasil = $this->Pemenuhan_model->simpan_po_bebas($hdr, $lines, $this->_id_user(), $biaya);
+        $this->_flash($hasil[0], $hasil[1]);
+        redirect($hasil[0] ? 'pemenuhan/po_detail/' . (int) $hasil[2] : 'pemenuhan/po_bebas');
+    }
+
     // $aksi: setujui | tolak (atasan) | kirim (purchasing) | batal
     public function po_aksi($id = 0, $aksi = '')
     {
@@ -291,7 +356,7 @@ class Pemenuhan extends MY_Controller
         if (!$po) {
             show_404();
         }
-        $kembali = $this->_kembali('pemenuhan/so/' . $po->id_so);
+        $kembali = $this->_kembali($po->id_so ? 'pemenuhan/so/' . $po->id_so : 'pemenuhan/po_detail/' . $po->id);
         $perlu   = array('setujui' => 'approve', 'tolak' => 'approve', 'kirim' => 'atur', 'batal' => 'batal_po');
         if (!isset($perlu[$aksi])) {
             $this->_flash(false, translate('i18n_aksi_tidak_dikenal'));
@@ -318,7 +383,9 @@ class Pemenuhan extends MY_Controller
         }
         $data['title']       = 'PO ' . $po['header']->no_po;
         $data['po']          = $po;
-        $data['bisa_proses'] = in_array($po['header']->status_so, array('confirmed', 'produksi', 'terkirim'), true);
+        // PO tanpa SO (PO bahan/stok) selalu bisa diproses
+        $data['bisa_proses'] = !$po['header']->id_so
+            || in_array($po['header']->status_so, array('confirmed', 'produksi', 'terkirim'), true);
         $data['boleh_bayar'] = in_array($po['header']->status, $this->Pemenuhan_model->status_boleh_bayar, true);
         $data['active_menu'] = 'po';
         $this->_view('pemenuhan/po_detail', $data);
@@ -398,22 +465,46 @@ class Pemenuhan extends MY_Controller
                 'ekspedisi'      => mb_substr(trim((string) $this->input->post('ekspedisi', true)), 0, 100),
                 'penerima'       => mb_substr(trim((string) $this->input->post('penerima', true)), 0, 100),
                 'catatan'        => trim((string) $this->input->post('catatan', true)),
+                'id_location'    => (int) $this->input->post('id_location'),
             );
             $qty = array();
             foreach ((array) $this->input->post('qty') as $k => $v) {
                 $qty[(int) $k] = (float) $v;
             }
-            list($ok, $pesan) = $this->Pemenuhan_model->terima_po($h->id, $hdr, $qty, $this->_id_user());
+            $aks = $h->jenis === 'dropship' ? $this->_baca_aksesoris() : array();
+            list($ok, $pesan) = $this->Pemenuhan_model->terima_po($h->id, $hdr, $qty, $this->_id_user(), $aks);
             $this->_flash($ok, $pesan);
             redirect($ok ? 'pemenuhan/po_detail/' . $h->id : 'pemenuhan/po_terima/' . $h->id);
             return;
         }
 
         if (!in_array($h->status, array('dipesan', 'sebagian'), true)) {
-            return $this->_tolak($h->id_so, 'PO ' . $h->no_po . (' ' . translate('i18n_belum_dikirim_ke_supplier_sudah_selesai')));
+            $pesan = 'PO ' . $h->no_po . (' ' . translate('i18n_belum_dikirim_ke_supplier_sudah_selesai'));
+            if (!$h->id_so) {
+                $this->session->set_flashdata('error', $pesan);
+                redirect('pemenuhan/po_detail/' . (int) $h->id);
+            }
+            return $this->_tolak($h->id_so, $pesan);
         }
-        $data['title'] = ($h->jenis === 'dropship' ? 'Konfirmasi Dropship ' : (translate('i18n_terima_barang') . ' ')) . $h->no_po;
-        $data['po']    = $po;
+        $ada_barang = false;
+        foreach ($po['items'] as $d) {
+            if (!empty($d->id_barang)) {
+                $ada_barang = true;
+            }
+        }
+        $data['title']      = ($h->jenis === 'dropship' ? 'Konfirmasi Dropship ' : (translate('i18n_terima_barang') . ' ')) . $h->no_po;
+        $data['po']         = $po;
+        $data['ada_barang'] = $ada_barang && $h->jenis === 'stok';
+        $data['lokasi']     = $data['ada_barang'] ? $this->Pemenuhan_model->get_lokasi() : array();
+        if ($h->jenis === 'dropship') {
+            $ids = array();
+            foreach ($po['items'] as $d) {
+                if ($d->id_so_detail) {
+                    $ids[] = (int) $d->id_so_detail;
+                }
+            }
+            $this->_data_aksesoris($data, $ids);
+        }
         $data['active_menu'] = 'po_terima';
         $this->_view('pemenuhan/po_terima', $data);
     }
@@ -596,6 +687,7 @@ class Pemenuhan extends MY_Controller
         $data['title'] = translate('i18n_buat_surat_jalan');
         $data['h']     = $h;
         $data['items'] = $items;
+        $this->_data_aksesoris($data, array_map(function ($it) { return (int) $it->id; }, $items));
         $this->_view('pemenuhan/sj_form', $data);
     }
 
@@ -615,7 +707,7 @@ class Pemenuhan extends MY_Controller
         foreach ((array) $this->input->post('qty') as $k => $v) {
             $qty[(int) $k] = (float) $v;
         }
-        $hasil = $this->Pemenuhan_model->simpan_sj($h->id, $hdr, $qty, $this->_id_user());
+        $hasil = $this->Pemenuhan_model->simpan_sj($h->id, $hdr, $qty, $this->_id_user(), $this->_baca_aksesoris());
         $this->_flash($hasil[0], $hasil[1]);
         redirect($hasil[0] ? 'pemenuhan/so/' . $h->id : 'pemenuhan/sj_buat/' . $h->id);
     }
@@ -639,10 +731,67 @@ class Pemenuhan extends MY_Controller
         if (!$sj) {
             show_404();
         }
+        // Aksesoris paket (mis. handle pintu) dicetak di bawah barangnya.
+        // Item yang aksesorisnya dicatat saat SJ dibuat (pintu kamar) -> pakai catatan itu.
+        // Item lain / SJ lama -> perkiraan proporsional dari aksesoris SO (qty aksesoris di SO = total seluruh qty item).
+        $tercatat = array();
+        foreach ((array) $this->Pemenuhan_model->get_sj_aksesoris($sj['header']->id) as $a) {
+            $tercatat[(int) $a->id_so_detail][] = $a;
+        }
+        $so   = $sj['header']->id_so ? $this->Sales_order_model->get_so_lengkap($sj['header']->id_so) : null;
+        $peta = array();
+        foreach ($so ? $so['items'] : array() as $it) {
+            $peta[(int) $it->id] = $it;
+        }
+        foreach ($sj['items'] as $it) {
+            $it->aksesoris_kirim = array();
+            if (isset($tercatat[(int) $it->id])) {
+                foreach ($tercatat[(int) $it->id] as $a) {
+                    if ((float) $a->qty > 0) {
+                        $it->aksesoris_kirim[] = (object) array('nama' => $a->nama, 'qty' => (float) $a->qty);
+                    }
+                }
+                continue;
+            }
+            $src = $peta[(int) $it->id] ?? null;
+            if (!$src || empty($src->aksesoris) || (float) $it->qty <= 0) {
+                continue;
+            }
+            $rasio = min(1, (float) $it->qty_kirim / (float) $it->qty);
+            foreach ($src->aksesoris as $a) {
+                $q = round((float) $a->qty * $rasio, 2);
+                if ($q > 0 && trim((string) $a->nama) !== '') {
+                    $it->aksesoris_kirim[] = (object) array('nama' => $a->nama, 'qty' => $q);
+                }
+            }
+        }
         $this->load->view('pemenuhan/sj_cetak', array('sj' => $sj));
     }
 
     // ================= HELPER =================
+
+    // Data aksesoris paket (mis. handle) + pilihan stok gudang untuk form SJ / terima dropship
+    private function _data_aksesoris(&$data, $ids_so_detail)
+    {
+        $data['aks_aktif'] = $this->Pemenuhan_model->ada_tabel_sj_aksesoris();
+        $data['aks_map']   = $data['aks_aktif'] ? $this->Pemenuhan_model->get_aksesoris_so($ids_so_detail) : array();
+        $data['aks_stok']  = $data['aks_map'] ? $this->Pemenuhan_model->get_stok_aksesoris() : array();
+    }
+
+    // POST aks_qty[id_aksesoris], aks_stok[id_aksesoris] -> array(id => array(qty, kunci))
+    private function _baca_aksesoris()
+    {
+        $qty   = (array) $this->input->post('aks_qty');
+        $kunci = (array) $this->input->post('aks_stok');
+        $hasil = array();
+        foreach ($qty as $id => $q) {
+            $hasil[(int) $id] = array(
+                'qty'   => (float) str_replace(',', '.', (string) $q),
+                'kunci' => (string) ($kunci[$id] ?? ''),
+            );
+        }
+        return $hasil;
+    }
 
     private function _view($view, $data)
     {

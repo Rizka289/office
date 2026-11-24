@@ -20,10 +20,29 @@ class Barang extends MY_Controller
         $data['active_menu'] = 'barang';
 
         $data['kategoriList'] = $this->Kategori_barang_model->get_kat_barang_paginated('', 1000, 0);
+        // Handle bawaan per pintu (database/pm_sj_aksesoris.sql)
+        $data['pakai_handle_bawaan'] = $this->db->field_exists('id_handle', 'barang');
+        $data['handleList'] = $data['pakai_handle_bawaan']
+            ? $this->db->select('id, kode_barang, nama, warna')->order_by('nama', 'ASC')->get('barang')->result()
+            : array();
 
         $this->load->view('templates/header', $data);
         $this->load->view('master_produk/barang_index', $data);
         $this->load->view('templates/footer', $data);
+    }
+
+    // Handle bawaan pintu: id barang handle + qty per 1 pintu
+    private function _isi_handle(&$data, $id_sendiri)
+    {
+        if (!$this->db->field_exists('id_handle', 'barang') || $this->input->post('id_handle') === null) {
+            return;
+        }
+        $id_h = (int) $this->input->post('id_handle');
+        if ($id_h === (int) $id_sendiri || ($id_h > 0 && !$this->db->where('id', $id_h)->count_all_results('barang'))) {
+            $id_h = 0;
+        }
+        $data['id_handle']  = $id_h > 0 ? $id_h : null;
+        $data['qty_handle'] = max(0, (float) $this->input->post('qty_handle')) ?: 1;
     }
 
     private function is_blank($value)
@@ -188,6 +207,7 @@ class Barang extends MY_Controller
             'gambar'       => $gambar_nama,
             'created_at'   => date('Y-m-d H:i:s'),
         );
+        $this->_isi_handle($data, 0);
 
         $simpan = $this->Barang_model->insert_nama_barang($data);
 
@@ -265,6 +285,7 @@ class Barang extends MY_Controller
             'stok_minimum' => $stokMinimum,
             'keterangan' => $keterangan,
         );
+        $this->_isi_handle($data, (int) $id);
 
         if (!empty($_FILES['gambar']['name'])) {
             $this->upload->initialize($this->_upload_config());

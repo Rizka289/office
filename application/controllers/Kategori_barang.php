@@ -98,6 +98,9 @@ class Kategori_barang extends MY_Controller
             'deskripsi'     => $deskripsi,
             'created_at'    => date('Y-m-d H:i:s'),
         );
+        if ($this->db->field_exists('pakai_handle', 'kategori_barang')) {
+            $data['pakai_handle'] = $this->input->post('pakai_handle') ? 1 : 0;
+        }
 
         $simpan = $this->Kategori_barang_model->insert_kategori_barang($data);
 
@@ -158,6 +161,9 @@ class Kategori_barang extends MY_Controller
             'nama_kategori' => $nama,
             'deskripsi'     => $deskripsi,
         );
+        if ($this->db->field_exists('pakai_handle', 'kategori_barang')) {
+            $data['pakai_handle'] = $this->input->post('pakai_handle') ? 1 : 0;
+        }
 
         $update = $this->Kategori_barang_model->update_kategori_barang($id, $data);
 

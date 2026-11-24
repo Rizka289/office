@@ -173,6 +173,21 @@
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
                         <input type="text" name="keterangan" min="0" class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" autocomplete="off" required>
                     </div>
+                    <?php if (!empty($pakai_handle_bawaan)): ?>
+                    <div class="mb-3 p-2 rounded" style="background:#f6f8f7">
+                        <label class="form-label small fw-bold mb-1">Handle bawaan (khusus pintu)</label>
+                        <div class="d-flex gap-2">
+                            <select name="id_handle" class="form-select form-select-sm">
+                                <option value="0">- tidak ada -</option>
+                                <?php foreach ($handleList as $hb): ?>
+                                    <option value="<?= (int) $hb->id ?>"><?= html_escape(trim(($hb->kode_barang ? $hb->kode_barang . ' - ' : '') . $hb->nama . ($hb->warna && $hb->warna !== '-' ? ' - ' . $hb->warna : ''))) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <input type="number" name="qty_handle" class="form-control form-control-sm" style="max-width:90px" min="0" step="1" value="1" title="Qty per 1 pintu">
+                        </div>
+                        <div class="text-muted small mt-1">Stok handle ini otomatis dipotong saat surat jalan pintu dibuat (qty &times; jumlah pintu), walaupun di penawaran tidak diisi aksesoris.</div>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
@@ -309,6 +324,21 @@
                         <label class="form-label small fw-bold"><?= translate('deskripsi') ?></label>
                         <input type="text" name="keterangan" id="edit_keterangan" class="form-control form-control-sm" placeholder="<?= translate('p_deskripsi') ?>" required>
                     </div>
+                    <?php if (!empty($pakai_handle_bawaan)): ?>
+                    <div class="mb-3 p-2 rounded" style="background:#f6f8f7">
+                        <label class="form-label small fw-bold mb-1">Handle bawaan (khusus pintu)</label>
+                        <div class="d-flex gap-2">
+                            <select name="id_handle" id="edit_id_handle" class="form-select form-select-sm">
+                                <option value="0">- tidak ada -</option>
+                                <?php foreach ($handleList as $hb): ?>
+                                    <option value="<?= (int) $hb->id ?>"><?= html_escape(trim(($hb->kode_barang ? $hb->kode_barang . ' - ' : '') . $hb->nama . ($hb->warna && $hb->warna !== '-' ? ' - ' . $hb->warna : ''))) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <input type="number" name="qty_handle" id="edit_qty_handle" class="form-control form-control-sm" style="max-width:90px" min="0" step="1" value="1" title="Qty per 1 pintu">
+                        </div>
+                        <div class="text-muted small mt-1">Stok handle ini otomatis dipotong saat surat jalan pintu dibuat (qty &times; jumlah pintu), walaupun di penawaran tidak diisi aksesoris.</div>
+                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"><?= translate('btn_batal') ?></button>
@@ -555,6 +585,8 @@
                         $('#edit_harga').val(response.data.harga_satuan);
                         $('#edit_stok').val(response.data.stok_minimum);
                         $('#edit_keterangan').val(response.data.keterangan);
+                        $('#edit_id_handle').val(String(parseInt(response.data.id_handle, 10) || 0));
+                        $('#edit_qty_handle').val(response.data.qty_handle != null ? parseFloat(response.data.qty_handle) : 1);
 
                         $('#edit_preview_gambar').attr('src', response.data.gambar_url);
 

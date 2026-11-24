@@ -87,6 +87,7 @@
               <option value="30-70"><?= translate('dp_30') ?></option>
               <option value="custom"><?= translate('custom') ?></option>
             </select>
+            <div class="form-text text-info d-none" id="info_ksy"><i class="bi bi-box-seam me-1"></i><?= translate('i18n_ksy_info_so_tambah') ?></div>
           </div>
           <div class="col-md-3 d-none" id="wrap_dp">
             <label class="form-label"><?= translate('i18n_dp_2') ?></label>
@@ -241,6 +242,7 @@
         document.getElementById('v_customer').value = h.nama_customer || '';
         document.getElementById('v_tgl_penawaran').value = h.tanggal || '';
         if (!alamatDiubah) { alamatEl.value = h.alamat_customer || ''; }
+        kunciKonsinyasi(h.jenis_penjualan === 'konsinyasi');
 
         var rows = '';
         d.items.forEach(function (it, i) {
@@ -302,8 +304,19 @@
     tampil('wrap_pasang', false);
     tampil('wrap_ongkir', false);
     tampil('wrap_pph', false);
-    grand = 0; updateDp();
+    grand = 0; kunciKonsinyasi(false); updateDp();
     btn.disabled = true;
+  }
+
+  // Konsinyasi (titip jual): tanpa DP, ditagih sesuai barang yang laku -> termin dikunci 100%
+  function kunciKonsinyasi(ya) {
+    var t = document.getElementById('termin');
+    if (ya) { t.value = '100'; }
+    t.style.pointerEvents = ya ? 'none' : '';
+    t.classList.toggle('bg-light', ya);
+    t.setAttribute('tabindex', ya ? '-1' : '0');
+    document.getElementById('info_ksy').classList.toggle('d-none', !ya);
+    if (typeof updateDp === 'function') { updateDp(); }
   }
 
   // Termin & DP

@@ -1,8 +1,13 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 include APPPATH . 'views/pemenuhan/_status.php';
 $this->load->view('pemenuhan/_style');
+include APPPATH . 'views/pemenuhan/_aksesoris.php';
 $h        = $po['header'];
 $dropship = $h->jenis === 'dropship';
+$ada_barang = !empty($ada_barang);
+$lokasi     = isset($lokasi) ? $lokasi : array();
+// PO tanpa SO (PO bahan/stok) kembali ke detail PO
+$url_kembali = $h->id_so ? site_url('pemenuhan/so/' . (int) $h->id_so) : site_url('pemenuhan/po_detail/' . (int) $h->id);
 ?>
 <div class="pm container-fluid py-3">
 
@@ -10,9 +15,9 @@ $dropship = $h->jenis === 'dropship';
     <div>
       <div class="judul"><i class="bi <?= $dropship ? 'bi-truck' : 'bi-box-arrow-in-down' ?> me-2"></i>
         <?= $dropship ? translate('i18n_konfirmasi_dropship_diterima_customer') : translate('i18n_terima_barang_dari_supplier') ?></div>
-      <div class="meta"><?= html_escape($h->no_po) ?> &middot; <?= html_escape($h->supplier ? $h->supplier->nama : '-') ?> &middot; <?= html_escape($h->no_so) ?> (<?= html_escape($h->nama_customer) ?>)</div>
+      <div class="meta"><?= html_escape($h->no_po) ?> &middot; <?= html_escape($h->supplier ? $h->supplier->nama : '-') ?> &middot; <?= $h->id_so ? html_escape($h->no_so) . ' (' . html_escape((string) $h->nama_customer) . ')' : 'PO bahan / stok' ?></div>
     </div>
-    <a href="<?= site_url('pemenuhan/so/' . (int) $h->id_so) ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?></a>
+    <a href="<?= $url_kembali ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('kembali') ?></a>
   </div>
 
   <?php $this->load->view('pemenuhan/_flash'); ?>
@@ -37,6 +42,18 @@ $dropship = $h->jenis === 'dropship';
           <label class="form-label"><?= $dropship ? translate('i18n_no_resi_surat_jalan_supplier') : translate('i18n_no_surat_jalan_supplier') ?></label>
           <input type="text" name="no_sj_supplier" class="form-control" maxlength="100">
         </div>
+        <?php if ($ada_barang): ?>
+          <div class="col-md-4">
+            <label class="form-label">Simpan di lokasi gudang <span class="text-danger">*</span></label>
+            <select name="id_location" class="form-select" required>
+              <option value="">- pilih lokasi -</option>
+              <?php foreach ($lokasi as $l): ?>
+                <option value="<?= (int) $l->id ?>"><?= html_escape(trim($l->location_code . ' ' . ($l->zone_name ? '(' . $l->zone_name . ')' : ''))) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <div class="muted">Barang bertanda <i class="bi bi-box-arrow-in-down text-success"></i> otomatis menambah stok di lokasi ini.</div>
+          </div>
+        <?php endif; ?>
         <?php if ($dropship): ?>
           <div class="col-md-3">
             <label class="form-label"><?= translate('i18n_ekspedisi') ?></label>
@@ -67,23 +84,27 @@ $dropship = $h->jenis === 'dropship';
             <tr>
               <td>
                 <div class="fw-semibold"><?= html_escape($d->nama_barang) ?></div>
-                <div class="muted"><?= $d->id_so_detail ? translate('i18n_item_so') : translate('i18n_baris_tambahan') ?><?= trim((string) $d->spesifikasi) !== '' ? ' &middot; ' . html_escape($d->spesifikasi) : '' ?></div>
+                <div class="muted"><?php if (!empty($d->id_barang) && !$dropship): ?><span class="text-success"><i class="bi bi-box-arrow-in-down"></i> masuk stok</span><?php else: ?><?= $d->id_so_detail ? translate('i18n_item_so') : translate('i18n_baris_tambahan') ?><?php endif; ?><?= trim((string) $d->spesifikasi) !== '' ? ' &middot; ' . html_escape($d->spesifikasi) : '' ?></div>
               </td>
               <td class="text-end"><?= $num($d->qty) ?> <?= html_escape($d->satuan) ?></td>
               <td class="text-end"><?= $num($d->qty_diterima) ?></td>
               <td class="text-end"><?= $num($sisa) ?></td>
               <td>
-                <input type="number" name="qty[<?= (int) $d->id ?>]" class="form-control form-control-sm text-end" min="0" max="<?= $sisa ?>" step="0.01" value="<?= $sisa ?>" <?= $sisa > 0 ? '' : 'disabled' ?>>
+                <input type="number" name="qty[<?= (int) $d->id ?>]" data-sod="<?= (int) $d->id_so_detail ?>" class="form-control form-control-sm text-end" min="0" max="<?= $sisa ?>" step="<?= (!empty($d->id_barang) && !$dropship) ? '1' : '0.01' ?>" value="<?= $sisa ?>" <?= $sisa > 0 ? '' : 'disabled' ?>>
               </td>
             </tr>
+            <?php if ($dropship && $d->id_so_detail) { $aks_baris($d->id_so_detail, 'qty[' . (int) $d->id . ']', 3); } ?>
           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
   </div>
 
+  <?php if ($dropship && $aks_map): ?>
+    <div class="alert alert-light border small"><i class="bi bi-arrow-return-right me-1"></i>Baris abu-abu = <b>aksesoris paket</b> (mis. handle) yang dikirim dari gudang kita untuk barang dropship ini. Pilih stok gudangnya supaya stok berkurang, atau pilih "tidak potong stok" kalau aksesoris sudah disediakan supplier.</div>
+  <?php endif; ?>
   <div class="d-flex justify-content-end gap-2 mb-4">
-    <a href="<?= site_url('pemenuhan/so/' . (int) $h->id_so) ?>" class="btn btn-outline-secondary"><?= translate('btn_batal') ?></a>
+    <a href="<?= $url_kembali ?>" class="btn btn-outline-secondary"><?= translate('btn_batal') ?></a>
     <button type="submit" class="btn btn-success" id="btn_simpan"><i class="bi bi-check2-square me-1"></i><?= translate('button_save') ?></button>
   </div>
   <?= form_close() ?>
@@ -104,6 +125,7 @@ $dropship = $h->jenis === 'dropship';
     </div>
   <?php endif; ?>
 </div>
+<?= $aks_script ?>
 <script>
   (function () {
     var kirim = false;

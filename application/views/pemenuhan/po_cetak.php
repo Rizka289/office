@@ -28,6 +28,12 @@ foreach ($items as $d_) { $sub_brg += (float) $d_->total; }
   <meta charset="utf-8">
   <title><?= $judul ?> <?= html_escape($h->no_po) ?></title>
   <?= $css ?>
+  <style>
+    /* Tanda tangan 4 kolom sejajar (surat jalan dropship, sama dengan sj_cetak) */
+    .ttd.ttd-4 { display:flex; justify-content:space-between; gap:12px; }
+    .ttd.ttd-4 .col { flex:1 1 0; width:auto; min-width:0; text-align:center; }
+    .ttd.ttd-4 .col .nama { white-space:nowrap; }
+  </style>
 </head>
 <body>
   <?= $toolbar ?>
@@ -52,6 +58,7 @@ foreach ($items as $d_) { $sub_brg += (float) $d_->total; }
       <div class="box">
         <?php if ($is_sj): ?>
           <h4>Kepada (penerima)</h4>
+          <?php if ($isi($h->nama_customer ?? '')): ?><div style="font-weight:700;font-size:12px"><?= html_escape($h->nama_customer) ?></div><?php endif; ?>
           <div><?= $multi($h->alamat_kirim) ?></div>
         <?php else: ?>
           <h4>Kepada supplier</h4>
@@ -66,6 +73,7 @@ foreach ($items as $d_) { $sub_brg += (float) $d_->total; }
           <tr><td>Tanggal</td><td>: <?= $tgl($h->tanggal) ?></td></tr>
           <?php if ($is_sj): ?>
             <tr><td>Ref. pesanan</td><td>: <?= html_escape($h->no_so) ?></td></tr>
+            <tr><td>Dikirim oleh</td><td>: <?= html_escape($perusahaan['nama']) ?></td></tr>
             <?php if ($isi($h->no_po_customer)): ?><tr><td>No. PO Anda</td><td>: <?= html_escape($h->no_po_customer) ?></td></tr><?php endif; ?>
           <?php else: ?>
             <?php if ($h->tgl_butuh): ?><tr><td>Dibutuhkan</td><td>: <?= $tgl($h->tgl_butuh) ?></td></tr><?php endif; ?>
@@ -98,7 +106,7 @@ foreach ($items as $d_) { $sub_brg += (float) $d_->total; }
             <td><strong><?= html_escape($d->nama_barang) ?></strong></td>
             <td class="c"><?= (int) ($d->lebar_mm ?? 0) > 0 ? $num($d->lebar_mm) : '-' ?></td>
             <td class="c"><?= (int) ($d->tinggi_mm ?? 0) > 0 ? $num($d->tinggi_mm) : '-' ?></td>
-            <td class="c"><?= $num($d->qty) ?></td>
+            <td class="c"><?= $num($d->qty) ?><?= ($d->satuan ?? 'unit') !== 'unit' && $isi($d->satuan ?? '') ? ' ' . html_escape($d->satuan) : '' ?></td>
             <td class="c"><?= (float) ($d->luas_m2 ?? 0) > 0 ? $fmt_luas($d->luas_m2) : '-' ?></td>
             <td><?= $isi($d->spesifikasi) ? $multi($d->spesifikasi) : '' ?></td>
             <?php if (!$is_sj): ?>
@@ -131,10 +139,11 @@ foreach ($items as $d_) { $sub_brg += (float) $d_->total; }
       <div class="catatan">Barang diterima dalam keadaan baik dan lengkap. Mohon tanda tangan, nama jelas &amp; tanggal terima.</div>
     <?php endif; ?>
 
-    <div class="ttd">
+    <div class="ttd<?= $is_sj ? ' ttd-4' : '' ?>">
       <?php if ($is_sj): ?>
-        <div class="col"><div>Pengirim,</div><div class="garis"></div><div class="nama"><?= html_escape($perusahaan['nama']) ?></div></div>
-        <div class="col"><div>Sopir / Ekspedisi,</div><div class="garis"></div><div class="nama">&nbsp;</div></div>
+        <div class="col"><div>Dibuat oleh,</div><div class="garis"></div><div class="nama">Admin / Gudang</div></div>
+        <div class="col"><div>Disetujui oleh,</div><div class="garis"></div><div class="nama">Mr. Chung / Mr. Wangting</div></div>
+        <div class="col"><div>Pengirim / Sopir,</div><div class="garis"></div><div class="nama">&nbsp;</div></div>
         <div class="col"><div>Penerima,</div><div class="garis"></div><div class="nama">&nbsp;</div></div>
       <?php else: ?>
         <div class="col"><div>Dibuat oleh,</div><div class="garis"></div><div class="nama"><?= html_escape(!empty($h->nama_pembuat) ? $h->nama_pembuat : 'Purchasing') ?></div></div>

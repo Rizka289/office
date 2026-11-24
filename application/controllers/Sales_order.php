@@ -87,7 +87,8 @@ class Sales_order extends MY_Controller
             }
             $total_so++;
 
-            $grand    = (float) $so->grand_total;
+            // konsinyasi: hanya barang yang sudah laku yang dihitung sebagai penjualan
+            $grand    = isset($so->tagihan) ? (float) $so->tagihan : (float) $so->grand_total;
             $diterima = (float) $so->total_diterima;
             $sisa     = isset($so->sisa_bayar) ? (float) $so->sisa_bayar : ($grand - $diterima);
 

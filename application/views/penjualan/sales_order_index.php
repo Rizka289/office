@@ -195,11 +195,13 @@ $rp = function ($n) {
               $badge = isset($status_badge[$st]) ? $status_badge[$st] : array('bg-secondary', ucfirst($st));
               $grand = (float) $row->grand_total;
               $sisa  = isset($row->sisa_bayar) ? (float) $row->sisa_bayar : $grand - (float) $row->total_diterima;
-              $lunas = $grand > 0 && $sisa <= 0.005;
+              // Konsinyasi: tagihan = barang yang sudah laku; lunas baru dianggap saat SO selesai
+              $ksy   = ($row->jenis_penjualan ?? 'biasa') === 'konsinyasi';
+              $lunas = $ksy ? ($st === 'selesai') : ($grand > 0 && $sisa <= 0.005);
             ?>
               <tr>
                 <td><?= $no++; ?></td>
-                <td class="fw-semibold text-success"><?= html_escape($row->no_so); ?></td>
+                <td class="fw-semibold text-success"><?= html_escape($row->no_so); ?><?php if ($ksy): ?> <span class="badge bg-info text-dark fw-normal"><?= translate('i18n_konsinyasi') ?></span><?php endif; ?></td>
                 <td><?= date('d M Y', strtotime($row->tanggal)); ?></td>
                 <td><?= html_escape($row->nama_customer); ?></td>
                 <td><?= !empty($row->no_po_customer) ? html_escape($row->no_po_customer) : '<span class="text-muted">-</span>'; ?></td>
@@ -211,6 +213,8 @@ $rp = function ($n) {
                     <span class="text-muted">-</span>
                   <?php elseif ($lunas): ?>
                     <span class="badge bg-success"><?= translate('i18n_lunas_2') ?></span>
+                  <?php elseif ($ksy && $sisa <= 0.005): ?>
+                    <span class="text-muted small fw-normal"><?= translate('i18n_menunggu_laporan_laku') ?></span>
                   <?php else: ?>
                     <?= $rp($sisa); ?>
                   <?php endif; ?>

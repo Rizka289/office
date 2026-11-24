@@ -46,12 +46,20 @@ $tgljam = function ($d) { return $d ? date('d M Y H:i', strtotime($d)) : '-'; };
       <div class="meta mt-1">
         <?= html_escape($h->supplier ? $h->supplier->nama : '-') ?> &middot;
         <?= $dropship ? translate('i18n_dropship_ke_customer') : translate('i18n_dikirim_ke_gudang') ?> &middot;
-        <?= html_escape($h->no_so) ?> (<?= html_escape($h->nama_customer) ?>)
+        <?php if ($h->id_so): ?>
+          <?= html_escape($h->no_so) ?> (<?= html_escape((string) $h->nama_customer) ?>)
+        <?php else: ?>
+          PO bahan / stok (tanpa SO)
+        <?php endif; ?>
       </div>
     </div>
     <div class="d-flex gap-2">
       <a href="<?= site_url('pemenuhan/po_cetak/' . (int) $h->id) ?>" target="_blank" class="btn btn-light btn-sm"><i class="bi bi-printer me-1"></i><?= translate('i18n_cetak_po') ?></a>
-      <a href="<?= site_url('pemenuhan/so/' . (int) $h->id_so) ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('i18n_proses_so') ?></a>
+      <?php if ($h->id_so): ?>
+        <a href="<?= site_url('pemenuhan/so/' . (int) $h->id_so) ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('i18n_proses_so') ?></a>
+      <?php else: ?>
+        <a href="<?= site_url('pemenuhan/po') ?>" class="btn btn-light btn-sm"><i class="bi bi-arrow-left me-1"></i><?= translate('i18n_purchase_order') ?></a>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -149,10 +157,10 @@ $tgljam = function ($d) { return $d ? date('d M Y H:i', strtotime($d)) : '-'; };
           <?php $no = 1; $tq = 0; $tl = 0; foreach ($po['items'] as $d): $tq += (float) $d->qty; $tl += (float) ($d->luas_m2 ?? 0) * (float) $d->qty; ?>
             <tr>
               <td><?= $no++ ?></td>
-              <td class="fw-semibold"><?= html_escape($d->nama_barang) ?></td>
+              <td class="fw-semibold"><?= html_escape($d->nama_barang) ?><?php if (!empty($d->id_barang) && !$dropship): ?><div class="muted text-success fw-normal"><i class="bi bi-box-arrow-in-down"></i> masuk stok saat diterima</div><?php endif; ?></td>
               <td class="text-end"><?= (int) ($d->lebar_mm ?? 0) > 0 ? $num($d->lebar_mm) : '-' ?></td>
               <td class="text-end"><?= (int) ($d->tinggi_mm ?? 0) > 0 ? $num($d->tinggi_mm) : '-' ?></td>
-              <td class="text-end"><?= $num($d->qty) ?></td>
+              <td class="text-end"><?= $num($d->qty) ?><?= ($d->satuan ?? 'unit') !== 'unit' && trim((string) ($d->satuan ?? '')) !== '' ? ' ' . html_escape($d->satuan) : '' ?></td>
               <td class="text-end"><?= (float) ($d->luas_m2 ?? 0) > 0 ? $fmt_luas($d->luas_m2) : '-' ?></td>
               <td class="muted" style="white-space:pre-line"><?= html_escape((string) $d->spesifikasi) ?></td>
               <td class="text-end"><?= $rp($d->harga) ?><div class="muted"><?= $per_m2($d) ? translate('i18n_per_m2') : translate('i18n_per_unit') ?></div></td>

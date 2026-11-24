@@ -348,7 +348,15 @@
                     'label' => translate('app_purchasing'),
                     'icon'  => 'bi-diagram-3',
                     'url'   => 'pemenuhan',
-                    'roles' => ['super_admin', 'atasan', 'staff_purchasing', 'staff_gudang'],
+                    'roles' => ['super_admin', 'atasan', 'staff_purchasing', 'staff_gudang', 'finance'],
+                ],
+                [
+                    // Barang titip jual di customer: lapor laku, tarik ke gudang, jatuh tempo. Lihat controllers/Konsinyasi.php
+                    'key'   => 'konsinyasi',
+                    'label' => translate('i18n_ksy_menu'),
+                    'icon'  => 'bi-box-seam',
+                    'url'   => 'konsinyasi',
+                    'roles' => ['super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'],
                 ],
             ],
         ],

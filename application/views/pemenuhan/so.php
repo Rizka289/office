@@ -52,11 +52,17 @@ $tombol_po = function ($id, $aksi, $label, $kelas, $tanya) use ($kembali) {
     <div class="d-flex align-items-center gap-2 flex-wrap">
       <?= $badge('so', $h->status) ?>
       <a href="<?= site_url('sales_order/detail/' . (int) $h->id) ?>" class="btn btn-light btn-sm"><i class="bi bi-file-text me-1"></i><?= translate('i18n_detail_so') ?></a>
+      <?php if (($h->jenis_penjualan ?? 'biasa') === 'konsinyasi' && in_array($h->status, array('produksi', 'terkirim', 'selesai'), true)): ?>
+        <a href="<?= site_url('konsinyasi/so/' . (int) $h->id) ?>" class="btn btn-info btn-sm"><i class="bi bi-box-seam me-1"></i><?= translate('i18n_barang_titipan') ?></a>
+      <?php endif; ?>
       <a href="<?= site_url('pemenuhan') ?>" class="btn btn-outline-light btn-sm"><i class="bi bi-list-task me-1"></i><?= translate('i18n_semua_proses') ?></a>
     </div>
   </div>
 
   <?php $this->load->view('pemenuhan/_flash'); ?>
+  <?php if (($h->jenis_penjualan ?? 'biasa') === 'konsinyasi'): ?>
+    <div class="alert alert-info py-2"><i class="bi bi-box-seam me-1"></i><?= sprintf(translate('i18n_ksy_info_pemenuhan'), (int) ($h->masa_konsinyasi ?: 60)) ?></div>
+  <?php endif; ?>
 
   <?php if (!$bisa_proses): ?>
     <div class="alert alert-warning">

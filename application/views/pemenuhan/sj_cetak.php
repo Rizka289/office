@@ -41,9 +41,8 @@ $dropship = $h->jenis === 'dropship';
           <tr><td>Tanggal</td><td>: <?= $tgl($h->tanggal) ?></td></tr>
           <tr><td>Ref. SO</td><td>: <?= html_escape($h->no_so) ?></td></tr>
           <?php if ($isi($h->no_po_customer)): ?><tr><td>No. PO Anda</td><td>: <?= html_escape($h->no_po_customer) ?></td></tr><?php endif; ?>
-          <?php if ($dropship): ?>
-            <tr><td>Dikirim oleh</td><td>: <?= html_escape($h->nama_supplier) ?> (dropship)</td></tr>
-          <?php endif; ?>
+          <?php /* Dropship: dokumen untuk customer selalu atas nama perusahaan kita, supplier tidak ditampilkan */ ?>
+          <tr><td>Dikirim oleh</td><td>: <?= html_escape($perusahaan['nama']) ?></td></tr>
           <?php if ($isi($h->ekspedisi)): ?><tr><td>Ekspedisi</td><td>: <?= html_escape($h->ekspedisi) ?></td></tr><?php endif; ?>
           <?php if ($isi($h->no_kendaraan)): ?><tr><td>No. kendaraan</td><td>: <?= html_escape($h->no_kendaraan) ?></td></tr><?php endif; ?>
           <?php if ($isi($h->no_resi)): ?><tr><td>No. resi</td><td>: <?= html_escape($h->no_resi) ?></td></tr><?php endif; ?>
@@ -65,6 +64,14 @@ $dropship = $h->jenis === 'dropship';
             <td class="c"><?= $num($it->qty_kirim) ?></td>
             <td></td>
           </tr>
+          <?php foreach (($it->aksesoris_kirim ?? array()) as $ak): ?>
+            <tr class="aks">
+              <td></td>
+              <td style="padding-left:18px">&#8627; <?= html_escape($ak->nama) ?> <span class="muted">(aksesoris / kelengkapan)</span></td>
+              <td class="c"><?= $num($ak->qty) ?></td>
+              <td></td>
+            </tr>
+          <?php endforeach; ?>
         <?php endforeach; ?>
       </tbody>
     </table>

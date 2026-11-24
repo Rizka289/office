@@ -1,6 +1,7 @@
 <?php defined('BASEPATH') or exit('No direct script access allowed');
 include APPPATH . 'views/pemenuhan/_status.php';
 $this->load->view('pemenuhan/_style');
+include APPPATH . 'views/pemenuhan/_aksesoris.php';
 ?>
 <div class="pm container-fluid py-3">
 
@@ -58,10 +59,18 @@ $this->load->view('pemenuhan/_style');
               <td class="text-end"><?= $num($it->p_siap_kirim) ?></td>
               <td><input type="number" name="qty[<?= (int) $it->id ?>]" class="form-control form-control-sm text-end" min="0" max="<?= (float) $it->p_siap_kirim ?>" step="0.01" value="<?= (float) $it->p_siap_kirim ?>"></td>
             </tr>
+            <?php $aks_baris($it->id, 'qty[' . (int) $it->id . ']', 4); ?>
           <?php endforeach; ?>
         </tbody>
       </table>
     </div>
+    <?php if ($aks_map): ?>
+      <div class="card-body border-top py-2 small">
+        <i class="bi bi-arrow-return-right me-1"></i>Baris abu-abu = <b>aksesoris paket</b> (mis. handle) yang ikut dikirim. Pilih stok gudangnya supaya stok berkurang otomatis; qty mengikuti jumlah barang yang dikirim (bisa diubah).
+      </div>
+    <?php elseif (!$aks_aktif): ?>
+      <div class="card-body border-top py-2 small text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Potong stok aksesoris (handle, dll) belum aktif: jalankan database/pm_sj_aksesoris.sql.</div>
+    <?php endif; ?>
     <div class="card-body border-top muted"><?= translate('i18n_hanya_barang_yang_sudah_selesai_produksi') ?> <b><?= translate('i18n_stok') ?></b> <?= translate('i18n_otomatis_dikurangi_dari_stok_gudang') ?></div>
   </div>
 
@@ -71,6 +80,7 @@ $this->load->view('pemenuhan/_style');
   </div>
   <?= form_close() ?>
 </div>
+<?= $aks_script ?>
 <script>
   (function () {
     var kirim = false;

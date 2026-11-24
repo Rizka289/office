@@ -455,6 +455,23 @@ class Pemenuhan_model extends CI_Model
             return $this->_gagal(translate('i18n_isi_qty_minimal_satu_barang'));
         }
 
+        $hasil = $this->_insert_po((int) $id_so, $jenis, $hdr, $sup, $rows, $total, $biaya, $id_user);
+        if (!$hasil[0]) {
+            return $hasil;
+        }
+        $this->sinkron_status_so($id_so);
+        if ($this->db->trans_status() === false) {
+            return $this->_gagal(translate('i18n_gagal_menyimpan_po'));
+        }
+        $this->db->trans_commit();
+        return $hasil;
+    }
+
+    // Simpan header + detail + biaya PO (dipakai PO dari SO dan PO bahan/stok tanpa SO).
+    // Dipanggil di dalam transaksi. $id_so = 0 -> PO tanpa SO (id_so NULL).
+    // Return array(ok, pesan, id_po)
+    private function _insert_po($id_so, $jenis, $hdr, $sup, $rows, $total, $biaya, $id_user)
+    {
         list($biaya_rows, $total_biaya, $err_biaya) = $this->_saring_biaya_po($biaya);
         if ($err_biaya !== '') {
             return $this->_gagal($err_biaya);
@@ -491,7 +508,7 @@ class Pemenuhan_model extends CI_Model
             'no_po'        => $no['no'],
             'no_urut'      => $no['no_urut'],
             'tahun'        => $no['tahun'],
-            'id_so'        => (int) $id_so,
+            'id_so'        => $id_so > 0 ? (int) $id_so : null,
             'id_supplier'  => (int) $sup->id,
             'jenis'        => $jenis,
             'tanggal'      => $hdr['tanggal'],
@@ -518,12 +535,189 @@ class Pemenuhan_model extends CI_Model
                 return $this->_gagal(translate('i18n_gagal_menyimpan_biaya_tambahan_po'));
             }
         }
-        $this->sinkron_status_so($id_so);
+        return array(true, 'PO ' . $no['no'] . (' ' . translate('i18n_dibuat_draft_menunggu_persetujuan_atasan')), $id_po);
+    }
+
+    // ================= 2a'. PO BAHAN / STOK (TANPA SALES ORDER) =================
+    //
+    // Untuk pembelian di luar penawaran/SO, mis. aluminium, kaca, aksesoris untuk produksi sendiri.
+    // Alur sama dengan PO biasa: draft -> disetujui atasan -> dipesan -> diterima gudang -> dibayar.
+    // Baris yang dipilih dari master barang otomatis MENAMBAH stok_barang saat diterima
+    // (kartu stok: PENERIMAAN_SUPPLIER), jadi bisa dipakai oleh SPK produksi.
+    //
+    // Butuh perubahan tabel: database/pm_po_tanpa_so.sql
+
+    // Struktur database untuk PO tanpa SO sudah siap?
+    public function po_bebas_siap()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $q   = $this->db->query(
+                "SELECT IS_NULLABLE FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pm_po' AND COLUMN_NAME = 'id_so'"
+            );
+            $row = $q ? $q->row() : null;
+            $ada = $row && strtoupper($row->IS_NULLABLE) === 'YES'
+                && $this->db->field_exists('id_barang', 'pm_po_detail')
+                && $this->db->field_exists('id_location', 'pm_po_terima');
+        }
+        return $ada;
+    }
+
+    // Master barang untuk dipilih di PO bahan
+    public function get_barang_beli()
+    {
+        return $this->db->select('id, kode_barang, nama, warna, satuan, jenis_barang')
+            ->order_by('nama', 'ASC')->get('barang')->result();
+    }
+
+    public function get_lokasi()
+    {
+        return $this->db->select('id, location_code, zone_name')
+            ->order_by('location_code', 'ASC')->get('locations')->result();
+    }
+
+    // $hdr: tanggal, id_supplier, tgl_butuh, alamat_kirim, catatan, pakai_ppn
+    // $lines: array of (id_barang, nama_barang, spesifikasi, qty, satuan, harga)
+    // Return: array(ok, pesan, id_po)
+    public function simpan_po_bebas($hdr, $lines, $id_user, $biaya = array())
+    {
+        return $this->_aman('_proses_po_bebas', array($hdr, $lines, $id_user, $biaya));
+    }
+
+    private function _proses_po_bebas($hdr, $lines, $id_user, $biaya = array())
+    {
+        if (!$this->po_bebas_siap()) {
+            return array(false, 'Fitur PO bahan belum aktif. Jalankan database/pm_po_tanpa_so.sql di database dulu.');
+        }
+        $this->db->trans_begin();
+        $sup = $this->db->get_where('supplier', array('id' => (int) $hdr['id_supplier']))->row();
+        if (!$sup) {
+            return $this->_gagal(translate('i18n_pilih_supplier_terlebih_dahulu'));
+        }
+
+        $barang = array();
+        foreach ($this->get_barang_beli() as $b) {
+            $barang[(int) $b->id] = $b;
+        }
+
+        $rows  = array();
+        $total = 0;
+        foreach ($lines as $l) {
+            $qty = round((float) $l['qty'], 2);
+            if ($qty <= 0) {
+                continue;
+            }
+            $id_b   = (int) ($l['id_barang'] ?? 0);
+            $nama   = trim((string) $l['nama_barang']);
+            $satuan = mb_substr(trim((string) ($l['satuan'] ?? '')), 0, 30);
+            if ($id_b > 0) {
+                if (!isset($barang[$id_b])) {
+                    return $this->_gagal('Barang yang dipilih tidak ditemukan di master barang.');
+                }
+                $b = $barang[$id_b];
+                if ($nama === '') {
+                    $nama = trim($b->nama . ($b->warna && $b->warna !== '-' ? ' - ' . $b->warna : ''));
+                }
+                if ($satuan === '') {
+                    $satuan = (string) $b->satuan;
+                }
+                // stok_barang disimpan bilangan bulat
+                if (abs($qty - round($qty)) > $this->eps) {
+                    return $this->_gagal('Qty ' . $nama . ' harus bilangan bulat karena masuk ke stok gudang.');
+                }
+            }
+            if ($nama === '') {
+                return $this->_gagal(translate('i18n_nama_barang_pada_baris_tambahan_wajib'));
+            }
+            $harga = max(0, (float) $l['harga']);
+            if ($harga <= 0) {
+                return $this->_gagal(translate('i18n_harga_beli') . $nama . translate('i18n_q_belum_diisi'));
+            }
+            $sub    = round($qty * $harga, 2);
+            $rows[] = array(
+                'id_so_detail' => null,
+                'id_barang'    => $id_b > 0 ? $id_b : null,
+                'nama_barang'  => mb_substr($nama, 0, 255),
+                'lebar_mm'     => 0,
+                'tinggi_mm'    => 0,
+                'luas_m2'      => 0,
+                'spesifikasi'  => trim((string) $l['spesifikasi']),
+                'qty'          => $qty,
+                'satuan'       => $satuan !== '' ? $satuan : 'unit',
+                'harga'        => $harga,
+                'hitung_per'   => 'unit',
+                'total'        => $sub,
+            );
+            $total += $sub;
+        }
+        if (!$rows) {
+            return $this->_gagal(translate('i18n_isi_qty_minimal_satu_barang'));
+        }
+
+        $hasil = $this->_insert_po(0, 'stok', $hdr, $sup, $rows, $total, $biaya, $id_user);
+        if (!$hasil[0]) {
+            return $hasil;
+        }
         if ($this->db->trans_status() === false) {
             return $this->_gagal(translate('i18n_gagal_menyimpan_po'));
         }
         $this->db->trans_commit();
-        return array(true, 'PO ' . $no['no'] . (' ' . translate('i18n_dibuat_draft_menunggu_persetujuan_atasan')), $id_po);
+        return $hasil;
+    }
+
+    // PO terkait SO: kunci SO (harus masih berjalan). PO tanpa SO: selalu boleh.
+    private function _kunci_so_po($id_so)
+    {
+        if ((int) $id_so <= 0) {
+            return true;
+        }
+        return (bool) $this->_kunci_so($id_so);
+    }
+
+    // Tambah stok_barang dari penerimaan PO + catat kartu stok (PENERIMAAN_SUPPLIER).
+    // Return '' jika ok, atau pesan error.
+    private function _stok_masuk_po($id_barang, $id_location, $qty, $id_trm, $no_po, $nama_supplier, $id_user)
+    {
+        $jenis_b = $this->db->select('jenis_barang')->get_where('barang', array('id' => (int) $id_barang))->row();
+        $opsi    = ($jenis_b && $jenis_b->jenis_barang === 'aksesoris') ? 'aksesoris' : 'bahan';
+        $ukuran  = '';
+        $rows    = $this->db->query(
+            'SELECT id, stok FROM stok_barang WHERE id_barang = ? AND id_location = ? AND opsi = ? AND ukuran = ? ORDER BY id ASC FOR UPDATE',
+            array((int) $id_barang, (int) $id_location, $opsi, $ukuran)
+        )->result();
+        $sebelum = 0;
+        foreach ($rows as $r) {
+            $sebelum += (int) $r->stok;
+        }
+        $sesudah = $sebelum + (int) $qty;
+        if ($rows) {
+            $ok = $this->db->set('stok', 'stok + ' . (int) $qty, false)->where('id', $rows[0]->id)->update('stok_barang');
+        } else {
+            $ok = $this->db->insert('stok_barang', array(
+                'id_barang' => (int) $id_barang, 'id_location' => (int) $id_location,
+                'opsi' => $opsi, 'ukuran' => $ukuran, 'stok' => $sesudah,
+            ));
+        }
+        if (!$ok) {
+            return 'Gagal menambah stok gudang.';
+        }
+        $ok = $this->db->insert('stok_riwayat', array(
+            'id_barang'       => (int) $id_barang,
+            'id_location'     => (int) $id_location,
+            'jenis_transaksi' => 'PENERIMAAN_SUPPLIER',
+            'id_referensi'    => (int) $id_trm,
+            'ukuran'          => $ukuran,
+            'opsi'            => $opsi,
+            'qty_masuk'       => (int) $qty,
+            'qty_keluar'      => 0,
+            'stok_sebelum'    => $sebelum,
+            'stok_sesudah'    => $sesudah,
+            'keterangan'      => 'Penerimaan PO ' . $no_po . ($nama_supplier ? ' dari ' . $nama_supplier : ''),
+            'created_by'      => $id_user,
+            'created_at'      => date('Y-m-d H:i:s'),
+        ));
+        return $ok ? '' : 'Gagal mencatat kartu stok.';
     }
 
     // $aksi:
@@ -543,7 +737,7 @@ class Pemenuhan_model extends CI_Model
             return array(false, translate('i18n_po_tidak_ditemukan'));
         }
         $this->db->trans_begin();
-        if (!$this->_kunci_so($po->id_so)) {
+        if (!$this->_kunci_so_po($po->id_so)) {
             $this->db->trans_rollback();
             return array(false, translate('i18n_so_sudah_selesai_batal_po_tidak_bisa'));
         }
@@ -608,19 +802,20 @@ class Pemenuhan_model extends CI_Model
     //  - PO dropship : konfirmasi barang sudah diterima customer -> otomatis tercatat terkirim
     // $hdr: tanggal, no_sj_supplier, ekspedisi, penerima, catatan
     // $qty_map: id_po_detail => qty
-    public function terima_po($id_po, $hdr, $qty_map, $id_user)
+    // $aks: aksesoris paket dari gudang untuk barang dropship (lihat _aksesoris_keluar)
+    public function terima_po($id_po, $hdr, $qty_map, $id_user, $aks = array())
     {
-        return $this->_aman('_proses_terima', array($id_po, $hdr, $qty_map, $id_user));
+        return $this->_aman('_proses_terima', array($id_po, $hdr, $qty_map, $id_user, $aks));
     }
 
-    private function _proses_terima($id_po, $hdr, $qty_map, $id_user)
+    private function _proses_terima($id_po, $hdr, $qty_map, $id_user, $aks = array())
     {
         $po = $this->db->get_where('pm_po', array('id' => (int) $id_po))->row();
         if (!$po) {
             return array(false, translate('i18n_po_tidak_ditemukan'));
         }
         $this->db->trans_begin();
-        if (!$this->_kunci_so($po->id_so)) {
+        if (!$this->_kunci_so_po($po->id_so)) {
             $this->db->trans_rollback();
             return array(false, translate('i18n_so_sudah_selesai_batal'));
         }
@@ -647,21 +842,53 @@ class Pemenuhan_model extends CI_Model
             return $this->_gagal(translate('i18n_isi_qty_yang_diterima_minimal_satu'));
         }
 
-        $this->db->insert('pm_po_terima', array(
+        // Baris yang terhubung ke master barang (PO bahan) -> masuk stok gudang, wajib pilih lokasi
+        $masuk_stok  = $po->jenis === 'stok';
+        $id_location = (int) ($hdr['id_location'] ?? 0);
+        $ada_barang  = false;
+        foreach ($terima as $t) {
+            if ($masuk_stok && !empty($t[0]->id_barang)) {
+                $ada_barang = true;
+                if (abs($t[1] - round($t[1])) > $this->eps) {
+                    return $this->_gagal('Qty diterima ' . $t[0]->nama_barang . ' harus bilangan bulat (masuk stok gudang).');
+                }
+            }
+        }
+        if ($ada_barang) {
+            if ($id_location <= 0 || !$this->db->where('id', $id_location)->count_all_results('locations')) {
+                return $this->_gagal('Pilih lokasi gudang tempat barang disimpan.');
+            }
+        }
+
+        $trm = array(
             'id_po'          => $po->id,
             'tanggal'        => $hdr['tanggal'],
             'no_sj_supplier' => $hdr['no_sj_supplier'],
             'catatan'        => $hdr['catatan'],
             'id_user'        => $id_user,
-        ));
+        );
+        if ($ada_barang) {
+            $trm['id_location'] = $id_location;
+        }
+        $this->db->insert('pm_po_terima', $trm);
         $id_trm = (int) $this->db->insert_id();
+        $nama_sup = $this->db->select('nama')->get_where('supplier', array('id' => (int) $po->id_supplier))->row();
         foreach ($terima as $t) {
             list($d, $q) = $t;
             $this->db->insert('pm_po_terima_detail', array('id_penerimaan' => $id_trm, 'id_po_detail' => $d->id, 'qty' => $q));
             $this->db->query('UPDATE pm_po_detail SET qty_diterima = qty_diterima + ? WHERE id = ?', array($q, $d->id));
+            if ($masuk_stok && !empty($d->id_barang)) {
+                $err = $this->_stok_masuk_po($d->id_barang, $id_location, (int) round($q), $id_trm, $po->no_po, $nama_sup ? $nama_sup->nama : '', $id_user);
+                if ($err !== '') {
+                    return $this->_gagal($err);
+                }
+            }
         }
 
         $pesan = (translate('i18n_penerimaan_po') . ' ') . $po->no_po . (' ' . translate('i18n_dicatat'));
+        if ($ada_barang) {
+            $pesan .= ' Stok gudang sudah bertambah (lihat Riwayat Stok).';
+        }
 
         // Dropship: barang sudah sampai di customer -> buat surat jalan dropship + tambah qty_terkirim
         if ($po->jenis === 'dropship') {
@@ -683,13 +910,20 @@ class Pemenuhan_model extends CI_Model
                 'id_user'      => $id_user,
             ));
             $id_sj = (int) $this->db->insert_id();
+            $ids_detail = array();
             foreach ($terima as $t) {
                 list($d, $q) = $t;
                 if (!$d->id_so_detail) {
                     continue;
                 }
+                $ids_detail[] = (int) $d->id_so_detail;
                 $this->db->insert('pm_sj_detail', array('id_sj' => $id_sj, 'id_so_detail' => $d->id_so_detail, 'qty' => $q));
                 $this->db->query('UPDATE sales_order_detail SET qty_terkirim = qty_terkirim + ? WHERE id = ?', array($q, $d->id_so_detail));
+            }
+            // aksesoris paket (mis. handle) dari gudang kita ikut dikirim untuk barang dropship
+            $err = $this->_aksesoris_keluar($id_sj, $no['no'], $po->id_so, $ids_detail, $aks, $id_user);
+            if ($err !== '') {
+                return $this->_gagal($err);
             }
             $pesan = (translate('i18n_dropship_po') . ' ') . $po->no_po . (' ' . translate('i18n_dikonfirmasi_diterima_customer')) . $no['no'] . ').';
         }
@@ -819,12 +1053,13 @@ class Pemenuhan_model extends CI_Model
 
     // $hdr: tanggal, alamat_kirim, ekspedisi, no_kendaraan, catatan; $qty_map: id_so_detail => qty
     // Return: array(ok, pesan, id_sj)
-    public function simpan_sj($id_so, $hdr, $qty_map, $id_user)
+    // $aks: aksesoris paket yang ikut dikirim (lihat _aksesoris_keluar)
+    public function simpan_sj($id_so, $hdr, $qty_map, $id_user, $aks = array())
     {
-        return $this->_aman('_proses_sj', array($id_so, $hdr, $qty_map, $id_user));
+        return $this->_aman('_proses_sj', array($id_so, $hdr, $qty_map, $id_user, $aks));
     }
 
-    private function _proses_sj($id_so, $hdr, $qty_map, $id_user)
+    private function _proses_sj($id_so, $hdr, $qty_map, $id_user, $aks = array())
     {
         $this->db->trans_begin();
         if (!$this->_kunci_so($id_so)) {
@@ -885,6 +1120,10 @@ class Pemenuhan_model extends CI_Model
                     return $this->_gagal('"' . $nama . '": ' . $err);
                 }
             }
+        }
+        $err = $this->_aksesoris_keluar($id_sj, $no['no'], $id_so, array_column($rows, 'id_so_detail'), $aks, $id_user);
+        if ($err !== '') {
+            return $this->_gagal($err);
         }
         $this->sinkron_status_so($id_so);
         if ($this->db->trans_status() === false) {
@@ -1153,9 +1392,213 @@ class Pemenuhan_model extends CI_Model
         return $sisa > 0 ? translate('i18n_stok_yang_dipesan_tidak_cukup_untuk_qty') : '';
     }
 
+    // ================= 3c. AKSESORIS PAKET (mis. handle pintu) =================
+    //
+    // Aksesoris item SO (sales_order_detail_aksesoris) ikut dikirim bersama barangnya.
+    // Saat SJ gudang dibuat / dropship dikonfirmasi diterima, admin memilih stok gudang
+    // untuk tiap aksesoris -> stok_barang berkurang (Kartu Stok: PENGIRIMAN_SO).
+    // Dicatat di pm_sj_aksesoris (database/pm_sj_aksesoris.sql). Batal SJ -> stok kembali.
+
+    public function ada_tabel_sj_aksesoris()
+    {
+        static $ada = null;
+        if ($ada === null) {
+            $ada = $this->db->table_exists('pm_sj_aksesoris') && $this->db->table_exists('sales_order_detail_aksesoris')
+                && $this->db->field_exists('pakai_handle', 'kategori_barang');
+        }
+        return $ada;
+    }
+
+    // Aksesoris per item SO + qty yang belum dikirim: array(id_so_detail => array(obj aksesoris))
+    // obj: id, nama, qty (total untuk seluruh qty item), terkirim, sisa, qty_item, id_barang_default
+    //
+    // Sumber aksesoris yang dipotong stoknya:
+    //  a. Aksesoris di penawaran/SO -> hanya untuk barang di kategori bertanda "pakai handle"
+    //     (pintu kamar / kamar mandi; rolling door dll tidak).
+    //  b. Handle bawaan dari master barang pintu (barang.id_handle x qty_handle per pintu)
+    //     -> selalu ditambahkan, kecuali handle itu sudah diisi sebagai aksesoris di penawaran.
+    //     id-nya negatif (= -id_so_detail) karena tidak ada di sales_order_detail_aksesoris.
+    public function get_aksesoris_so($ids_so_detail)
+    {
+        $ids = array_values(array_filter(array_map('intval', (array) $ids_so_detail)));
+        if (!$ids || !$this->ada_tabel_sj_aksesoris()) {
+            return array();
+        }
+        $ada_bawaan = $this->db->field_exists('id_handle', 'barang');
+        $this->db->select('d.id, d.qty, k.pakai_handle')
+            ->from('sales_order_detail d')
+            ->join('barang b', 'b.id = d.id_barang', 'left')
+            ->join('kategori_barang k', 'k.id = b.id_kategori', 'left');
+        if ($ada_bawaan) {
+            $this->db->select('b.id_handle, b.qty_handle, h.nama AS nama_handle, h.warna AS warna_handle')
+                ->join('barang h', 'h.id = b.id_handle', 'left');
+        }
+        $item = array();
+        foreach ($this->db->where_in('d.id', $ids)->get()->result() as $d) {
+            $item[(int) $d->id] = $d;
+        }
+
+        $daftar = array();
+        $ids_kat = array();
+        foreach ($item as $id => $d) {
+            if ((int) $d->pakai_handle === 1) {
+                $ids_kat[] = $id;
+            }
+        }
+        if ($ids_kat) {
+            foreach ($this->db->select('id, id_so_detail, nama, qty')->where_in('id_so_detail', $ids_kat)
+                ->order_by('id', 'ASC')->get('sales_order_detail_aksesoris')->result() as $r) {
+                if (trim((string) $r->nama) === '' || (float) $r->qty <= 0) {
+                    continue;
+                }
+                $r->id_barang_default = 0;
+                $daftar[(int) $r->id_so_detail][] = $r;
+            }
+        }
+        foreach ($item as $id => $d) {
+            if (!$ada_bawaan || (int) $d->id_handle <= 0 || $d->nama_handle === null) {
+                continue;
+            }
+            $nama_h = trim($d->nama_handle . ($d->warna_handle && $d->warna_handle !== '-' ? ' - ' . $d->warna_handle : ''));
+            $sudah  = false;
+            foreach ($daftar[$id] ?? array() as $r) {
+                $x = mb_strtolower(trim($r->nama));
+                $y = mb_strtolower(trim($d->nama_handle));
+                if ($x !== '' && (mb_strpos($x, $y) !== false || mb_strpos($y, $x) !== false || mb_strpos($x, 'handle') !== false)) {
+                    $sudah = true;
+                }
+            }
+            if ($sudah) {
+                continue;
+            }
+            $per = (float) $d->qty_handle > 0 ? (float) $d->qty_handle : 1;
+            $daftar[$id][] = (object) array(
+                'id' => -$id, 'id_so_detail' => $id, 'nama' => $nama_h,
+                'qty' => round($per * (float) $d->qty, 2), 'id_barang_default' => (int) $d->id_handle,
+            );
+        }
+        if (!$daftar) {
+            return array();
+        }
+
+        $terkirim = array();
+        $q = $this->db->select('sa.id_aksesoris, SUM(sa.qty) AS q', false)
+            ->from('pm_sj_aksesoris sa')->join('pm_sj sj', 'sj.id = sa.id_sj')
+            ->where('sj.status <>', 'batal')->where_in('sa.id_so_detail', array_keys($daftar))
+            ->group_by('sa.id_aksesoris')->get();
+        foreach ($q ? $q->result() : array() as $r) {
+            $terkirim[(int) $r->id_aksesoris] = (float) $r->q;
+        }
+        foreach ($daftar as $id => $list) {
+            foreach ($list as $r) {
+                $r->qty_item = (float) $item[$id]->qty;
+                $r->terkirim = $terkirim[(int) $r->id] ?? 0;
+                $r->sisa     = max(0, (float) $r->qty - $r->terkirim);
+            }
+        }
+        return $daftar;
+    }
+
+    // Pilihan stok gudang untuk aksesoris (stok fisik > 0), barang/opsi aksesoris di atas
+    public function get_stok_aksesoris()
+    {
+        $rows = $this->get_stok_tersedia();
+        usort($rows, function ($a, $b) {
+            $x = ($a->opsi === 'aksesoris') ? 0 : 1;
+            $y = ($b->opsi === 'aksesoris') ? 0 : 1;
+            return $x !== $y ? $x - $y : strcasecmp((string) $a->nama_barang, (string) $b->nama_barang);
+        });
+        return $rows;
+    }
+
+    // Simpan aksesoris yang ikut dikirim di SJ + potong stok. Dipanggil di dalam transaksi.
+    // $aks: array(id_aksesoris => array('qty' => .., 'kunci' => 'id_barang|id_location|opsi|ukuran' atau ''))
+    // $ids_detail: id_so_detail yang ikut di SJ ini. Return '' jika ok, atau pesan error.
+    private function _aksesoris_keluar($id_sj, $no_sj, $id_so, $ids_detail, $aks, $id_user)
+    {
+        if (!$this->ada_tabel_sj_aksesoris() || !$ids_detail) {
+            return '';
+        }
+        $daftar = $this->get_aksesoris_so($ids_detail);
+        foreach ($daftar as $id_detail => $list) {
+            foreach ($list as $a) {
+                $in    = $aks[(int) $a->id] ?? array('qty' => 0, 'kunci' => '');
+                $qty   = round(max(0, (float) $in['qty']), 2);
+                $kunci = trim((string) ($in['kunci'] ?? ''));
+                if ($qty <= 0) {
+                    // tetap dicatat (qty 0) supaya cetak SJ tahu aksesoris ini memang tidak ikut dikirim
+                    $this->db->insert('pm_sj_aksesoris', array(
+                        'id_sj' => (int) $id_sj, 'id_so_detail' => (int) $id_detail, 'id_aksesoris' => (int) $a->id,
+                        'nama' => mb_substr((string) $a->nama, 0, 255), 'qty' => 0,
+                    ));
+                    continue;
+                }
+                if ($qty > $a->sisa + $this->eps) {
+                    return 'Aksesoris "' . $a->nama . '": qty melebihi sisa yang belum dikirim (' . (float) $a->sisa . ').';
+                }
+                $row = array(
+                    'id_sj' => (int) $id_sj, 'id_so_detail' => (int) $id_detail, 'id_aksesoris' => (int) $a->id,
+                    'nama' => mb_substr((string) $a->nama, 0, 255), 'qty' => $qty,
+                    'id_barang' => null, 'id_location' => null, 'opsi' => '', 'ukuran' => '',
+                );
+                if ($kunci !== '') {
+                    $p = explode('|', $kunci, 4);
+                    if (count($p) !== 4 || (int) $p[0] <= 0 || (int) $p[1] <= 0) {
+                        return 'Aksesoris "' . $a->nama . '": pilihan stok tidak valid.';
+                    }
+                    if (abs($qty - round($qty)) > $this->eps) {
+                        return 'Aksesoris "' . $a->nama . '": qty harus bilangan bulat karena dipotong dari stok.';
+                    }
+                    // jangan ambil stok yang sudah dipesan SO lain
+                    $fisik = $this->db->query(
+                        'SELECT COALESCE(SUM(stok), 0) AS s FROM stok_barang WHERE id_barang = ? AND id_location = ? AND opsi = ? AND ukuran = ? FOR UPDATE',
+                        array((int) $p[0], (int) $p[1], $p[2], $p[3])
+                    )->row();
+                    $dipesan  = $this->_stok_dipesan($this->_kunci_stok($p[0], $p[1], $p[2], $p[3]));
+                    $tersedia = (float) $fisik->s - (float) array_sum($dipesan);
+                    if ($qty > $tersedia + $this->eps) {
+                        return 'Aksesoris "' . $a->nama . '": stok tersedia di lokasi itu tinggal ' . max(0, $tersedia) . '.';
+                    }
+                    $src = (object) array('id_barang' => (int) $p[0], 'id_location' => (int) $p[1], 'opsi' => $p[2], 'ukuran' => $p[3], 'id_so' => (int) $id_so);
+                    $err = $this->_mutasi_stok($src, -(int) round($qty), 'PENGIRIMAN_SO', $id_sj, 'Aksesoris ' . $a->nama . ' - ' . $no_sj, $id_user);
+                    if ($err !== '') {
+                        return 'Aksesoris "' . $a->nama . '": ' . $err;
+                    }
+                    $row['id_barang']   = (int) $p[0];
+                    $row['id_location'] = (int) $p[1];
+                    $row['opsi']        = $p[2];
+                    $row['ukuran']      = $p[3];
+                }
+                if (!$this->db->insert('pm_sj_aksesoris', $row)) {
+                    return 'Gagal menyimpan aksesoris surat jalan.';
+                }
+            }
+        }
+        return '';
+    }
+
+    // Aksesoris yang tercatat di satu SJ (untuk cetak). null = SJ lama / fitur belum aktif.
+    public function get_sj_aksesoris($id_sj)
+    {
+        if (!$this->ada_tabel_sj_aksesoris()) {
+            return null;
+        }
+        $rows = $this->db->where('id_sj', (int) $id_sj)->order_by('id', 'ASC')->get('pm_sj_aksesoris')->result();
+        return $rows ?: null;
+    }
+
     // Kembalikan stok dari SJ yang dibatalkan
     private function _kembalikan_stok_sj($sj)
     {
+        if ($this->ada_tabel_sj_aksesoris()) {
+            foreach ($this->db->get_where('pm_sj_aksesoris', array('id_sj' => (int) $sj->id))->result() as $x) {
+                if ((int) $x->id_barang > 0 && (float) $x->qty > 0) {
+                    $src = (object) array('id_barang' => (int) $x->id_barang, 'id_location' => (int) $x->id_location,
+                        'opsi' => (string) $x->opsi, 'ukuran' => (string) $x->ukuran, 'id_so' => (int) $sj->id_so);
+                    $this->_mutasi_stok($src, (int) round((float) $x->qty), 'BATAL_PENGIRIMAN_SO', $sj->id, 'Batal aksesoris ' . $x->nama . ' - ' . $sj->no_sj, null);
+                }
+            }
+        }
         if (!$this->db->table_exists('pm_sj_stok')) {
             return;
         }

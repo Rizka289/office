@@ -4,7 +4,7 @@
  * PIUTANG CUSTOMER
  *
  * Sumber piutang = Sales Order (bukan tabel baru):
- *   tagihan  = sales_order.grand_total
+ *   tagihan  = sales_order.grand_total (konsinyasi: sales_order.nilai_laku = barang yang sudah laku)
  *   diterima = SUM(sales_order_pembayaran.nominal)   (DP + pelunasan + lainnya)
  *   sisa     = tagihan - diterima
  *
@@ -71,9 +71,15 @@ class Piutang_model extends CI_Model
             $params[] = (int) $f['id_customer'];
         }
 
+        // Konsinyasi: yang ditagih hanya barang yang sudah laku (nilai_laku), bukan grand_total.
+        // Dikembalikan sebagai kolom grand_total supaya perhitungan & tampilan piutang tetap sama.
+        $this->load->helper('konsinyasi');
+        $tagihan_sql = sql_tagihan_so('so');
+        $jenis_sql   = $this->db->field_exists('jenis_penjualan', 'sales_order') ? 'so.jenis_penjualan' : "'biasa'";
+
         $sql = "SELECT * FROM (
                     SELECT so.id, so.no_so, so.tanggal, so.tgl_kirim, so.status, so.termin, so.dp_persen,
-                           so.grand_total, so.no_po_customer, so.id_customer,
+                           {$tagihan_sql} AS grand_total, so.grand_total AS nilai_so, {$jenis_sql} AS jenis_penjualan, so.no_po_customer, so.id_customer,
                            c.nama AS nama_customer, c.kontak AS kontak_customer,
                            (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp WHERE sp.id_so = so.id) AS total_bayar,
                            (SELECT MAX(sp.tanggal) FROM sales_order_pembayaran sp WHERE sp.id_so = so.id) AS tgl_bayar_terakhir,
@@ -108,7 +114,8 @@ class Piutang_model extends CI_Model
         $r->persen_kirim = $qty > 0 ? min(100, round($kirim / $qty * 100)) : 0;
         $semua_terkirim  = $qty > 0 && $kirim + $this->eps >= $qty;
 
-        if ($semua_terkirim || in_array($r->status, array('terkirim', 'selesai'), true)) {
+        // Konsinyasi: barang yang sudah dilaporkan laku langsung bisa ditagih
+        if ($semua_terkirim || in_array($r->status, array('terkirim', 'selesai'), true) || ($r->jenis_penjualan ?? 'biasa') === 'konsinyasi') {
             $r->tahap = 'tagih';
         } elseif ($r->kurang_dp > $this->eps) {
             $r->tahap = 'dp';
@@ -158,7 +165,8 @@ class Piutang_model extends CI_Model
     // Kartu piutang: semua SO customer (kecuali batal) + seluruh pembayarannya
     public function get_kartu_customer($id_customer)
     {
-        $so = $this->db->select('so.id, so.no_so, so.tanggal, so.status, so.grand_total, so.no_po_customer,
+        $this->load->helper('konsinyasi');
+        $so = $this->db->select('so.id, so.no_so, so.tanggal, so.status, ' . sql_tagihan_so('so') . ' AS grand_total, so.no_po_customer,
                 (SELECT COALESCE(SUM(sp.nominal), 0) FROM sales_order_pembayaran sp WHERE sp.id_so = so.id) AS total_bayar', false)
             ->from('sales_order so')
             ->where('so.id_customer', (int) $id_customer)

@@ -775,7 +775,13 @@ class Pemenuhan extends MY_Controller
     {
         $data['aks_aktif'] = $this->Pemenuhan_model->ada_tabel_sj_aksesoris();
         $data['aks_map']   = $data['aks_aktif'] ? $this->Pemenuhan_model->get_aksesoris_so($ids_so_detail) : array();
-        $data['aks_stok']  = $data['aks_map'] ? $this->Pemenuhan_model->get_stok_aksesoris() : array();
+        $prioritas = array();
+        foreach ($data['aks_map'] as $list) {
+            foreach ($list as $a) {
+                $prioritas[] = (int) ($a->id_barang_default ?? 0);
+            }
+        }
+        $data['aks_stok']  = $data['aks_map'] ? $this->Pemenuhan_model->get_stok_aksesoris($prioritas) : array();
     }
 
     // POST aks_qty[id_aksesoris], aks_stok[id_aksesoris] -> array(id => array(qty, kunci))

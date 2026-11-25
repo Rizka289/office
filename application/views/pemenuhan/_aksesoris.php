@@ -19,13 +19,18 @@ $aks_label_stok = function ($r) {
 // pilihan awal: handle bawaan pintu (stok terbanyak), atau nama aksesoris yang cocok dengan nama barang stok
 $aks_cocok = function ($a) use ($aks_stok) {
   if (!empty($a->id_barang_default)) {
-    $pilih = ''; $maks = 0;
+    // handle per bukaan: utamakan stok handle dengan bukaan yang sama
+    $pilih = ''; $maks = 0; $pilih_sama = ''; $maks_sama = 0;
     foreach ($aks_stok as $r) {
-      if ((int) explode('|', $r->kunci)[0] === (int) $a->id_barang_default && $r->tersedia > $maks) {
-        $pilih = $r->kunci; $maks = $r->tersedia;
+      if ((int) explode('|', $r->kunci)[0] !== (int) $a->id_barang_default || $r->tersedia <= 0) { continue; }
+      if (!empty($a->opsi) && $r->opsi === $a->opsi && $r->tersedia > $maks_sama) {
+        $pilih_sama = $r->kunci; $maks_sama = $r->tersedia;
       }
+      if ($r->tersedia > $maks) { $pilih = $r->kunci; $maks = $r->tersedia; }
     }
-    if ($pilih !== '') { return $pilih; }
+    if ($pilih_sama !== '') { return $pilih_sama; }
+    if ($pilih !== '' && empty($a->opsi)) { return $pilih; }
+    if (!empty($a->opsi)) { return ''; }
   }
   $n = mb_strtolower(trim($a->nama));
   if ($n === '') { return ''; }
@@ -58,7 +63,8 @@ $aks_baris = function ($id_detail, $induk, $kolom_tengah) use ($aks_map, $aks_st
       <td>
         <input type="number" name="aks_qty[<?= (int) $a->id ?>]" class="form-control form-control-sm text-end in-aks" min="0" step="1"
                max="<?= (float) $a->sisa ?>" value="0"
-               data-induk="<?= html_escape($induk) ?>" data-total="<?= (float) $a->qty ?>" data-sisa="<?= (float) $a->sisa ?>" data-item="<?= (float) $a->qty_item ?>">
+               data-induk="<?= html_escape($induk) ?>" data-total="<?= (float) $a->qty ?>" data-sisa="<?= (float) $a->sisa ?>" data-item="<?= (float) $a->qty_item ?>"
+               <?php if (!empty($a->opsi)): ?>data-opsi="<?= html_escape($a->opsi) ?>" data-per="<?= (float) $a->per ?>" data-seg="<?= html_escape(json_encode($a->seg)) ?>"<?php endif; ?>>
       </td>
     </tr>
   <?php endforeach;
@@ -73,8 +79,18 @@ $aks_script = <<<'JS'
     function hitung(el) {
       if (el.dataset.manual) { return; }
       var induk = document.querySelector('[name="' + el.dataset.induk + '"]');
-      var q = induk ? (Number(induk.value) || 0) : 0, item = Number(el.dataset.item) || 0;
-      var v = item > 0 ? Math.round(Number(el.dataset.total) * Math.min(1, q / item)) : 0;
+      var q = induk ? (Number(induk.value) || 0) : 0, item = Number(el.dataset.item) || 0, v;
+      if (el.dataset.seg) {
+        // pintu per bukaan: ikuti urutan stok yang keluar (sama dengan pemotongan stok pintu)
+        var seg = JSON.parse(el.dataset.seg), sisa = q, n = 0;
+        seg.forEach(function (x) {
+          var ambil = Math.min(sisa, Number(x[1]) || 0);
+          if (ambil > 0) { if (x[0] === el.dataset.opsi) { n += ambil; } sisa -= ambil; }
+        });
+        v = Math.round(n * (Number(el.dataset.per) || 1));
+      } else {
+        v = item > 0 ? Math.round(Number(el.dataset.total) * Math.min(1, q / item)) : 0;
+      }
       el.value = Math.max(0, Math.min(v, Number(el.dataset.sisa) || 0));
     }
     aks.forEach(function (el) {

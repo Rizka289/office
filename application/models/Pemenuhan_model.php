@@ -1399,6 +1399,9 @@ class Pemenuhan_model extends CI_Model
     // untuk tiap aksesoris -> stok_barang berkurang (Kartu Stok: PENGIRIMAN_SO).
     // Dicatat di pm_sj_aksesoris (database/pm_sj_aksesoris.sql). Batal SJ -> stok kembali.
 
+    // Handle bawaan dipecah per bukaan pintu. id aksesoris virtual = -(id_so_detail + offset)
+    const AKS_BUKAAN = array('bukaan_kanan' => 100000000, 'bukaan_kiri' => 200000000);
+
     public function ada_tabel_sj_aksesoris()
     {
         static $ada = null;
@@ -1438,6 +1441,26 @@ class Pemenuhan_model extends CI_Model
             $item[(int) $d->id] = $d;
         }
 
+        // Alokasi stok pintu per bukaan (kanan/kiri). Urutan sama dengan pemotongan stok di SJ (id ASC),
+        // supaya qty handle per bukaan mengikuti pintu yang benar-benar keluar.
+        $bukaan_item = array();   // id_so_detail => opsi => array(total)
+        $seg_item    = array();   // id_so_detail => list array(opsi, sisa) urut FIFO (untuk qty otomatis di form)
+        foreach ($this->db->select('id_so_detail, opsi, qty, qty_keluar')->where_in('id_so_detail', $ids)
+            ->where('status', 'aktif')->order_by('id', 'ASC')->get('pm_alokasi_stok')->result() as $a) {
+            $idd = (int) $a->id_so_detail;
+            if (!isset(self::AKS_BUKAAN[$a->opsi])) {
+                continue;
+            }
+            $bukaan_item[$idd][$a->opsi]['total'] = ($bukaan_item[$idd][$a->opsi]['total'] ?? 0) + (float) $a->qty;
+            $sisa = (float) $a->qty - (float) $a->qty_keluar;
+            if ($sisa > 0) {
+                $seg_item[$idd][] = array($a->opsi, $sisa);
+            }
+        }
+        foreach ($bukaan_item as $idd => $x) {
+            $seg_item[$idd] = $seg_item[$idd] ?? array();
+        }
+
         $daftar = array();
         $ids_kat = array();
         foreach ($item as $id => $d) {
@@ -1472,6 +1495,19 @@ class Pemenuhan_model extends CI_Model
                 continue;
             }
             $per = (float) $d->qty_handle > 0 ? (float) $d->qty_handle : 1;
+            // Pintu diambil dari stok dengan bukaan kanan / kiri -> handle dipecah sesuai bukaannya
+            $bukaan = $bukaan_item[$id] ?? array();
+            if ($bukaan) {
+                foreach ($bukaan as $opsi => $b) {
+                    $daftar[$id][] = (object) array(
+                        'id' => -($id + self::AKS_BUKAAN[$opsi]), 'id_so_detail' => $id,
+                        'nama' => $nama_h . ' (' . str_replace('_', ' ', $opsi) . ')',
+                        'qty' => round($per * $b['total'], 2), 'id_barang_default' => (int) $d->id_handle,
+                        'opsi' => $opsi, 'per' => $per, 'seg' => $seg_item[$id],
+                    );
+                }
+                continue;
+            }
             $daftar[$id][] = (object) array(
                 'id' => -$id, 'id_so_detail' => $id, 'nama' => $nama_h,
                 'qty' => round($per * (float) $d->qty, 2), 'id_barang_default' => (int) $d->id_handle,
@@ -1500,9 +1536,22 @@ class Pemenuhan_model extends CI_Model
     }
 
     // Pilihan stok gudang untuk aksesoris (stok fisik > 0), barang/opsi aksesoris di atas
-    public function get_stok_aksesoris()
+    // $prioritas: id barang handle bawaan -> stoknya selalu ikut (daftar umum dibatasi 200 baris)
+    public function get_stok_aksesoris($prioritas = array())
     {
-        $rows = $this->get_stok_tersedia();
+        $rows = array();
+        $ada  = array();
+        foreach (array_unique(array_filter(array_map('intval', (array) $prioritas))) as $idb) {
+            foreach ($this->get_stok_tersedia($idb) as $r) {
+                $rows[] = $r;
+                $ada[$r->kunci] = true;
+            }
+        }
+        foreach ($this->get_stok_tersedia() as $r) {
+            if (!isset($ada[$r->kunci])) {
+                $rows[] = $r;
+            }
+        }
         usort($rows, function ($a, $b) {
             $x = ($a->opsi === 'aksesoris') ? 0 : 1;
             $y = ($b->opsi === 'aksesoris') ? 0 : 1;

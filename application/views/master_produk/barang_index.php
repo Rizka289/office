@@ -373,6 +373,9 @@
             return $('<div>').text(str).html();
         }
 
+        // Nama handle bawaan untuk badge di daftar barang
+        var NAMA_HANDLE = <?= json_encode(array_reduce(isset($handleList) ? $handleList : array(), function ($c, $hb) { $c[(int) $hb->id] = trim($hb->nama . ($hb->warna && $hb->warna !== '-' ? ' - ' . $hb->warna : '')); return $c; }, array()), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) ?>;
+
         function loadData(page, search) {
             currentPage = page || 1;
             currentSearch = (search !== undefined) ? search : currentSearch;
@@ -456,7 +459,9 @@
                     '<td>' + imgHtml + '</td>' +
                     '<td class="fw-semibold">' + escapeHtml(brg.kode_barang) + '</td>' +
                     '<td>' + escapeHtml(brg.nama_kategori) + '</td>' +
-                    '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi + '</td>' +
+                    '<td>' + escapeHtml(brg.nama) + '<br>' + badgeProduksi +
+                        (parseInt(brg.id_handle, 10) > 0 ? ' <span class="badge text-bg-info fw-normal" title="Handle bawaan, stok dipotong saat surat jalan">handle: ' + escapeHtml(NAMA_HANDLE[brg.id_handle] || ('#' + brg.id_handle)) + ' &times; ' + (parseFloat(brg.qty_handle) || 1) + '</span>' : '') +
+                        '</td>' +
                     '<td>' + escapeHtml(brg.warna) + '</td>' +
                    
                     '<td>' + escapeHtml(brg.satuan) + '</td>' +

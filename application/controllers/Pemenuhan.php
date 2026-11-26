@@ -22,6 +22,7 @@ class Pemenuhan extends MY_Controller
     private $izin = array(
         'lihat'    => array('super_admin', 'atasan', 'finance', 'staff_purchasing', 'staff_gudang'),
         'atur'     => array('super_admin', 'staff_purchasing'),
+        'sumber'   => array('super_admin', 'staff_purchasing', 'finance'),   // pilih sumber & supplier item SO
         'approve'  => array('super_admin', 'atasan'),
         'batal_po' => array('super_admin', 'atasan', 'staff_purchasing'),
         'terima'   => array('super_admin', 'staff_gudang', 'staff_purchasing'),
@@ -150,7 +151,7 @@ class Pemenuhan extends MY_Controller
     public function simpan_sumber($id = 0)
     {
         $this->_wajib_post();
-        $this->_wajib_izin('atur', 'pemenuhan/so/' . (int) $id);
+        $this->_wajib_izin('sumber', 'pemenuhan/so/' . (int) $id);
         $h      = $this->_so_atau_404($id);
         $sumber = (array) $this->input->post('sumber');
         $sup    = (array) $this->input->post('id_supplier');
@@ -413,12 +414,17 @@ class Pemenuhan extends MY_Controller
         }
 
         $nominal = preg_replace('/[^0-9,]/', '', (string) $this->input->post('nominal'));
+        // Rekening asal dari pilihan; "Lainnya" -> pakai teks yang diketik
+        $rek = trim((string) $this->input->post('rekening_asal', true));
+        if ($rek === '__lain') {
+            $rek = trim((string) $this->input->post('rekening_asal_lain', true));
+        }
         $d = array(
             'tanggal'       => $this->_tgl($this->input->post('tanggal')) ?: date('Y-m-d'),
             'jenis'         => (string) $this->input->post('jenis'),
             'nominal'       => (float) str_replace(',', '.', $nominal),
             'metode'        => (string) $this->input->post('metode'),
-            'rekening_asal' => mb_substr(trim((string) $this->input->post('rekening_asal', true)), 0, 100),
+            'rekening_asal' => mb_substr($rek, 0, 100),
             'bukti'         => $bukti,
             'keterangan'    => trim((string) $this->input->post('keterangan', true)),
         );

@@ -25,6 +25,8 @@ $pct_total = $tot_qty > 0 ? min(100, round($tot_kirim / $tot_qty * 100)) : 0;
 // Hak akses (dari controller Pemenuhan::$izin)
 $izin       = isset($izin) ? $izin : array();
 $bisa_atur  = $bisa_proses && !empty($izin['atur']);
+// Pilih sumber & supplier per item (purchasing + finance)
+$bisa_sumber = $bisa_proses && !empty($izin['sumber']);
 $bisa_prod  = $bisa_proses && !empty($izin['produksi']);
 $bisa_kirim = $bisa_proses && !empty($izin['kirim']);
 $bisa_appr  = $bisa_proses && !empty($izin['approve']);
@@ -127,10 +129,10 @@ $tombol_po = function ($id, $aksi, $label, $kelas, $tanya) use ($kembali) {
               </td>
               <td class="text-end"><?= $num($it->qty) ?></td>
               <td>
-                <?php if ($it->p_terkunci || !$bisa_atur): ?>
+                <?php if ($it->p_terkunci || !$bisa_sumber): ?>
                   <?= $badge('sumber', $it->sumber) ?>
                   <input type="hidden" name="sumber[<?= $id ?>]" value="<?= html_escape((string) $it->sumber) ?>" class="in-sumber" data-row="<?= $id ?>">
-                  <?php if ($it->p_terkunci && $bisa_atur): ?><div class="muted"><i class="bi bi-lock"></i> <?= translate('i18n_sudah_diproses') ?></div><?php endif; ?>
+                  <?php if ($it->p_terkunci && $bisa_sumber): ?><div class="muted"><i class="bi bi-lock"></i> <?= translate('i18n_sudah_diproses') ?></div><?php endif; ?>
                 <?php else: ?>
                   <select name="sumber[<?= $id ?>]" class="form-select form-select-sm in-sumber" data-row="<?= $id ?>">
                     <option value=""><?= translate('i18n_pilih_2') ?></option>
@@ -142,7 +144,7 @@ $tombol_po = function ($id, $aksi, $label, $kelas, $tanya) use ($kembali) {
                 <?php endif; ?>
               </td>
               <td>
-                <select name="id_supplier[<?= $id ?>]" class="form-select form-select-sm in-sup" id="sup_<?= $id ?>" <?= $bisa_atur ? '' : 'disabled' ?>>
+                <select name="id_supplier[<?= $id ?>]" class="form-select form-select-sm in-sup" id="sup_<?= $id ?>" <?= $bisa_sumber ? '' : 'disabled data-kunci="1"' ?>>
                   <option value="0"><?= translate('i18n_supplier_3') ?></option>
                   <?php foreach ($supplier_list as $s): ?>
                     <option value="<?= (int) $s->id ?>" <?= (int) $it->id_supplier === (int) $s->id ? 'selected' : '' ?>><?= html_escape($s->nama) ?></option>
@@ -183,7 +185,7 @@ $tombol_po = function ($id, $aksi, $label, $kelas, $tanya) use ($kembali) {
         </tbody>
       </table>
     </div>
-    <?php if ($bisa_atur && $items): ?>
+    <?php if ($bisa_sumber && $items): ?>
       <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-2 border-top">
         <div class="muted">
           <?= translate('i18n_sumber_yang_sudah_punya_spk_po') ?>

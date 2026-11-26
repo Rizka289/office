@@ -278,11 +278,14 @@ $tgljam = function ($d) { return $d ? date('d M Y H:i', strtotime($d)) : '-'; };
           </div>
           <div class="col-md-4">
             <label class="form-label small"><?= translate('i18n_dari_rekening') ?></label>
-            <input type="text" name="rekening_asal" class="form-control form-control-sm" list="list_rek" maxlength="100" placeholder="<?= translate('i18n_mis_rekening_pt') ?>">
-            <datalist id="list_rek">
-              <option value="Rekening PT"></option>
-              <option value="Rekening Mahmudi"></option>
-            </datalist>
+            <select name="rekening_asal" id="in_rek" class="form-select form-select-sm" required>
+              <option value="">- pilih rekening -</option>
+              <option value="Rekening PT">Rekening PT</option>
+              <option value="Rekening Mahmudi">Rekening Mahmudi</option>
+              <option value="Kas tunai">Kas tunai</option>
+              <option value="__lain">Lainnya (ketik)...</option>
+            </select>
+            <input type="text" name="rekening_asal_lain" id="in_rek_lain" class="form-control form-control-sm mt-1 d-none" maxlength="100" placeholder="<?= translate('i18n_mis_rekening_pt') ?>">
           </div>
           <div class="col-md-5">
             <label class="form-label small"><?= translate('i18n_bukti_transfer_jpg_png_pdf_maks_2mb') ?></label>
@@ -303,6 +306,14 @@ $tgljam = function ($d) { return $d ? date('d M Y H:i', strtotime($d)) : '-'; };
         (function () {
           var j = document.getElementById('in_jenis'), n = document.getElementById('in_nominal'), sisa = <?= json_encode($sisa) ?>;
           j.addEventListener('change', function () { if (j.value === 'pelunasan') { n.value = sisa; } });
+          // Rekening "Lainnya" -> tampilkan kolom ketik
+          var r = document.getElementById('in_rek'), rl = document.getElementById('in_rek_lain');
+          r.addEventListener('change', function () {
+            var lain = r.value === '__lain';
+            rl.classList.toggle('d-none', !lain);
+            rl.required = lain;
+            if (lain) { rl.focus(); }
+          });
         })();
       </script>
     <?php elseif (!empty($izin['bayar']) && $h->status === 'draft'): ?>
